@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import AppShell from "@/components/layout/AppShell";
 import { useAppState, type ChildProfile, type CaregiverProfile } from "@/lib/AppStateContext";
 
 export default function OnboardingPage() {
@@ -10,15 +9,14 @@ export default function OnboardingPage() {
     const {
         child,
         caregivers,
-        currentJuneCaregiverId,
         setChild,
         setCaregivers,
-        setCurrentJuneCaregiverId,
         setOnboardingCompleted,
     } = useAppState();
 
     // Wizard step management
     const [step, setStep] = useState(0);
+    const [showInviteCard, setShowInviteCard] = useState(false);
 
     // Step 1: Child name
     const [childName, setChildName] = useState(child.name);
@@ -30,8 +28,6 @@ export default function OnboardingPage() {
     const [caregiver2Name, setCaregiver2Name] = useState(caregivers[1]?.name || "");
     const [caregiver2Label, setCaregiver2Label] = useState(caregivers[1]?.label || "");
     const [caregiversError, setCaregiversError] = useState("");
-
-    // Step 3: Current location (using global state directly)
 
     const handleNextStep1 = () => {
         if (!childName.trim()) {
@@ -53,7 +49,7 @@ export default function OnboardingPage() {
         setStep(1);
     };
 
-    const handleNextStep2 = () => {
+    const handleFinishSetup = () => {
         if (
             !caregiver1Name.trim() ||
             !caregiver1Label.trim() ||
@@ -85,38 +81,86 @@ export default function OnboardingPage() {
 
         // Update AppState
         setCaregivers(newCaregivers);
+        setOnboardingCompleted(true);
 
-        // Ensure currentJuneCaregiverId is valid
-        if (
-            !newCaregivers.find((c) => c.id === currentJuneCaregiverId)
-        ) {
-            setCurrentJuneCaregiverId(newCaregivers[0].id);
-        }
-
-        setStep(2);
+        // Show invite card
+        setShowInviteCard(true);
     };
 
-    const handleFinish = () => {
-        setOnboardingCompleted(true);
+    const handleCopyInviteLink = () => {
+        // Generate a mock invite link
+        const inviteLink = `${window.location.origin}/invite/${caregivers[1]?.id || 'cg-2'}`;
+        navigator.clipboard.writeText(inviteLink);
+        alert("Invite link copied to clipboard!");
+    };
+
+    const handleGoToHome = () => {
         router.push("/");
     };
 
+    if (showInviteCard) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center px-4">
+                <div className="max-w-md w-full">
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
+                                ✓
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                                Setup complete!
+                            </h1>
+                            <p className="text-sm text-gray-600">
+                                You're all set. Now invite the other caretaker.
+                            </p>
+                        </div>
+
+                        <div className="bg-blue-50 rounded-xl p-4 mb-4 border border-blue-100">
+                            <h3 className="font-bold text-gray-900 mb-2">
+                                Invite the other caretaker
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                                {caregiver2Name} can use this link to create a password and join.
+                            </p>
+                            <button
+                                onClick={handleCopyInviteLink}
+                                className="w-full py-2.5 px-4 bg-primary text-white rounded-lg font-semibold text-sm hover:bg-blue-600 transition-colors"
+                            >
+                                Copy invite link
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={handleGoToHome}
+                            className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                        >
+                            Go to home
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <AppShell>
-            <div className="max-w-md mx-auto">
+        <div className="min-h-screen bg-background flex items-center justify-center px-4">
+            <div className="max-w-md w-full">
                 {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">
                         Set up homes.kids
                     </h1>
                     <p className="text-sm text-gray-600">
-                        We&apos;ll configure your child and the homes they move between.
+                        {step === 0
+                            ? "Let's enter your child's details and the homes they live between."
+                            : "We'll configure your child and the homes they move between."
+                        }
                     </p>
                 </div>
 
                 {/* Step indicator */}
                 <div className="mb-6">
-                    <p className="text-sm text-gray-500">Step {step + 1} of 3</p>
+                    <p className="text-sm text-gray-500">Step {step + 1} of 2</p>
                 </div>
 
                 {/* Step 1: Child */}
@@ -126,7 +170,7 @@ export default function OnboardingPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Child&apos;s name
+                                    Child's name
                                 </label>
                                 <input
                                     type="text"
@@ -153,13 +197,13 @@ export default function OnboardingPage() {
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-6">
                         <h2 className="font-bold text-gray-900 mb-1">Caregivers</h2>
                         <p className="text-xs text-gray-500 mb-4">
-                            We&apos;ll start with two caregivers. You can add more later.
+                            Enter details for both caregivers.
                         </p>
                         <div className="space-y-6">
-                            {/* Caregiver 1 */}
+                            {/* Caregiver 1 (you) */}
                             <div>
                                 <h3 className="text-sm font-medium text-gray-700 mb-2">
-                                    Caregiver 1
+                                    Caretaker 1 (you)
                                 </h3>
                                 <div className="space-y-3">
                                     <div>
@@ -176,7 +220,7 @@ export default function OnboardingPage() {
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-600 mb-1">
-                                            Label (how the child calls them)
+                                            Label (what the child calls you)
                                         </label>
                                         <input
                                             type="text"
@@ -192,7 +236,7 @@ export default function OnboardingPage() {
                             {/* Caregiver 2 */}
                             <div>
                                 <h3 className="text-sm font-medium text-gray-700 mb-2">
-                                    Caregiver 2
+                                    Caretaker 2
                                 </h3>
                                 <div className="space-y-3">
                                     <div>
@@ -209,13 +253,13 @@ export default function OnboardingPage() {
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-600 mb-1">
-                                            Label (how the child calls them)
+                                            Label (what the child calls them)
                                         </label>
                                         <input
                                             type="text"
                                             value={caregiver2Label}
                                             onChange={(e) => setCaregiver2Label(e.target.value)}
-                                            placeholder="Mum"
+                                            placeholder="Mommy"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         />
                                     </div>
@@ -225,29 +269,6 @@ export default function OnboardingPage() {
                             {caregiversError && (
                                 <p className="text-xs text-red-600">{caregiversError}</p>
                             )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 3: Where is child now? */}
-                {step === 2 && (
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-6">
-                        <h2 className="font-bold text-gray-900 mb-4">
-                            Where is {child.name} right now?
-                        </h2>
-                        <div className="flex gap-2">
-                            {caregivers.map((caregiver) => (
-                                <button
-                                    key={caregiver.id}
-                                    onClick={() => setCurrentJuneCaregiverId(caregiver.id)}
-                                    className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${currentJuneCaregiverId === caregiver.id
-                                        ? "border-primary bg-primary/5 font-medium"
-                                        : "border-gray-200 hover:border-gray-300"
-                                        }`}
-                                >
-                                    <div className="text-sm">{caregiver.label}</div>
-                                </button>
-                            ))}
                         </div>
                     </div>
                 )}
@@ -262,17 +283,17 @@ export default function OnboardingPage() {
                             Back
                         </button>
                     )}
-                    {step < 2 && (
+                    {step < 1 && (
                         <button
-                            onClick={step === 0 ? handleNextStep1 : handleNextStep2}
+                            onClick={handleNextStep1}
                             className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
                         >
                             Next
                         </button>
                     )}
-                    {step === 2 && (
+                    {step === 1 && (
                         <button
-                            onClick={handleFinish}
+                            onClick={handleFinishSetup}
                             className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
                         >
                             Finish setup
@@ -280,6 +301,6 @@ export default function OnboardingPage() {
                     )}
                 </div>
             </div>
-        </AppShell>
+        </div>
     );
 }
