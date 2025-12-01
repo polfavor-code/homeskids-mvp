@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
@@ -8,7 +8,7 @@ import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
-export default function ItemsPage() {
+function ItemsPageContent() {
     useEnsureOnboarding();
 
     const { items } = useItems();
@@ -150,5 +150,13 @@ export default function ItemsPage() {
                 )}
             </div>
         </AppShell>
+    );
+}
+
+export default function ItemsPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ItemsPageContent />
+        </Suspense>
     );
 }
