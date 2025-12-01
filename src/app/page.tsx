@@ -83,6 +83,9 @@ export default function Home() {
                 currentCaregiver={currentCaregiver}
             />
 
+            {/* Horizontal divider */}
+            <div className="border-t border-gray-200"></div>
+
             {/* 4. To Be Found Preview */}
             <ToBeFoundPreview missingItems={missingItems} />
         </AppShell>

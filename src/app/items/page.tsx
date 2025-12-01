@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -12,7 +13,16 @@ export default function ItemsPage() {
 
     const { items } = useItems();
     const { child, caregivers } = useAppState();
+    const searchParams = useSearchParams();
     const [filter, setFilter] = useState<string>("All");
+
+    // Handle URL query parameter for filter
+    useEffect(() => {
+        const filterParam = searchParams.get("filter");
+        if (filterParam) {
+            setFilter(filterParam);
+        }
+    }, [searchParams]);
 
     // Helper to get location label
     const getLocationLabel = (caregiverId: string, isMissing: boolean) => {
@@ -100,13 +110,16 @@ export default function ItemsPage() {
                                         {item.name}
                                     </h3>
                                     <p className="text-xs text-gray-500 truncate">
-                                        {item.category} · {locationLabel}
+                                        {item.category}
+                                        {/* Show location label conditionally based on filter */}
+                                        {filter === "All" && ` · ${locationLabel}`}
                                     </p>
                                 </div>
 
                                 {/* Right: Status Badges */}
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                    {item.isMissing ? (
+                                    {/* Show yellow pill only if filter is "All" */}
+                                    {item.isMissing && filter === "All" ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                             To be found
                                         </span>
