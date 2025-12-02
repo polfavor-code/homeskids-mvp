@@ -1,0 +1,21 @@
+{
+    "name": "homes.kids",
+    "short_name": "homes.kids",
+    "description": "Everything your child needs between homes.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F6F7F8",
+    "theme_color": "#4A90E2",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

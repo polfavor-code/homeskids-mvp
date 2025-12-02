@@ -1,0 +1,52 @@
+import type { Metadata, Viewport } from "next";
+import { ItemsProvider } from "@/lib/ItemsContext";
+import { AppStateProvider } from "@/lib/AppStateContext";
+import "../styles/globals.css";
+import Script from "next/script";
+
+export const metadata: Metadata = {
+    title: "homes.kids",
+    description: "Everything your child needs between homes.",
+    manifest: "/manifest.webmanifest",
+    icons: {
+        icon: "/icons/icon-192.png",
+        apple: "/icons/icon-192.png",
+    },
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "homes.kids",
+    },
+};
+
+export const viewport: Viewport = {
+    themeColor: "#4A90E2",
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+};
+
+export default function RootLayout({
+    children,
+}: Readonly<{
+    children: React.ReactNode;
+}>) {
+    return (
+        <html lang="en">
+            <body>
+                <AppStateProvider>
+                    <ItemsProvider>{children}</ItemsProvider>
+                </AppStateProvider>
+                <Script id="register-sw" strategy="afterInteractive">
+                    {`
+                        if ('serviceWorker' in navigator) {
+                            window.addEventListener('load', () => {
+                                navigator.serviceWorker.register('/sw.js').catch(() => {});
+                            });
+                        }
+                    `}
+                </Script>
+            </body>
+        </html>
+    );
+}
