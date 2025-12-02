@@ -32,15 +32,15 @@ export default function AppShell({ children }: AppShellProps) {
                 <Link href="/" className="font-bold text-lg text-primary tracking-tight">
                     homes.kids
                 </Link>
-                
+
                 {/* Three Avatars */}
                 <div className="flex items-center gap-2">
-                    {/* Caregiver 1 Avatar */}
+                    {/* Caretaker 1 Avatar */}
                     <div className="relative">
                         <button
                             onClick={() => setCaregiver1MenuOpen(!caregiver1MenuOpen)}
                             className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-sm ${caregivers[0]?.avatarColor || "bg-blue-500"}`}
-                            aria-label={caregivers[0]?.name || "Caregiver 1"}
+                            aria-label={caregivers[0]?.name || "Caretaker 1"}
                         >
                             {caregivers[0]?.avatarInitials || "C1"}
                         </button>
@@ -53,7 +53,7 @@ export default function AppShell({ children }: AppShellProps) {
                                     Edit details
                                 </button>
                                 <hr className="my-1" />
-                                <button 
+                                <button
                                     onClick={handleLogout}
                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                                 >
@@ -84,12 +84,12 @@ export default function AppShell({ children }: AppShellProps) {
                         )}
                     </div>
 
-                    {/* Caregiver 2 Avatar */}
+                    {/* Caretaker 2 Avatar */}
                     <div className="relative">
                         <button
                             onClick={() => setCaregiver2MenuOpen(!caregiver2MenuOpen)}
                             className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-sm ${caregivers[1]?.avatarColor || "bg-pink-500"}`}
-                            aria-label={caregivers[1]?.name || "Caregiver 2"}
+                            aria-label={caregivers[1]?.name || "Caretaker 2"}
                         >
                             {caregivers[1]?.avatarInitials || "C2"}
                         </button>
@@ -102,7 +102,7 @@ export default function AppShell({ children }: AppShellProps) {
                                     Edit details
                                 </button>
                                 <hr className="my-1" />
-                                <button 
+                                <button
                                     onClick={handleLogout}
                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                                 >
