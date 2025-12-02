@@ -35,9 +35,23 @@ export default function RegisterPage() {
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">
                         homes.kids
                     </h1>
-                    <p className="text-gray-600">
-                        Create your account
+                    <p className="text-gray-500 font-medium mb-4">
+                        Co-parenting central hub.
                     </p>
+                    <ul className="text-sm text-gray-500 space-y-1 inline-block text-left">
+                        <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            All info and schedules in one place.
+                        </li>
+                        <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            Track what moves between homes.
+                        </li>
+                        <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            Share important contacts.
+                        </li>
+                    </ul>
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50">
