@@ -14,6 +14,7 @@ const CATEGORIES = [
     "Sports",
     "Musical instruments",
     "Medicine",
+    "Electronics",
     "Other",
 ];
 
@@ -78,7 +79,7 @@ export default function AddItemPage() {
                             type="button"
                             className="text-sm font-medium text-primary hover:underline"
                         >
-                            Add photo (optional)
+                            Add photo (recommended)
                         </button>
                     </div>
 
@@ -125,8 +126,8 @@ export default function AddItemPage() {
                                 <label
                                     key={caregiver.id}
                                     className={`flex items-center p-3 border rounded-xl cursor-pointer transition-colors ${location === caregiver.id
-                                            ? "border-primary bg-blue-50"
-                                            : "border-gray-200 hover:bg-gray-50"
+                                        ? "border-primary bg-blue-50"
+                                        : "border-gray-200 hover:bg-gray-50"
                                         }`}
                                 >
                                     <input
@@ -139,8 +140,8 @@ export default function AddItemPage() {
                                     />
                                     <span
                                         className={`font-medium ${location === caregiver.id
-                                                ? "text-primary"
-                                                : "text-gray-700"
+                                            ? "text-primary"
+                                            : "text-gray-700"
                                             }`}
                                     >
                                         {caregiver.label}’s Home
@@ -149,8 +150,8 @@ export default function AddItemPage() {
                             ))}
                             <label
                                 className={`flex items-center p-3 border rounded-xl cursor-pointer transition-colors ${location === "To be found"
-                                        ? "border-yellow-400 bg-yellow-50"
-                                        : "border-gray-200 hover:bg-gray-50"
+                                    ? "border-yellow-400 bg-yellow-50"
+                                    : "border-gray-200 hover:bg-gray-50"
                                     }`}
                             >
                                 <input
@@ -163,8 +164,8 @@ export default function AddItemPage() {
                                 />
                                 <span
                                     className={`font-medium ${location === "To be found"
-                                            ? "text-yellow-700"
-                                            : "text-gray-700"
+                                        ? "text-yellow-700"
+                                        : "text-gray-700"
                                         }`}
                                 >
                                     To be found

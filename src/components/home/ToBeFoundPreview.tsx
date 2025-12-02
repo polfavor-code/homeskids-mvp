@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { Item } from "@/lib/mockData";
 
 interface ToBeFoundPreviewProps {
@@ -17,9 +18,9 @@ export default function ToBeFoundPreview({ missingItems }: ToBeFoundPreviewProps
                         {missingItems.length}
                     </span>
                 </div>
-                <button className="text-sm text-primary font-medium hover:underline">
+                <Link href="/items?filter=To be found" className="text-sm text-primary font-medium hover:underline">
                     View all
-                </button>
+                </Link>
             </div>
 
             <div className="space-y-3">
