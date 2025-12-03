@@ -8,6 +8,16 @@ import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
+/**
+ * Renders the items page content with a filterable list of the child's belongings.
+ *
+ * Synchronizes the active filter with the `filter` URL query parameter, ensures onboarding
+ * has completed, and displays filter pills for caregivers and "To be found". Shows a list
+ * of items matching the active filter with location labels and status badges, and an empty
+ * state when no items match.
+ *
+ * @returns The JSX element for the items page content
+ */
 function ItemsPageContent() {
     useEnsureOnboarding();
 

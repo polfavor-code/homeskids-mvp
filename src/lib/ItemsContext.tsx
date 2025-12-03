@@ -31,6 +31,14 @@ interface ItemsContextType {
 
 const ItemsContext = createContext<ItemsContextType | undefined>(undefined);
 
+/**
+ * Provides the ItemsContext to descendants and manages items and missing-message state backed by Supabase.
+ *
+ * The provider loads items for the current user's family, exposes the items array, mutation helpers (addItem, updateItemLocation, updateItemRequested, markItemFound),
+ * and missing-message helpers (missingMessages, addMissingMessage, getMissingMessagesForItem), and keeps local state in sync with the backend.
+ *
+ * @returns A provider element that supplies the ItemsContext to its children
+ */
 export function ItemsProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<Item[]>([]);
     const [missingMessages, setMissingMessages] = useState<MissingMessage[]>([]);
