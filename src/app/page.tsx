@@ -18,7 +18,7 @@ export default function Home() {
 
     const currentCaregiver = caregivers.find(
         (c) => c.id === currentJuneCaregiverId
-    )!;
+    ) || caregivers[0];
 
     // Filter missing items
     const missingItems = items.filter((item) => item.isMissing);
@@ -35,7 +35,7 @@ export default function Home() {
                         Add your first item
                     </h2>
                     <p className="text-gray-500 mb-8 max-w-xs mx-auto">
-                        Start by adding one of {child.name}’s things so we can track where it is.
+                        Start by adding one of {child?.name || "your child"}’s things so we can track where it is.
                     </p>
                     <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-sm text-blue-700">
                         <p>Use the <strong>+</strong> button below to add an item.</p>

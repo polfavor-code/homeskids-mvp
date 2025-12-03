@@ -20,9 +20,10 @@ export default function AppShell({ children }: AppShellProps) {
     // Hide + button on onboarding routes
     const isOnboarding = pathname === "/onboarding";
 
-    const handleLogout = () => {
-        // TODO: Implement logout logic
-        console.log("Logout clicked");
+    const handleLogout = async () => {
+        const { supabase } = await import("@/lib/supabase");
+        await supabase.auth.signOut();
+        window.location.href = "/login";
     };
 
     return (
@@ -68,9 +69,9 @@ export default function AppShell({ children }: AppShellProps) {
                         <button
                             onClick={() => setChildMenuOpen(!childMenuOpen)}
                             className="w-8 h-8 rounded-full bg-mint text-white flex items-center justify-center text-sm font-medium shadow-sm"
-                            aria-label={child.name}
+                            aria-label={child?.name || "Child"}
                         >
-                            {child.avatarInitials}
+                            {child?.avatarInitials || "C"}
                         </button>
                         {childMenuOpen && (
                             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">

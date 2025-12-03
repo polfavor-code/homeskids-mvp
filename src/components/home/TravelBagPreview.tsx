@@ -5,8 +5,8 @@ import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
 
 interface TravelBagPreviewProps {
     items: Item[]; // All items
-    child: ChildProfile;
-    currentCaregiver: CaregiverProfile;
+    child: ChildProfile | null;
+    currentCaregiver: CaregiverProfile | undefined;
 }
 
 export default function TravelBagPreview({ items, child, currentCaregiver }: TravelBagPreviewProps) {
@@ -20,7 +20,7 @@ export default function TravelBagPreview({ items, child, currentCaregiver }: Tra
 
     const itemsToPack = items.filter(
         (item) =>
-            item.locationCaregiverId === currentCaregiver.id &&
+            item.locationCaregiverId === currentCaregiver?.id &&
             item.isRequestedForNextVisit
     );
 
@@ -30,15 +30,15 @@ export default function TravelBagPreview({ items, child, currentCaregiver }: Tra
     const totalRequested = itemsToPack.length;
     const isAllPacked = totalRequested > 0 && unpackedItems.length === 0;
 
-    let title = `${child.name}’s travel bag`;
+    let title = `${child?.name || "Child"}'s travel bag`;
     let subtitle = "";
 
     if (totalRequested === 0) {
         subtitle = "No items requested for the next visit yet";
     } else if (isAllPacked) {
-        subtitle = `Bag is ready from ${currentCaregiver.label}`;
+        subtitle = `Bag is ready from ${currentCaregiver?.label || "home"}`;
     } else {
-        subtitle = `${unpackedItems.length} items to pack at ${currentCaregiver.label}’s Home`;
+        subtitle = `${unpackedItems.length} items to pack at ${currentCaregiver?.label || "home"}'s Home`;
     }
 
     // Show up to 2 items (prioritize unpacked)

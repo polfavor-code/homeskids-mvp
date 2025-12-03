@@ -43,7 +43,7 @@ function ItemsPageContent() {
         <AppShell>
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-xl font-bold text-gray-900">{child.name}&apos;s Things</h1>
+                <h1 className="text-xl font-bold text-gray-900">{child?.name || "Child"}&apos;s Things</h1>
                 <p className="text-sm text-gray-500">All items across every home.</p>
                 <p className="text-xs text-gray-400 mt-1">
                     Showing {filteredItems.length} items

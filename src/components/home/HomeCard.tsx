@@ -5,7 +5,7 @@ import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
 
 interface HomeCardProps {
     caregiver: CaregiverProfile;
-    child: ChildProfile;
+    child: ChildProfile | null;
     items: Item[];
     isChildHere: boolean;
 }
@@ -29,9 +29,9 @@ export default function HomeCard({ caregiver, child, items, isChildHere }: HomeC
                 {isChildHere && (
                     <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-xs font-semibold">
                         <div className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center text-[10px]">
-                            {child.avatarInitials}
+                            {child?.avatarInitials || "C"}
                         </div>
-                        {child.name} is here
+                        {child?.name || "Child"} is here
                     </div>
                 )}
             </div>

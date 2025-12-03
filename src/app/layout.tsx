@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ItemsProvider } from "@/lib/ItemsContext";
 import { AppStateProvider } from "@/lib/AppStateContext";
+import { AuthProvider } from "@/lib/AuthContext";
 import "../styles/globals.css";
 import Script from "next/script";
 
@@ -34,9 +35,11 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body>
-                <AppStateProvider>
-                    <ItemsProvider>{children}</ItemsProvider>
-                </AppStateProvider>
+                <AuthProvider>
+                    <AppStateProvider>
+                        <ItemsProvider>{children}</ItemsProvider>
+                    </AppStateProvider>
+                </AuthProvider>
                 <Script id="register-sw" strategy="afterInteractive">
                     {`
                         if ('serviceWorker' in navigator) {

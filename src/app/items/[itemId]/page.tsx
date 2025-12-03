@@ -6,6 +6,7 @@ import AppShell from "@/components/layout/AppShell";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import ItemPhoto from "@/components/ItemPhoto";
 
 export default function ItemDetailPage({
     params,
@@ -127,8 +128,12 @@ export default function ItemDetailPage({
             {/* Header & Hero */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">
                 <div className="text-center mb-6">
-                    <div className="w-24 h-24 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center text-4xl font-bold text-gray-400 mb-4">
-                        {item.name.charAt(0)}
+                    <div className="mx-auto mb-4 flex justify-center">
+                        <ItemPhoto
+                            photoPath={item.photoUrl}
+                            itemName={item.name}
+                            className="w-24 h-24"
+                        />
                     </div>
                     {statusPill && <div className="mb-3">{statusPill}</div>}
                     <h1 className="text-2xl font-bold text-gray-900 mb-1">{item.name}</h1>

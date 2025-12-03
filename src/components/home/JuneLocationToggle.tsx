@@ -2,7 +2,7 @@ import React from "react";
 import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
 
 interface JuneLocationToggleProps {
-    child: ChildProfile;
+    child: ChildProfile | null;
     caregivers: CaregiverProfile[];
     selectedCaregiverId: string;
     onToggle: (caregiverId: string) => void;
@@ -16,7 +16,7 @@ export default function JuneLocationToggle({
 }: JuneLocationToggleProps) {
     return (
         <div className="space-y-3">
-            <h2 className="text-lg font-bold text-gray-900">Where is {child.name} right now?</h2>
+            <h2 className="text-lg font-bold text-gray-900">Where is {child?.name || "your child"} right now?</h2>
             <div className="flex p-1 bg-gray-100 rounded-xl">
                 {caregivers.map((caregiver) => {
                     const isSelected = selectedCaregiverId === caregiver.id;

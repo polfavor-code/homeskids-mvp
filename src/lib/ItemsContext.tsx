@@ -32,86 +32,212 @@ interface ItemsContextType {
 const ItemsContext = createContext<ItemsContextType | undefined>(undefined);
 
 export function ItemsProvider({ children }: { children: ReactNode }) {
-    const [items, setItems] = useState<Item[]>(MOCK_ITEMS);
+    const [items, setItems] = useState<Item[]>([]);
     const [missingMessages, setMissingMessages] = useState<MissingMessage[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Load from localStorage on mount
+    // Fetch items from Supabase on mount
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem("homeskids_items_v1");
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (parsed.items) setItems(parsed.items);
-                if (parsed.missingMessages) setMissingMessages(parsed.missingMessages);
+        const fetchItems = async () => {
+            try {
+                const { supabase } = await import("@/lib/supabase");
+                const { data: { user } } = await supabase.auth.getUser();
+
+                if (!user) {
+                    setIsLoaded(true);
+                    return;
+                }
+
+                // Get user's family
+                const { data: familyMember } = await supabase
+                    .from("family_members")
+                    .select("family_id")
+                    .eq("user_id", user.id)
+                    .limit(1);
+
+                if (familyMember && familyMember.length > 0) {
+                    // Fetch items for this family
+                    const { data: itemsData } = await supabase
+                        .from("items")
+                        .select("*")
+                        .eq("family_id", familyMember[0].family_id);
+
+                    if (itemsData) {
+                        const mappedItems: Item[] = itemsData.map((item: any) => ({
+                            id: item.id,
+                            name: item.name,
+                            category: item.category,
+                            locationCaregiverId: item.location_caregiver_id || (item.location_invite_id ? `pending-${item.location_invite_id}` : null),
+                            isRequestedForNextVisit: item.is_requested_for_next_visit,
+                            isPacked: item.is_packed,
+                            isMissing: item.is_missing,
+                            photoUrl: item.photo_url,
+                            notes: item.notes,
+                        }));
+                        setItems(mappedItems);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load items:", error);
+            } finally {
+                setIsLoaded(true);
             }
-        } catch (error) {
-            console.error("Failed to load items:", error);
-        } finally {
-            setIsLoaded(true);
-        }
+        };
+
+        fetchItems();
     }, []);
 
-    // Save to localStorage on change
-    useEffect(() => {
-        if (!isLoaded) return;
+    const addItem = async (item: Omit<Item, "id">) => {
         try {
-            const stateToSave = {
-                items,
-                missingMessages,
-            };
-            localStorage.setItem("homeskids_items_v1", JSON.stringify(stateToSave));
-        } catch (error) {
-            console.error("Failed to save items:", error);
-        }
-    }, [items, missingMessages, isLoaded]);
+            const { supabase } = await import("./supabase");
+            const { data: { user } } = await supabase.auth.getUser();
 
-    const addItem = (newItem: Item) => {
-        setItems((prev) => [newItem, ...prev]);
+            if (!user) {
+                console.error("No user found");
+                return;
+            }
+
+            // Get user's family
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", user.id)
+                .single();
+
+            if (!familyMember) {
+                console.error("User not in a family");
+                return;
+            }
+
+            // Handle pending caregivers
+            let locationCaregiverId = item.locationCaregiverId;
+            let locationInviteId = null;
+
+            if (locationCaregiverId?.startsWith("pending-")) {
+                locationInviteId = locationCaregiverId.replace("pending-", "");
+                locationCaregiverId = null;
+            }
+
+            const { data, error } = await supabase
+                .from("items")
+                .insert({
+                    name: item.name,
+                    category: item.category,
+                    location_caregiver_id: locationCaregiverId,
+                    location_invite_id: locationInviteId,
+                    notes: item.notes,
+                    family_id: familyMember.family_id,
+                    photo_url: item.photoUrl,
+                    is_missing: item.isMissing,
+                })
+                .select()
+                .single();
+
+            if (error) {
+                console.error("Error adding item:", error);
+                return;
+            }
+
+            if (data) {
+                const newItem: Item = {
+                    id: data.id,
+                    name: data.name,
+                    category: data.category,
+                    locationCaregiverId: data.location_caregiver_id || (data.location_invite_id ? `pending-${data.location_invite_id}` : null),
+                    notes: data.notes,
+                    photoUrl: data.photo_url,
+                    isRequestedForNextVisit: false,
+                    isPacked: false,
+                    isMissing: item.isMissing,
+                };
+                setItems((prev) => [...prev, newItem]);
+            }
+        } catch (error) {
+            console.error("Failed to add item:", error);
+        }
     };
 
-    const updateItemLocation = (
+    const updateItemLocation = async (
         itemId: string,
         newLocation: { caregiverId?: string; toBeFound?: boolean }
     ) => {
-        setItems((prev) =>
-            prev.map((item) => {
-                if (item.id !== itemId) return item;
+        try {
+            const { supabase } = await import("@/lib/supabase");
 
-                if (newLocation.toBeFound) {
-                    // Set to "To be found"
-                    return {
-                        ...item,
-                        isMissing: true,
-                        isRequestedForNextVisit: false,
-                        isPacked: false,
-                    };
-                } else if (newLocation.caregiverId) {
-                    // Move to specific caregiver's home
-                    return {
-                        ...item,
-                        locationCaregiverId: newLocation.caregiverId,
-                        isMissing: false,
-                        isRequestedForNextVisit: false,
-                        isPacked: false,
-                    };
-                }
+            const updates: any = {};
 
-                return item;
-            })
-        );
+            if (newLocation.toBeFound) {
+                updates.is_missing = true;
+                updates.is_requested_for_next_visit = false;
+                updates.is_packed = false;
+            } else if (newLocation.caregiverId) {
+                updates.location_caregiver_id = newLocation.caregiverId;
+                updates.is_missing = false;
+                updates.is_requested_for_next_visit = false;
+                updates.is_packed = false;
+            }
+
+            const { error } = await supabase
+                .from("items")
+                .update(updates)
+                .eq("id", itemId);
+
+            if (error) throw error;
+
+            // Update local state
+            setItems((prev) =>
+                prev.map((item) => {
+                    if (item.id !== itemId) return item;
+
+                    if (newLocation.toBeFound) {
+                        return {
+                            ...item,
+                            isMissing: true,
+                            isRequestedForNextVisit: false,
+                            isPacked: false,
+                        };
+                    } else if (newLocation.caregiverId) {
+                        return {
+                            ...item,
+                            locationCaregiverId: newLocation.caregiverId,
+                            isMissing: false,
+                            isRequestedForNextVisit: false,
+                            isPacked: false,
+                        };
+                    }
+
+                    return item;
+                })
+            );
+        } catch (error) {
+            console.error("Failed to update item location:", error);
+        }
     };
 
-    const updateItemRequested = (itemId: string, requested: boolean) => {
-        setItems((prev) =>
-            prev.map((item) => {
-                if (item.id !== itemId) return item;
-                return {
-                    ...item,
-                    isRequestedForNextVisit: requested,
-                };
-            })
-        );
+    const updateItemRequested = async (itemId: string, requested: boolean) => {
+        try {
+            const { supabase } = await import("@/lib/supabase");
+
+            const { error } = await supabase
+                .from("items")
+                .update({ is_requested_for_next_visit: requested })
+                .eq("id", itemId);
+
+            if (error) throw error;
+
+            // Update local state
+            setItems((prev) =>
+                prev.map((item) => {
+                    if (item.id !== itemId) return item;
+                    return {
+                        ...item,
+                        isRequestedForNextVisit: requested,
+                    };
+                })
+            );
+        } catch (error) {
+            console.error("Failed to update item request status:", error);
+        }
     };
 
     const addMissingMessage = (message: {

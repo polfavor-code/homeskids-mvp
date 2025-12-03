@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import { MOCK_CAREGIVERS } from "@/lib/mockData";
 import { useItems } from "@/lib/ItemsContext";
+import { useAppState } from "@/lib/AppStateContext";
 
 const CATEGORIES = [
     "Clothing",
@@ -21,35 +21,76 @@ const CATEGORIES = [
 export default function AddItemPage() {
     const router = useRouter();
     const { addItem } = useItems();
+    const { caregivers } = useAppState();
 
     const [name, setName] = useState("");
     const [category, setCategory] = useState("");
     const [location, setLocation] = useState("");
     const [notes, setNotes] = useState("");
     const [error, setError] = useState("");
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string>("");
+    const [uploading, setUploading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !category || !location) {
             setError("Please fill in all required fields.");
             return;
         }
 
-        const isMissing = location === "To be found";
-        const locationCaregiverId = isMissing ? MOCK_CAREGIVERS[0].id : location; // Default to first caregiver if missing for now, or handle better logic
+        setUploading(true);
+        setError("");
 
-        const newItem = {
-            id: `item-${Date.now()}`,
-            name,
-            category,
-            locationCaregiverId,
-            isRequestedForNextVisit: false,
-            isPacked: false,
-            isMissing,
-        };
+        try {
+            let photoUrl = "";
 
-        addItem(newItem);
-        router.push("/items");
+            // Upload photo if selected
+            if (photoFile) {
+                const { supabase } = await import("@/lib/supabase");
+                const fileExt = photoFile.name.split(".").pop();
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from("item-photos")
+                    .upload(fileName, photoFile, {
+                        cacheControl: "3600",
+                        upsert: false,
+                    });
+
+                if (uploadError) {
+                    console.error("Upload error:", uploadError);
+                    setError("Failed to upload photo. Please try again.");
+                    setUploading(false);
+                    return;
+                }
+
+                // Store the file path (not the full URL, we'll generate signed URLs when displaying)
+                photoUrl = fileName;
+            }
+
+            const isMissing = location === "To be found";
+            const locationCaregiverId = isMissing ? (caregivers[0]?.id || "") : location;
+
+            const newItem = {
+                id: `item-${Date.now()}`,
+                name,
+                category,
+                locationCaregiverId,
+                isRequestedForNextVisit: false,
+                isPacked: false,
+                isMissing,
+                photoUrl: photoUrl || undefined,
+            };
+
+            await addItem(newItem);
+            router.push("/items");
+        } catch (err) {
+            console.error("Error creating item:", err);
+            setError("Failed to create item. Please try again.");
+        } finally {
+            setUploading(false);
+        }
     };
 
     return (
@@ -72,15 +113,55 @@ export default function AddItemPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 space-y-4">
-                    {/* Photo Placeholder */}
+                    {/* Photo Upload */}
                     <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
-                        <div className="w-10 h-10 text-gray-400 mb-2">📷</div>
-                        <button
-                            type="button"
-                            className="text-sm font-medium text-primary hover:underline"
-                        >
-                            Add photo (recommended)
-                        </button>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            id="photo-upload"
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    setPhotoFile(file);
+                                    // Create preview URL
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        setPhotoPreview(reader.result as string);
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            }}
+                        />
+                        {photoPreview ? (
+                            <div className="relative w-full">
+                                <img
+                                    src={photoPreview}
+                                    alt="Preview"
+                                    className="w-full h-48 object-cover rounded-lg"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPhotoFile(null);
+                                        setPhotoPreview("");
+                                    }}
+                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="w-10 h-10 text-gray-400 mb-2">📷</div>
+                                <label
+                                    htmlFor="photo-upload"
+                                    className="text-sm font-medium text-primary hover:underline cursor-pointer"
+                                >
+                                    Add photo (recommended)
+                                </label>
+                            </>
+                        )}
                     </div>
 
                     {/* Name */}
@@ -122,7 +203,7 @@ export default function AddItemPage() {
                             Where is this item now? <span className="text-red-500">*</span>
                         </label>
                         <div className="space-y-2">
-                            {MOCK_CAREGIVERS.map((caregiver) => (
+                            {caregivers.map((caregiver) => (
                                 <label
                                     key={caregiver.id}
                                     className={`flex items-center p-3 border rounded-xl cursor-pointer transition-colors ${location === caregiver.id

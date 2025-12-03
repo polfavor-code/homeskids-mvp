@@ -60,7 +60,7 @@ export default function TravelBagPage() {
 
             <div className="mb-6">
                 <h1 className="text-xl font-bold text-gray-900">
-                    {child.name}'s travel bag
+                    {child?.name || "Child"}'s travel bag
                 </h1>
                 <p className="text-sm text-gray-500">
                     Check off items as you pack them.
