@@ -27,12 +27,6 @@ export const viewport: Viewport = {
     maximumScale: 1,
 };
 
-/**
- * Root layout component that wraps the application content with authentication, application state, and items providers and registers a service worker.
- *
- * @param children - The content to render inside the provider tree.
- * @returns The root HTML element containing the body with the provider hierarchy and an inline service worker registration script.
- */
 export default function RootLayout({
     children,
 }: Readonly<{

@@ -6,15 +6,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useAppState } from "@/lib/AppStateContext";
 import { supabase } from "@/lib/supabase";
 
-/**
- * Renders the invite acceptance page and manages the invite flow (landing, login, signup).
- *
- * Fetches invite data by token, presents onboarding UI, handles sign-up or sign-in, creates/updates
- * the user's profile and family membership, migrates invited items to the user, marks the invite
- * accepted, and redirects to the app home when complete.
- *
- * @returns The React element for the invite page UI that drives the invite acceptance and join flow.
- */
 export default function InvitePage() {
     const params = useParams();
     const router = useRouter();

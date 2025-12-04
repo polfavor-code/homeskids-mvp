@@ -5,14 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-/**
- * Renders the login page UI and handles user sign-in.
- *
- * Displays email and password fields, shows validation and authentication errors,
- * authenticates the user via Supabase, and redirects to the app root on successful sign-in.
- *
- * @returns The React element for the login page.
- */
 export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
