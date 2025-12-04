@@ -81,9 +81,17 @@ export default function AddItemPage() {
                 isPacked: false,
                 isMissing,
                 photoUrl: photoUrl || undefined,
+                notes: notes || undefined,
             };
 
-            await addItem(newItem);
+            const result = await addItem(newItem);
+
+            if (!result.success) {
+                setError(result.error || "Failed to create item. Please try again.");
+                setUploading(false);
+                return;
+            }
+
             router.push("/items");
         } catch (err) {
             console.error("Error creating item:", err);
@@ -274,9 +282,9 @@ export default function AddItemPage() {
                 <button
                     type="submit"
                     className="w-full py-3 bg-primary text-white font-bold rounded-xl shadow-sm hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!name || !category || !location}
+                    disabled={uploading || !name || !category || !location}
                 >
-                    Save item
+                    {uploading ? "Saving..." : "Save item"}
                 </button>
             </form>
         </AppShell>

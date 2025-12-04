@@ -8,20 +8,36 @@ import TravelBagPreview from "@/components/home/TravelBagPreview";
 import ToBeFoundPreview from "@/components/home/ToBeFoundPreview";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useAuth } from "@/lib/AuthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
 export default function Home() {
     useEnsureOnboarding();
 
-    const { items } = useItems();
-    const { child, caregivers, currentJuneCaregiverId, setCurrentJuneCaregiverId } = useAppState();
+    const { user, loading: authLoading } = useAuth();
+    const { items, isLoaded: itemsLoaded } = useItems();
+    const { child, caregivers, currentJuneCaregiverId, setCurrentJuneCaregiverId, isLoaded: appStateLoaded } = useAppState();
 
-    const currentCaregiver = caregivers.find(
-        (c) => c.id === currentJuneCaregiverId
-    ) || caregivers[0];
+    const currentCaregiver = caregivers.length
+        ? (caregivers.find((c) => c.id === currentJuneCaregiverId) ?? caregivers[0])
+        : undefined;
 
     // Filter missing items
     const missingItems = items.filter((item) => item.isMissing);
+
+    // Show loading state while auth/data is loading to prevent flash of content
+    if (authLoading || !appStateLoaded || !itemsLoaded) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    // Only show content if user is authenticated (otherwise will redirect via useEnsureOnboarding)
+    if (!user) {
+        return null;
+    }
 
     // Global empty state
     if (items.length === 0) {

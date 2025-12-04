@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Item } from "@/lib/mockData";
 import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
+import ItemPhoto from "@/components/ItemPhoto";
 
 interface HomeCardProps {
     caregiver: CaregiverProfile;
@@ -52,15 +53,22 @@ export default function HomeCard({ caregiver, child, items, isChildHere }: HomeC
                 {items.length > 0 ? (
                     <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                         {items.slice(0, 3).map((item) => (
-                            <div key={item.id} className="flex flex-col gap-1 min-w-[72px]">
-                                <div className="w-[72px] h-[72px] rounded-xl bg-gray-100 flex items-center justify-center text-xl">
-                                    {/* Placeholder for item thumbnail */}
-                                    <span className="opacity-20">📦</span>
+                            <Link
+                                key={item.id}
+                                href={`/items/${item.id}`}
+                                className="flex flex-col gap-1 min-w-[72px] group"
+                            >
+                                <div className="w-[72px] h-[72px] rounded-xl bg-gray-100 flex items-center justify-center text-xl overflow-hidden border border-transparent group-hover:border-primary/20 transition-colors">
+                                    <ItemPhoto
+                                        photoPath={item.photoUrl}
+                                        itemName={item.name}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
-                                <span className="text-xs text-gray-600 truncate w-full text-center">
+                                <span className="text-xs text-gray-600 truncate w-full text-center group-hover:text-primary transition-colors">
                                     {item.name}
                                 </span>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 ) : (

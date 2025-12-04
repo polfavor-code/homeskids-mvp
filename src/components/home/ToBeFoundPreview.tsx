@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Item } from "@/lib/mockData";
+import ItemPhoto from "@/components/ItemPhoto";
 
 interface ToBeFoundPreviewProps {
     missingItems: Item[];
@@ -25,15 +26,23 @@ export default function ToBeFoundPreview({ missingItems }: ToBeFoundPreviewProps
 
             <div className="space-y-3">
                 {missingItems.slice(0, 2).map((item) => (
-                    <div key={item.id} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-lg">
-                            ❓
+                    <Link
+                        key={item.id}
+                        href={`/items/${item.id}`}
+                        className="flex items-center gap-3 group"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-lg overflow-hidden border border-transparent group-hover:border-primary/20 transition-colors">
+                            <ItemPhoto
+                                photoPath={item.photoUrl}
+                                itemName={item.name}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                            <p className="text-sm font-medium text-gray-900 group-hover:text-primary transition-colors">{item.name}</p>
                             <p className="text-xs text-gray-500">Reported missing by Daddy</p>
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
         </div>

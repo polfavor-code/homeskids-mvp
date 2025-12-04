@@ -24,8 +24,6 @@ export default function OnboardingPage() {
 
     // Step 1: Child details
     const [childName, setChildName] = useState(child?.name || "");
-    const [childBirthday, setChildBirthday] = useState("");
-    const [childPhoto, setChildPhoto] = useState<File | null>(null);
     const [childNameError, setChildNameError] = useState("");
 
     // Step 2: Caretakers
@@ -74,7 +72,7 @@ export default function OnboardingPage() {
 
             if (existingChild) {
                 // Update existing child
-                await supabase
+                const { data, error } = await supabase
                     .from("children")
                     .update({
                         name: childName.trim(),
@@ -82,6 +80,13 @@ export default function OnboardingPage() {
                     })
                     .eq("id", existingChild.id);
 
+                if (error) {
+                    console.error("Failed to update child:", error);
+                    setChildNameError("Failed to update child data. Please try again.");
+                    return;
+                }
+
+                // Only update local state when database update succeeds
                 setChild({
                     id: existingChild.id,
                     name: childName.trim(),
@@ -183,8 +188,8 @@ export default function OnboardingPage() {
 
             // Create real invite in Supabase
             if (familyMember) {
-                // Generate unique token
-                const inviteToken = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                // Generate cryptographically secure unique token
+                const inviteToken = crypto.randomUUID();
 
                 // Create invite in database with invitee details
                 const { error: inviteError } = await supabase.from("invites").insert({
@@ -230,12 +235,7 @@ export default function OnboardingPage() {
         router.push("/");
     };
 
-    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setChildPhoto(e.target.files[0]);
-            // TODO: Implement photo preview/upload logic
-        }
-    };
+
 
     if (showInviteCard) {
         return (
@@ -312,7 +312,7 @@ export default function OnboardingPage() {
                                     type="text"
                                     value={childName}
                                     onChange={(e) => setChildName(e.target.value)}
-                                    placeholder="June"
+                                    placeholder="e.g. June"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                                 {childNameError && (
@@ -325,34 +325,8 @@ export default function OnboardingPage() {
                                 </p>
                             )}
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Birthday
-                                </label>
-                                <input
-                                    type="date"
-                                    value={childBirthday}
-                                    onChange={(e) => setChildBirthday(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                />
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Optional child photo
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoChange}
-                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-primary hover:file:bg-blue-100"
-                                />
-                                {childPhoto && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Selected: {childPhoto.name}
-                                    </p>
-                                )}
-                            </div>
+
                         </div>
                     </div>
                 )}
@@ -436,7 +410,8 @@ export default function OnboardingPage() {
                             )}
                         </div>
                     </div>
-                )}
+                )
+                }
 
                 {/* Navigation buttons */}
                 <div className="flex gap-3">
@@ -465,7 +440,7 @@ export default function OnboardingPage() {
                         </button>
                     )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

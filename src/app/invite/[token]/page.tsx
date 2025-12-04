@@ -39,6 +39,12 @@ export default function InvitePage() {
         e.preventDefault();
         if (!invite) return;
 
+        // Fix 1: Validate password confirmation for signup
+        if (view === "signup" && password !== confirmPassword) {
+            alert("Passwords don't match. Please try again.");
+            return;
+        }
+
         try {
             let userId;
 
@@ -49,7 +55,14 @@ export default function InvitePage() {
                     password,
                 });
                 if (authError) throw authError;
-                userId = authData.user?.id;
+
+                // Fix 2: Check that authData.user exists after signup
+                if (!authData.user) {
+                    alert("Please check your email for a confirmation link before continuing.");
+                    return;
+                }
+
+                userId = authData.user.id;
 
                 // Create Profile
                 if (userId) {
@@ -112,7 +125,8 @@ export default function InvitePage() {
 
                 // Refresh app state (will happen automatically on redirect/mount)
                 setOnboardingCompleted(true);
-                window.location.href = "/";
+                // Fix 3: Use router.push for consistent client-side routing
+                router.push("/");
             }
 
         } catch (err: any) {

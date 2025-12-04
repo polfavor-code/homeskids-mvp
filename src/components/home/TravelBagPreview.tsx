@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Item } from "@/lib/mockData";
 import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
+import ItemPhoto from "@/components/ItemPhoto";
 
 interface TravelBagPreviewProps {
     items: Item[]; // All items
@@ -54,12 +55,20 @@ export default function TravelBagPreview({ items, child, currentCaregiver }: Tra
             {previewItems.length > 0 && (
                 <div className="space-y-3 mb-4">
                     {previewItems.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-sm">
-                                🎒
+                        <Link
+                            key={item.id}
+                            href={`/items/${item.id}`}
+                            className="flex items-center gap-3 group"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-sm overflow-hidden border border-transparent group-hover:border-primary/20 transition-colors">
+                                <ItemPhoto
+                                    photoPath={item.photoUrl}
+                                    itemName={item.name}
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
+                                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-primary transition-colors">
                                     {item.name}
                                 </p>
                             </div>
@@ -71,7 +80,7 @@ export default function TravelBagPreview({ items, child, currentCaregiver }: Tra
                             >
                                 {item.isPacked ? "Packed" : "Requested"}
                             </span>
-                        </div>
+                        </Link>
                     ))}
                 </div>
             )}
