@@ -7,13 +7,6 @@ import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
-/**
- * Render the Travel Bag page that displays a unified packing checklist for a child and lets the user mark requested items as packed.
- *
- * The component reads items and app state from context, ensures onboarding has completed, and presents categorized sections for items to pack, already packed, and items reported missing.
- *
- * @returns The page's JSX element containing the travel bag checklist UI
- */
 export default function TravelBagPage() {
     useEnsureOnboarding();
 

@@ -34,13 +34,6 @@ interface AppStateContextType {
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
-/**
- * Provides application-level child and caregiver state to descendant components via AppStateContext.
- *
- * Initializes local state, loads/fetches child, caregivers, pending invites, and onboarding status from the backend for the current user, exposes setters, a `refreshData` function to reload state, and an `isLoaded` flag indicating initial load completion.
- *
- * @returns A React context provider element that supplies the AppStateContext value to `children`.
- */
 export function AppStateProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const [child, setChild] = useState<ChildProfile | null>(null);

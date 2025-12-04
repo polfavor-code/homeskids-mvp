@@ -18,16 +18,6 @@ const CATEGORIES = [
     "Other",
 ];
 
-/**
- * Renders the "Add a new item" page with a form for entering item details.
- *
- * The form lets the user provide a name, category, location (a caregiver or "To be found"), optional notes,
- * and an optional photo. Submitting the form creates a new item via the app's item store, uploads the photo
- * to Supabase storage when a file is provided, and navigates to the items list on success. Displays
- * user-facing errors for missing required fields or upload/creation failures.
- *
- * @returns The JSX element for the Add Item page containing the form, photo upload UI, location selector, and submit button.
- */
 export default function AddItemPage() {
     const router = useRouter();
     const { addItem } = useItems();
