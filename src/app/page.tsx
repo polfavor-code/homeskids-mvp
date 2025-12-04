@@ -11,15 +11,6 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
-/**
- * Renders the app's Home screen, handling onboarding and presenting items by caregiver.
- *
- * Displays an empty-state prompt when there are no items; otherwise shows the location toggle,
- * per-caregiver home cards summarizing items at each caregiver, a travel bag preview for the
- * currently selected caregiver, and a list of missing items.
- *
- * @returns The Home screen UI as a React element
- */
 export default function Home() {
     useEnsureOnboarding();
 

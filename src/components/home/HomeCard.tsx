@@ -11,15 +11,6 @@ interface HomeCardProps {
     isChildHere: boolean;
 }
 
-/**
- * Render a caregiver's home card showing the caregiver avatar, last-updated text, an optional child-present badge, and up to three item thumbnails.
- *
- * @param caregiver - Caregiver profile used for the avatar initials, avatar color, and the card label
- * @param child - Child profile or `null`; when present its initials and name are shown inside the "is here" badge (defaults shown when `null`)
- * @param items - Array of items to display; if non-empty a "View all items" link is shown and up to three items are rendered as thumbnails
- * @param isChildHere - Controls whether the child-present badge is rendered
- * @returns The JSX element for the home card UI
- */
 export default function HomeCard({ caregiver, child, items, isChildHere }: HomeCardProps) {
     return (
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">

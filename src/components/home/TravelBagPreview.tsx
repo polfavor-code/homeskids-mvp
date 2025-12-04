@@ -10,18 +10,6 @@ interface TravelBagPreviewProps {
     currentCaregiver: CaregiverProfile | undefined;
 }
 
-/**
- * Render a compact travel-bag preview for a child showing requested items associated with the current caregiver.
- *
- * Displays a title using the child's name (or "Child"), a subtitle that reflects whether there are no requested items,
- * the bag is fully packed, or how many items remain to pack at the caregiver's location, and up to two item previews
- * (unpacked items first, then packed). Also includes a link to open the full travel bag.
- *
- * @param items - Array of items to evaluate for packing and display.
- * @param child - Child profile used to build the title; may be `null`.
- * @param currentCaregiver - Caregiver used to filter items by location and to populate subtitle text; may be `undefined`.
- * @returns The JSX element for the travel-bag preview card.
- */
 export default function TravelBagPreview({ items, child, currentCaregiver }: TravelBagPreviewProps) {
     // Logic:
     // If June is at Daddy's (currentCaregiver), we are packing FOR Daddy's?

@@ -5,16 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-/**
- * Renders the user registration page and handles sign-up, profile & family creation, and navigation to onboarding.
- *
- * Displays a registration form (email, password, confirm password), validates inputs, signs the user up via Supabase,
- * creates a default profile, creates a family record, links the user as a family member, and navigates to "/onboarding" on success.
- *
- * Validation errors (missing fields or mismatched passwords) and server-side failures are surfaced to the user via an inline error message.
- *
- * @returns The registration page UI as JSX.
- */
 export default function RegisterPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");

@@ -9,12 +9,6 @@ interface AppShellProps {
     children: React.ReactNode;
 }
 
-/**
- * Layout wrapper that provides the application chrome (top app bar with avatars and menus) and a conditional floating action button while rendering page content.
- *
- * @param children - The content to render inside the shell's main area.
- * @returns The app shell element containing the header, main content container, and a bottom-right FAB when not on the onboarding route.
- */
 export default function AppShell({ children }: AppShellProps) {
     const pathname = usePathname();
     const { child, caregivers } = useAppState();
