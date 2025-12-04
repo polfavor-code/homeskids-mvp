@@ -2,14 +2,24 @@ import React from "react";
 import Link from "next/link";
 import { Item } from "@/lib/mockData";
 import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
+import ItemPhoto from "@/components/ItemPhoto";
 
 interface HomeCardProps {
     caregiver: CaregiverProfile;
-    child: ChildProfile;
+    child: ChildProfile | null;
     items: Item[];
     isChildHere: boolean;
 }
 
+/**
+ * Render a caregiver's home card showing the caregiver avatar, last-updated text, an optional child-present badge, and up to three item thumbnails.
+ *
+ * @param caregiver - Caregiver profile used for the avatar initials, avatar color, and the card label
+ * @param child - Child profile or `null`; when present its initials and name are shown inside the "is here" badge (defaults shown when `null`)
+ * @param items - Array of items to display; if non-empty a "View all items" link is shown and up to three items are rendered as thumbnails
+ * @param isChildHere - Controls whether the child-present badge is rendered
+ * @returns The JSX element for the home card UI
+ */
 export default function HomeCard({ caregiver, child, items, isChildHere }: HomeCardProps) {
     return (
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
@@ -29,9 +39,9 @@ export default function HomeCard({ caregiver, child, items, isChildHere }: HomeC
                 {isChildHere && (
                     <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-xs font-semibold">
                         <div className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center text-[10px]">
-                            {child.avatarInitials}
+                            {child?.avatarInitials || "C"}
                         </div>
-                        {child.name} is here
+                        {child?.name || "Child"} is here
                     </div>
                 )}
             </div>
@@ -52,15 +62,22 @@ export default function HomeCard({ caregiver, child, items, isChildHere }: HomeC
                 {items.length > 0 ? (
                     <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                         {items.slice(0, 3).map((item) => (
-                            <div key={item.id} className="flex flex-col gap-1 min-w-[72px]">
-                                <div className="w-[72px] h-[72px] rounded-xl bg-gray-100 flex items-center justify-center text-xl">
-                                    {/* Placeholder for item thumbnail */}
-                                    <span className="opacity-20">📦</span>
+                            <Link
+                                key={item.id}
+                                href={`/items/${item.id}`}
+                                className="flex flex-col gap-1 min-w-[72px] group"
+                            >
+                                <div className="w-[72px] h-[72px] rounded-xl bg-gray-100 flex items-center justify-center text-xl overflow-hidden border border-transparent group-hover:border-primary/20 transition-colors">
+                                    <ItemPhoto
+                                        photoPath={item.photoUrl}
+                                        itemName={item.name}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
-                                <span className="text-xs text-gray-600 truncate w-full text-center">
+                                <span className="text-xs text-gray-600 truncate w-full text-center group-hover:text-primary transition-colors">
                                     {item.name}
                                 </span>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 ) : (

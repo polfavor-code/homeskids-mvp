@@ -2,11 +2,22 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import ItemPhoto from "@/components/ItemPhoto";
 
+/**
+ * Render the item detail page for the specified item.
+ *
+ * Displays the item's photo, status, current location selector, actions (request toggle or missing-note UI),
+ * missing conversation (when applicable), and history. If the item cannot be found, renders a back link and a centered "Item not found" message.
+ *
+ * @param params - Route parameters containing the `itemId` of the item to display.
+ * @returns The page UI for the item identified by `params.itemId`.
+ */
 export default function ItemDetailPage({
     params,
 }: {
@@ -21,7 +32,10 @@ export default function ItemDetailPage({
         getMissingMessagesForItem,
         addMissingMessage,
         markItemFound,
+        deleteItem,
+        updateItemName,
     } = useItems();
+    const router = useRouter();
     const { caregivers, currentJuneCaregiverId } = useAppState();
     const item = items.find((i) => i.id === params.itemId);
 
@@ -39,7 +53,22 @@ export default function ItemDetailPage({
     >([]);
 
     // State for missing conversation
+    // State for missing conversation
     const [messageInput, setMessageInput] = useState("");
+
+    // State for name editing
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedName, setEditedName] = useState(item?.name || "");
+
+    const handleSaveName = async () => {
+        if (!item || !editedName.trim()) return;
+        try {
+            await updateItemName(item.id, editedName.trim());
+            setIsEditingName(false);
+        } catch (error) {
+            alert("Failed to update name");
+        }
+    };
 
     if (!item) {
         return (
@@ -112,6 +141,21 @@ export default function ItemDetailPage({
         }
     };
 
+    const handleDelete = async () => {
+        if (
+            window.confirm(
+                "Are you sure you want to delete this item?\n\nThis cannot be undone and it will disappear for all caretakers from their lists."
+            )
+        ) {
+            const result = await deleteItem(item.id);
+            if (result.success) {
+                router.push("/items");
+            } else {
+                alert(result.error || "Failed to delete item");
+            }
+        }
+    };
+
     return (
         <AppShell>
             {/* Back Link */}
@@ -127,11 +171,66 @@ export default function ItemDetailPage({
             {/* Header & Hero */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">
                 <div className="text-center mb-6">
-                    <div className="w-24 h-24 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center text-4xl font-bold text-gray-400 mb-4">
-                        {item.name.charAt(0)}
+                    <div className="mx-auto mb-4 flex justify-center">
+                        <ItemPhoto
+                            photoPath={item.photoUrl}
+                            itemName={item.name}
+                            className="w-24 h-24"
+                        />
                     </div>
                     {statusPill && <div className="mb-3">{statusPill}</div>}
-                    <h1 className="text-2xl font-bold text-gray-900 mb-1">{item.name}</h1>
+                    {statusPill && <div className="mb-3">{statusPill}</div>}
+
+                    {isEditingName ? (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                            <input
+                                type="text"
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                className="text-2xl font-bold text-gray-900 text-center border-b-2 border-primary focus:outline-none bg-transparent w-full max-w-[250px]"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleSaveName();
+                                    if (e.key === "Escape") {
+                                        setIsEditingName(false);
+                                        setEditedName(item.name);
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={handleSaveName}
+                                className="p-1 text-green-600 hover:text-green-700 bg-green-50 rounded-full w-8 h-8 flex items-center justify-center"
+                            >
+                                ✓
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsEditingName(false);
+                                    setEditedName(item.name);
+                                }}
+                                className="p-1 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full w-8 h-8 flex items-center justify-center"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center gap-2 mb-1">
+                            <h1 className="text-2xl font-bold text-gray-900">{item.name}</h1>
+                            <button
+                                onClick={() => {
+                                    setEditedName(item.name);
+                                    setIsEditingName(true);
+                                }}
+                                className="p-1 text-gray-400 hover:text-primary transition-colors"
+                                aria-label="Edit name"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    )}
                     <p className="text-gray-500 font-medium">
                         {item.category} · {locationLabel}
                     </p>
@@ -142,7 +241,7 @@ export default function ItemDetailPage({
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
                 <h3 className="font-bold text-gray-900 mb-3">Current home</h3>
                 <select
-                    value={item.isMissing ? "TO_BE_FOUND" : item.locationCaregiverId}
+                    value={item.isMissing ? "TO_BE_FOUND" : item.locationCaregiverId ?? undefined}
                     onChange={(e) => handleLocationChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white"
                 >
@@ -157,6 +256,14 @@ export default function ItemDetailPage({
                     <p className="text-xs text-gray-500 mt-2">{updateMessage}</p>
                 )}
             </div>
+
+            {/* Notes Section */}
+            {item.notes && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
+                    <h3 className="font-bold text-gray-900 mb-2">Notes</h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.notes}</p>
+                </div>
+            )}
 
             {/* Actions Card */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">
@@ -357,6 +464,16 @@ export default function ItemDetailPage({
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Delete Button */}
+            <div className="mt-8 mb-4 text-center">
+                <button
+                    onClick={handleDelete}
+                    className="text-red-500 text-sm font-medium hover:text-red-600 transition-colors py-2 px-4 rounded-lg hover:bg-red-50"
+                >
+                    Delete item
+                </button>
             </div>
         </AppShell >
     );

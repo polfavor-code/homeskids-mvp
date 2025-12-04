@@ -3,7 +3,18 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
+/**
+ * Renders the user registration page and handles sign-up, profile & family creation, and navigation to onboarding.
+ *
+ * Displays a registration form (email, password, confirm password), validates inputs, signs the user up via Supabase,
+ * creates a default profile, creates a family record, links the user as a family member, and navigates to "/onboarding" on success.
+ *
+ * Validation errors (missing fields or mismatched passwords) and server-side failures are surfaced to the user via an inline error message.
+ *
+ * @returns The registration page UI as JSX.
+ */
 export default function RegisterPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
@@ -11,7 +22,7 @@ export default function RegisterPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !password || !confirmPassword) {
             setError("Please fill in all fields.");
@@ -23,9 +34,71 @@ export default function RegisterPage() {
         }
         setError("");
 
-        // TODO: Implement real registration
-        // For now, just redirect to onboarding
-        router.push("/onboarding");
+        try {
+            // 1. Sign up user
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email,
+                password,
+            });
+
+            if (authError) {
+                setError(authError.message);
+                return;
+            }
+
+            if (authData.user) {
+                const userId = authData.user.id;
+
+                // 2. Create Profile
+                const { error: profileError } = await supabase
+                    .from("profiles")
+                    .insert({
+                        id: userId,
+                        email: email,
+                        name: email.split("@")[0], // Default name from email
+                        avatar_initials: email[0].toUpperCase(),
+                        avatar_color: "bg-blue-500", // Default color
+                    });
+
+                if (profileError) {
+                    console.error("Profile creation failed:", profileError);
+                    // Continue anyway, can be fixed later or via triggers
+                }
+
+                // 3. Create Family
+                const { data: familyData, error: familyError } = await supabase
+                    .from("families")
+                    .insert({
+                        name: `${email.split("@")[0]}'s Family`,
+                    })
+                    .select()
+                    .single();
+
+                if (familyError || !familyData) {
+                    console.error("Family creation failed:", familyError);
+                    setError("Failed to create family space.");
+                    return;
+                }
+
+                // 4. Link User to Family
+                const { error: memberError } = await supabase
+                    .from("family_members")
+                    .insert({
+                        family_id: familyData.id,
+                        user_id: userId,
+                        role: "parent",
+                    });
+
+                if (memberError) {
+                    console.error("Failed to join family:", memberError);
+                }
+
+                router.push("/onboarding");
+            }
+        } catch (err) {
+            setError("An unexpected error occurred.");
+            console.error(err);
+        }
     };
 
     return (

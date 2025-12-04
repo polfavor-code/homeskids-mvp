@@ -2,12 +2,25 @@ import React from "react";
 import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
 
 interface JuneLocationToggleProps {
-    child: ChildProfile;
+    child: ChildProfile | null;
     caregivers: CaregiverProfile[];
     selectedCaregiverId: string;
     onToggle: (caregiverId: string) => void;
 }
 
+/**
+ * Renders a horizontal toggle of caregivers so the user can select who the child is with.
+ *
+ * Renders one button per caregiver, highlights the button whose id matches `selectedCaregiverId`,
+ * and calls `onToggle` with the caregiver's id when a button is clicked. If `child` is null or
+ * has no name, displays "your child" in the heading.
+ *
+ * @param child - The child profile to reference in the heading; may be `null`.
+ * @param caregivers - List of caregivers to render as selectable options.
+ * @param selectedCaregiverId - The id of the currently selected caregiver.
+ * @param onToggle - Callback invoked with the selected caregiver's id when a caregiver is chosen.
+ * @returns The JSX element for the caregiver selection toggle.
+ */
 export default function JuneLocationToggle({
     child,
     caregivers,
@@ -16,7 +29,7 @@ export default function JuneLocationToggle({
 }: JuneLocationToggleProps) {
     return (
         <div className="space-y-3">
-            <h2 className="text-lg font-bold text-gray-900">Where is {child.name} right now?</h2>
+            <h2 className="text-lg font-bold text-gray-900">Where is {child?.name || "your child"} right now?</h2>
             <div className="flex p-1 bg-gray-100 rounded-xl">
                 {caregivers.map((caregiver) => {
                     const isSelected = selectedCaregiverId === caregiver.id;

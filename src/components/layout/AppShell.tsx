@@ -9,6 +9,12 @@ interface AppShellProps {
     children: React.ReactNode;
 }
 
+/**
+ * Layout wrapper that provides the application chrome (top app bar with avatars and menus) and a conditional floating action button while rendering page content.
+ *
+ * @param children - The content to render inside the shell's main area.
+ * @returns The app shell element containing the header, main content container, and a bottom-right FAB when not on the onboarding route.
+ */
 export default function AppShell({ children }: AppShellProps) {
     const pathname = usePathname();
     const { child, caregivers } = useAppState();
@@ -20,9 +26,10 @@ export default function AppShell({ children }: AppShellProps) {
     // Hide + button on onboarding routes
     const isOnboarding = pathname === "/onboarding";
 
-    const handleLogout = () => {
-        // TODO: Implement logout logic
-        console.log("Logout clicked");
+    const handleLogout = async () => {
+        const { supabase } = await import("@/lib/supabase");
+        await supabase.auth.signOut();
+        window.location.href = "/login";
     };
 
     return (
@@ -68,9 +75,9 @@ export default function AppShell({ children }: AppShellProps) {
                         <button
                             onClick={() => setChildMenuOpen(!childMenuOpen)}
                             className="w-8 h-8 rounded-full bg-mint text-white flex items-center justify-center text-sm font-medium shadow-sm"
-                            aria-label={child.name}
+                            aria-label={child?.name || "Child"}
                         >
-                            {child.avatarInitials}
+                            {child?.avatarInitials || "C"}
                         </button>
                         {childMenuOpen && (
                             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">

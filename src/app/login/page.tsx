@@ -3,14 +3,23 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
+/**
+ * Renders the login page UI and handles user sign-in.
+ *
+ * Displays email and password fields, shows validation and authentication errors,
+ * authenticates the user via Supabase, and redirects to the app root on successful sign-in.
+ *
+ * @returns The React element for the login page.
+ */
 export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !password) {
             setError("Please enter both email and password.");
@@ -18,9 +27,22 @@ export default function LoginPage() {
         }
         setError("");
 
-        // TODO: Implement real authentication
-        // For now, just redirect to home
-        router.push("/");
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (error) {
+                setError(error.message);
+                return;
+            }
+
+            router.push("/");
+        } catch (err) {
+            setError("An unexpected error occurred.");
+            console.error(err);
+        }
     };
 
     return (

@@ -2,16 +2,34 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppState, type ChildProfile, type CaregiverProfile } from "@/lib/AppStateContext";
+import AppShell from "@/components/layout/AppShell";
+import { useAppState, type CaregiverProfile } from "@/lib/AppStateContext";
+import { useAuth } from "@/lib/AuthContext";
 
+/**
+ * Renders the two-step onboarding flow for adding a child and inviting caretakers.
+ *
+ * The component manages local form state for child details and two caretakers, persists
+ * data to Supabase (children, profiles, invites), updates application state via
+ * useAppState, stores a pending invite token in localStorage, and navigates to home when finished.
+ *
+ * Side effects:
+ * - Reads/writes Supabase tables: family_members, children, profiles, invites.
+ * - Updates app state (setChild, setCaregivers, setOnboardingCompleted) and calls refreshData.
+ * - Persists a pending invite token to localStorage and copies invite links to the clipboard.
+ *
+ * @returns The onboarding page React element
+ */
 export default function OnboardingPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const {
         child,
         caregivers,
         setChild,
         setCaregivers,
         setOnboardingCompleted,
+        refreshData,
     } = useAppState();
 
     // Wizard step management
@@ -19,9 +37,7 @@ export default function OnboardingPage() {
     const [showInviteCard, setShowInviteCard] = useState(false);
 
     // Step 1: Child details
-    const [childName, setChildName] = useState(child.name);
-    const [childBirthday, setChildBirthday] = useState("");
-    const [childPhoto, setChildPhoto] = useState<File | null>(null);
+    const [childName, setChildName] = useState(child?.name || "");
     const [childNameError, setChildNameError] = useState("");
 
     // Step 2: Caretakers
@@ -31,27 +47,98 @@ export default function OnboardingPage() {
     const [caretaker2Label, setCaretaker2Label] = useState(caregivers[1]?.label || "");
     const [caretakersError, setCaretakersError] = useState("");
 
-    const handleNextStep1 = () => {
+    const handleNextStep1 = async () => {
         if (!childName.trim()) {
             setChildNameError("Please enter a name.");
             return;
         }
         setChildNameError("");
 
-        // Derive initials (first letter of first word)
-        const initials = childName.trim().charAt(0).toUpperCase();
+        try {
+            const { supabase } = await import("@/lib/supabase");
 
-        // Update AppState
-        setChild({
-            id: child.id || "child-1",
-            name: childName.trim(),
-            avatarInitials: initials,
-        });
+            if (!user) {
+                setChildNameError("Authentication error. Please log in again.");
+                return;
+            }
 
-        setStep(1);
+            // Get user's family
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", user.id)
+                .single();
+
+            if (!familyMember) {
+                setChildNameError("No family found. Please contact support.");
+                return;
+            }
+
+            // Derive initials
+            const initials = childName.trim().charAt(0).toUpperCase();
+
+            // Save or update child in database
+            const { data: existingChild } = await supabase
+                .from("children")
+                .select("*")
+                .eq("family_id", familyMember.family_id)
+                .single();
+
+            if (existingChild) {
+                // Update existing child
+                const { data, error } = await supabase
+                    .from("children")
+                    .update({
+                        name: childName.trim(),
+                        avatar_initials: initials,
+                    })
+                    .eq("id", existingChild.id);
+
+                if (error) {
+                    console.error("Failed to update child:", error);
+                    setChildNameError("Failed to update child data. Please try again.");
+                    return;
+                }
+
+                // Only update local state when database update succeeds
+                setChild({
+                    id: existingChild.id,
+                    name: childName.trim(),
+                    avatarInitials: initials,
+                });
+            } else {
+                // Create new child
+                const { data: newChild, error: childError } = await supabase
+                    .from("children")
+                    .insert({
+                        family_id: familyMember.family_id,
+                        name: childName.trim(),
+                        avatar_initials: initials,
+                    })
+                    .select()
+                    .single();
+
+                if (childError) {
+                    setChildNameError("Failed to save child data.");
+                    console.error(childError);
+                    return;
+                }
+
+                setChild({
+                    id: newChild.id,
+                    name: newChild.name,
+                    avatarInitials: newChild.avatar_initials,
+                });
+            }
+
+            setStep(1);
+        } catch (error) {
+            console.error("Error saving child:", error);
+            setChildNameError("Failed to save. Please try again.");
+        }
     };
 
-    const handleFinishSetup = () => {
+    const handleFinishSetup = async () => {
         if (
             !caretaker1Name.trim() ||
             !caretaker1Label.trim() ||
@@ -63,35 +150,97 @@ export default function OnboardingPage() {
         }
         setCaretakersError("");
 
-        // Create caretakers array
-        const newCaretakers: CaregiverProfile[] = [
-            {
-                id: caregivers[0]?.id || "cg-1",
-                name: caretaker1Name.trim(),
-                label: caretaker1Label.trim(),
-                avatarInitials: caretaker1Name.trim().charAt(0).toUpperCase(),
-                avatarColor: caregivers[0]?.avatarColor || "bg-blue-500",
-            },
-            {
-                id: caregivers[1]?.id || "cg-2",
-                name: caretaker2Name.trim(),
-                label: caretaker2Label.trim(),
-                avatarInitials: caretaker2Name.trim().charAt(0).toUpperCase(),
-                avatarColor: caregivers[1]?.avatarColor || "bg-pink-500",
-            },
-        ];
+        try {
+            const { supabase } = await import("@/lib/supabase");
 
-        // Update AppState
-        setCaregivers(newCaretakers);
-        setOnboardingCompleted(true);
+            if (!user) {
+                setCaretakersError("Authentication error.");
+                return;
+            }
 
-        // Show invite card
-        setShowInviteCard(true);
+            // Update current user's profile with their name and initials
+            await supabase
+                .from("profiles")
+                .update({
+                    name: caretaker1Name.trim(),
+                    avatar_initials: caretaker1Name.trim().charAt(0).toUpperCase(),
+                })
+                .eq("id", user.id);
+
+            // Get user's family for the invite
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", user.id)
+                .single();
+
+            // Create caretakers array with real user ID
+            const newCaretakers: CaregiverProfile[] = [
+                {
+                    id: user.id, // Real user ID
+                    name: caretaker1Name.trim(),
+                    label: caretaker1Label.trim(),
+                    avatarInitials: caretaker1Name.trim().charAt(0).toUpperCase(),
+                    avatarColor: "bg-blue-500",
+                    isCurrentUser: true,
+                },
+            ];
+
+            // Update AppState
+            setCaregivers(newCaretakers);
+
+            // Save onboarding completion to Supabase
+            await supabase
+                .from("profiles")
+                .update({
+                    onboarding_completed: true,
+                    label: caretaker1Label.trim()
+                })
+                .eq("id", user.id);
+
+            setOnboardingCompleted(true);
+
+            // Create real invite in Supabase
+            if (familyMember) {
+                // Generate cryptographically secure unique token
+                const inviteToken = crypto.randomUUID();
+
+                // Create invite in database with invitee details
+                const { error: inviteError } = await supabase.from("invites").insert({
+                    family_id: familyMember.family_id,
+                    token: inviteToken,
+                    status: "pending",
+                    invitee_name: caretaker2Name.trim(),
+                    invitee_label: caretaker2Label.trim(),
+                    created_at: new Date().toISOString(),
+                });
+
+                if (inviteError) {
+                    console.error("Failed to create invite:", inviteError);
+                } else {
+                    // Store invite token for display
+                    localStorage.setItem("pending_invite_token", inviteToken);
+                }
+            }
+
+            // Show invite card
+            setShowInviteCard(true);
+
+            // Refresh app state to load the new invite as a pending caregiver
+            await refreshData();
+        } catch (error) {
+            console.error("Failed to complete onboarding:", error);
+            setCaretakersError("Failed to save. Please try again.");
+        }
     };
 
     const handleCopyInviteLink = () => {
-        // Generate a mock invite link
-        const inviteLink = `${window.location.origin}/invite/${caregivers[1]?.id || 'cg-2'}`;
+        const inviteToken = localStorage.getItem("pending_invite_token");
+        if (!inviteToken) {
+            alert("No invite link available");
+            return;
+        }
+        const inviteLink = `${window.location.origin}/invite/${inviteToken}`;
         navigator.clipboard.writeText(inviteLink);
         alert("Invite link copied to clipboard!");
     };
@@ -100,12 +249,7 @@ export default function OnboardingPage() {
         router.push("/");
     };
 
-    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setChildPhoto(e.target.files[0]);
-            // TODO: Implement photo preview/upload logic
-        }
-    };
+
 
     if (showInviteCard) {
         return (
@@ -182,7 +326,7 @@ export default function OnboardingPage() {
                                     type="text"
                                     value={childName}
                                     onChange={(e) => setChildName(e.target.value)}
-                                    placeholder="June"
+                                    placeholder="e.g. June"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                                 {childNameError && (
@@ -195,34 +339,8 @@ export default function OnboardingPage() {
                                 </p>
                             )}
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Birthday
-                                </label>
-                                <input
-                                    type="date"
-                                    value={childBirthday}
-                                    onChange={(e) => setChildBirthday(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                />
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Optional child photo
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoChange}
-                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-primary hover:file:bg-blue-100"
-                                />
-                                {childPhoto && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Selected: {childPhoto.name}
-                                    </p>
-                                )}
-                            </div>
+
                         </div>
                     </div>
                 )}
@@ -249,7 +367,7 @@ export default function OnboardingPage() {
                                             type="text"
                                             value={caretaker1Name}
                                             onChange={(e) => setCaretaker1Name(e.target.value)}
-                                            placeholder="Paul"
+                                            placeholder="e.g. Paul"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         />
                                     </div>
@@ -261,7 +379,7 @@ export default function OnboardingPage() {
                                             type="text"
                                             value={caretaker1Label}
                                             onChange={(e) => setCaretaker1Label(e.target.value)}
-                                            placeholder="Daddy"
+                                            placeholder="e.g. Daddy"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         />
                                     </div>
@@ -282,7 +400,7 @@ export default function OnboardingPage() {
                                             type="text"
                                             value={caretaker2Name}
                                             onChange={(e) => setCaretaker2Name(e.target.value)}
-                                            placeholder="Alice"
+                                            placeholder="e.g. Ellis"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         />
                                     </div>
@@ -294,7 +412,7 @@ export default function OnboardingPage() {
                                             type="text"
                                             value={caretaker2Label}
                                             onChange={(e) => setCaretaker2Label(e.target.value)}
-                                            placeholder="Mommy"
+                                            placeholder="e.g. Mommy"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         />
                                     </div>
@@ -306,7 +424,8 @@ export default function OnboardingPage() {
                             )}
                         </div>
                     </div>
-                )}
+                )
+                }
 
                 {/* Navigation buttons */}
                 <div className="flex gap-3">
@@ -335,7 +454,7 @@ export default function OnboardingPage() {
                         </button>
                     )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

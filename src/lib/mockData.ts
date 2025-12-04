@@ -10,10 +10,12 @@ export interface Item {
     id: string;
     name: string;
     category: string;
-    locationCaregiverId: string;
+    locationCaregiverId: string | null;
     isRequestedForNextVisit: boolean;
     isPacked: boolean;
     isMissing: boolean;
+    photoUrl?: string; // Optional photo URL from Supabase Storage
+    notes?: string; // Optional notes
 }
 
 export interface Child {
@@ -38,7 +40,7 @@ export const MOCK_CAREGIVERS: Caregiver[] = [
     },
     {
         id: "b1",
-        name: "Alice",
+        name: "Ellis",
         label: "Mommy",
         avatarInitials: "A",
         avatarColor: "bg-pink-500",
