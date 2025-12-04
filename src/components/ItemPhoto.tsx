@@ -9,6 +9,16 @@ interface ItemPhotoProps {
     className?: string;
 }
 
+/**
+ * Renders an item image fetched from Supabase storage or a fallback placeholder while loading or when no photo exists.
+ *
+ * Renders a placeholder with the item's initial if `photoPath` is not provided or a signed URL is not available, a loading placeholder while the signed URL is being retrieved, and the image element when the signed URL is obtained.
+ *
+ * @param photoPath - Path to the photo in Supabase storage; when undefined or empty a placeholder is shown
+ * @param itemName - Item name used for the image `alt` attribute and the placeholder initial
+ * @param className - Optional additional CSS classes applied to the rendered element
+ * @returns A JSX element displaying the image, a loading state, or a placeholder depending on `photoPath` and fetch status
+ */
 export default function ItemPhoto({ photoPath, itemName, className = "" }: ItemPhotoProps) {
     const [photoUrl, setPhotoUrl] = useState<string>("");
     const [loading, setLoading] = useState(true);

@@ -8,6 +8,19 @@ interface JuneLocationToggleProps {
     onToggle: (caregiverId: string) => void;
 }
 
+/**
+ * Renders a horizontal toggle of caregivers so the user can select who the child is with.
+ *
+ * Renders one button per caregiver, highlights the button whose id matches `selectedCaregiverId`,
+ * and calls `onToggle` with the caregiver's id when a button is clicked. If `child` is null or
+ * has no name, displays "your child" in the heading.
+ *
+ * @param child - The child profile to reference in the heading; may be `null`.
+ * @param caregivers - List of caregivers to render as selectable options.
+ * @param selectedCaregiverId - The id of the currently selected caregiver.
+ * @param onToggle - Callback invoked with the selected caregiver's id when a caregiver is chosen.
+ * @returns The JSX element for the caregiver selection toggle.
+ */
 export default function JuneLocationToggle({
     child,
     caregivers,

@@ -6,6 +6,20 @@ import AppShell from "@/components/layout/AppShell";
 import { useAppState, type CaregiverProfile } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 
+/**
+ * Renders the two-step onboarding flow for adding a child and inviting caretakers.
+ *
+ * The component manages local form state for child details and two caretakers, persists
+ * data to Supabase (children, profiles, invites), updates application state via
+ * useAppState, stores a pending invite token in localStorage, and navigates to home when finished.
+ *
+ * Side effects:
+ * - Reads/writes Supabase tables: family_members, children, profiles, invites.
+ * - Updates app state (setChild, setCaregivers, setOnboardingCompleted) and calls refreshData.
+ * - Persists a pending invite token to localStorage and copies invite links to the clipboard.
+ *
+ * @returns The onboarding page React element
+ */
 export default function OnboardingPage() {
     const router = useRouter();
     const { user } = useAuth();

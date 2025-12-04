@@ -9,6 +9,15 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import ItemPhoto from "@/components/ItemPhoto";
 
+/**
+ * Render the item detail page for the specified item.
+ *
+ * Displays the item's photo, status, current location selector, actions (request toggle or missing-note UI),
+ * missing conversation (when applicable), and history. If the item cannot be found, renders a back link and a centered "Item not found" message.
+ *
+ * @param params - Route parameters containing the `itemId` of the item to display.
+ * @returns The page UI for the item identified by `params.itemId`.
+ */
 export default function ItemDetailPage({
     params,
 }: {

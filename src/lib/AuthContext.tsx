@@ -13,6 +13,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Provides authentication context to descendants and manages Supabase authentication state.
+ *
+ * @param children - Elements rendered as the provider's content; rendered only after initial auth state is resolved
+ * @returns The context provider element supplying `user`, `session`, `loading`, and `signOut` to descendants
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
@@ -40,6 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
+/**
+ * Accesses the authentication context provided by an AuthProvider.
+ *
+ * @returns The current authentication context with `user`, `session`, `loading`, and `signOut`.
+ * @throws Error if called outside of an AuthProvider.
+ */
 export function useAuth() {
     const context = useContext(AuthContext);
     if (context === undefined) {
