@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard V4 - Action Oriented</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-cream: #FDFBF7;
+            --forest: #243425;
+            --forest-light: #5C705D;
+            --accent: #E8F3E9;
+            --white: #FFFFFF;
+            --shadow: 0 8px 24px rgba(36, 52, 37, 0.08);
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Outfit', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header-section {
+            margin-bottom: 40px;
+        }
+
+        .greeting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 24px;
+        }
+
+        .greeting {
+            font-family: 'DM Serif Display', serif;
+            font-size: 32px;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .date-badge {
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--accent);
+            padding: 6px 12px;
+            border-radius: 100px;
+            color: var(--forest);
+        }
+
+        .intro-text {
+            font-size: 16px;
+            color: var(--forest-light);
+            margin-bottom: 24px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--forest-light);
+            flex-wrap: wrap;
+        }
+
+        .stat-highlight {
+            color: var(--forest);
+            font-weight: 700;
+        }
+
+        .stat-alert {
+            color: #D32F2F;
+            font-weight: 700;
+            background: #FFEBEE;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .primary-actions {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-add {
+            background: var(--forest);
+            color: white;
+            box-shadow: 0 4px 12px rgba(36, 52, 37, 0.2);
+        }
+
+        .btn-sec {
+            background: white;
+            border: 1px solid #E0E0E0;
+            color: var(--forest);
+        }
+
+        /* Section Title */
+        .section-header {
+            text-align: center;
+            margin-bottom: 32px;
+            position: relative;
+        }
+
+        .section-header::after {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 2px;
+            background: var(--forest);
+            margin: 16px auto 0;
+            opacity: 0.1;
+        }
+
+        .section-header h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .section-header p {
+            font-size: 13px;
+            color: var(--forest-light);
+            margin-top: 6px;
+        }
+
+        /* Flow */
+        .flow-container {
+            position: relative;
+        }
+
+        .flow-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background: linear-gradient(to bottom, transparent, #E0DCD5 10%, #E0DCD5 90%, transparent);
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 10;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .home-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .status-pill {
+            background: var(--forest);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background: #F8F8F8;
+            padding: 16px;
+            border-radius: 16px;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-val {
+            display: block;
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .info-lbl {
+            font-size: 11px;
+            color: var(--forest-light);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Bag Card */
+        .bag-card {
+            text-align: center;
+            max-width: 300px;
+            margin: 0 auto 40px;
+            padding: 32px 24px;
+            border-radius: 32px;
+        }
+
+        /* Stacked Items */
+        .stack-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 24px 0;
+            height: 64px;
+        }
+
+        .stack-item {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 4px solid var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin-left: -22px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            position: relative;
+            background-color: #F5F5F5;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .stack-item:nth-child(1) {
+            margin-left: 0;
+            z-index: 4;
+            background-color: #FFE4E1;
+        }
+
+        .stack-item:nth-child(2) {
+            z-index: 3;
+            background-color: #F0F8FF;
+        }
+
+        .stack-item:nth-child(3) {
+            z-index: 2;
+            background-color: #F0FFF0;
+        }
+
+        .stack-item:nth-child(4) {
+            z-index: 1;
+            background-color: #E8E8E8;
+            color: #4A5D4B;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stack-item:hover {
+            transform: scale(1.15) translateY(-4px);
+            z-index: 20;
+        }
+
+        .bag-cta {
+            background: var(--forest);
+            color: white;
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(36, 52, 37, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .bag-cta:hover {
+            background: #1A261B;
+        }
+
+        .switch-btn {
+            background: white;
+            border: 2px solid #F0F0F0;
+            color: var(--forest);
+            width: 100%;
+            padding: 14px;
+            border-radius: 16px;
+            font-weight: 600;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        .switch-btn:hover {
+            border-color: var(--forest);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header-section">
+            <div class="greeting-row">
+                <h1 class="greeting">Hi Paul,</h1>
+                <div class="date-badge">Today</div>
+            </div>
+            <p class="intro-text">Here’s what you need for June today.</p>
+
+            <div class="stats-bar">
+                <span><span class="stat-highlight">2</span> homes</span> •
+                <span><span class="stat-highlight">11</span> items</span> •
+                <span><span class="stat-highlight">2</span> to pack</span> •
+                <span class="stat-alert">1 missing</span>
+            </div>
+
+            <div class="primary-actions">
+                <button class="action-btn btn-add">+ Add item</button>
+                <button class="action-btn btn-sec">Request</button>
+                <button class="action-btn btn-sec">Invite</button>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h2>June’s home right now</h2>
+            <p>Tap a home to view details or switch location.</p>
+        </div>
+
+        <div class="flow-container">
+            <div class="flow-line"></div>
+
+            <!-- Active Home -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="home-name">Ellishouse</h3>
+                    <div class="status-pill">Here</div>
+                </div>
+                <div style="font-size:13px; color:#5C705D; margin-bottom:16px;">Local time 02:07</div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-val">Map</span>
+                        <span class="info-lbl">View</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-val">2</span>
+                        <span class="info-lbl">People</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-val">3</span>
+                        <span class="info-lbl">Items</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bag -->
+            <div class="card bag-card">
+                <h3 class="home-name" style="font-size:22px;">June's Travel Bag</h3>
+
+                <div class="stack-container">
+                    <div class="stack-item">📱</div>
+                    <div class="stack-item"><img
+                            src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=64&h=64"
+                            style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Dog"></div>
+                    <div class="stack-item">🧸</div>
+                    <div class="stack-item">+2</div>
+                </div>
+
+                <p style="margin-bottom:24px; font-weight:500;">2 items to pack</p>
+
+                <button class="bag-cta">
+                    Open bag <span>→</span>
+                </button>
+            </div>
+
+            <!-- Other Home -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="home-name">Daddieshouse</h3>
+                </div>
+                <div style="font-size:13px; color:#5C705D; margin-bottom:16px;">Local time 02:07</div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-val">Map</span>
+                        <span class="info-lbl">View</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-val">1</span>
+                        <span class="info-lbl">Person</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-val">8</span>
+                        <span class="info-lbl">Items</span>
+                    </div>
+                </div>
+                <button class="switch-btn">Switch to this home</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

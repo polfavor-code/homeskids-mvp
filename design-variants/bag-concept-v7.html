@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Bag - Concept 7</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #E5E5E5;
+            padding-bottom: 16px;
+        }
+
+        h1 {
+            font-family: serif;
+            font-size: 24px;
+            color: var(--forest);
+            margin: 0;
+        }
+
+        .route {
+            font-size: 12px;
+            font-weight: 600;
+            color: #888;
+        }
+
+        .outline-card {
+            background: white;
+            border: 2px solid #EAEAEA;
+            border-radius: 16px;
+            padding: 24px;
+            transition: border-color 0.2s;
+        }
+
+        .outline-card:hover {
+            border-color: var(--forest);
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            border: 1px solid #DDD;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--forest);
+        }
+
+        .info h3 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--forest);
+        }
+
+        .info p {
+            margin: 2px 0 0;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .mini-list {
+            margin-bottom: 24px;
+        }
+
+        .mini-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #F5F5F5;
+            font-size: 14px;
+        }
+
+        .mini-item:last-child {
+            border-bottom: none;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--forest);
+            border-radius: 8px;
+            color: var(--forest);
+            text-align: center;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--forest);
+            color: white;
+        }
+
+        .missing-simple {
+            margin-top: 24px;
+            font-size: 13px;
+            color: #C53030;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Check June’s bag</h1>
+            <span class="route">Daddy's → Mommy's</span>
+        </div>
+
+        <div class="outline-card">
+            <div class="top">
+                <div class="icon-box">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 7H18V21H6V7Z" />
+                        <path d="M9 7V4C9 3 10 2 11 2H13C14 2 15 3 15 4V7" />
+                    </svg>
+                </div>
+                <div class="info">
+                    <h3>June's Travel Bag</h3>
+                    <p>3 of 4 items packed</p>
+                </div>
+            </div>
+
+            <div class="mini-list">
+                <div class="mini-item">
+                    <span>Flashlight</span> <span>✓</span>
+                </div>
+                <div class="mini-item">
+                    <span>iPad</span> <span>✓</span>
+                </div>
+                <div class="mini-item">
+                    <span>Meds</span> <span>✓</span>
+                </div>
+                <div class="mini-item" style="color:#888;">
+                    <span>School Folder</span> <span>○</span>
+                </div>
+            </div>
+
+            <a href="#" class="btn">Open bag details →</a>
+        </div>
+
+        <div class="missing-simple">
+            <strong>Missing:</strong> Soccer Cleats (from Daddy's)
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import ItemPhoto from "@/components/ItemPhoto";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -12,7 +13,7 @@ function ItemsPageContent() {
     useEnsureOnboarding();
 
     const { items } = useItems();
-    const { child, caregivers } = useAppState();
+    const { child, caregivers, homes } = useAppState();
     const searchParams = useSearchParams();
     const [filter, setFilter] = useState<string>("All");
 
@@ -24,19 +25,31 @@ function ItemsPageContent() {
         }
     }, [searchParams]);
 
-    // Helper to get location label
-    const getLocationLabel = (caregiverId: string, isMissing: boolean) => {
-        if (isMissing) return "To be found";
-        const caregiver = caregivers.find((c) => c.id === caregiverId);
+    // Helper to get location label - prefers home, falls back to caregiver
+    const getLocationLabel = (item: { locationHomeId: string | null; locationCaregiverId: string | null; isMissing: boolean }) => {
+        if (item.isMissing) return "To be found";
+        // Prefer home-based location
+        if (item.locationHomeId) {
+            const home = homes.find((h) => h.id === item.locationHomeId);
+            if (home) return home.name;
+        }
+        // Fallback to caregiver
+        const caregiver = caregivers.find((c) => c.id === item.locationCaregiverId);
         return caregiver ? `${caregiver.label}'s Home` : "Unknown Location";
     };
 
-    // Filter items
+    // Filter items - now supports filtering by home ID
     const filteredItems = items.filter((item) => {
         if (filter === "All") return true;
         if (filter === "To be found") return item.isMissing;
-        // Filter by caregiver ID
-        return item.locationCaregiverId === filter && !item.isMissing;
+        // Filter by home ID (or fallback to caregiver match via home's owner)
+        if (item.locationHomeId === filter) return !item.isMissing;
+        // Also check if item's caregiver matches the home's owner (for legacy items)
+        const filterHome = homes.find((h) => h.id === filter);
+        if (filterHome?.ownerCaregiverId && item.locationCaregiverId === filterHome.ownerCaregiverId) {
+            return !item.isMissing;
+        }
+        return false;
     });
 
     return (
@@ -61,16 +74,16 @@ function ItemsPageContent() {
                 >
                     All
                 </button>
-                {caregivers.map((caregiver) => (
+                {homes.map((home) => (
                     <button
-                        key={caregiver.id}
-                        onClick={() => setFilter(caregiver.id)}
-                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === caregiver.id
+                        key={home.id}
+                        onClick={() => setFilter(home.id)}
+                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === home.id
                             ? "bg-primary text-white"
                             : "bg-white border border-gray-200 text-gray-600"
                             }`}
                     >
-                        {caregiver.label}&apos;s Home
+                        {home.name}
                     </button>
                 ))}
                 <button
@@ -87,10 +100,7 @@ function ItemsPageContent() {
             {/* Item List */}
             <div className="space-y-2">
                 {filteredItems.map((item) => {
-                    const locationLabel = getLocationLabel(
-                        item.locationCaregiverId,
-                        item.isMissing
-                    );
+                    const locationLabel = getLocationLabel(item);
 
                     return (
                         <Link
@@ -99,10 +109,12 @@ function ItemsPageContent() {
                             className="block bg-white rounded-xl p-3 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform"
                         >
                             <div className="flex items-center justify-between gap-3">
-                                {/* Left: Thumbnail */}
-                                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-lg font-bold text-gray-400 flex-shrink-0">
-                                    {item.name.charAt(0)}
-                                </div>
+                                {/* Left: Thumbnail - Use ItemPhoto for real images */}
+                                <ItemPhoto
+                                    photoPath={item.photoUrl}
+                                    itemName={item.name}
+                                    className="w-12 h-12 flex-shrink-0"
+                                />
 
                                 {/* Middle: Info */}
                                 <div className="flex-1 min-w-0">

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+            --teal: #4CA1AF;
+            --orange: #D76F4B;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 60px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* The flow line - connecting upwards and downwards */
+        .flow-line {
+            position: absolute;
+            top: -60px;
+            bottom: -60px;
+            left: 24px;
+            width: 2px;
+            background: #E0E0E0;
+            z-index: 0;
+        }
+
+        /* The Card */
+        .flow-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px 24px 24px 56px;
+            /* Left padding for line */
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 4px 20px rgba(44, 62, 45, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.02);
+        }
+
+        /* Node on the line */
+        .node {
+            position: absolute;
+            left: 19px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: var(--forest);
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 2;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            font-weight: 700;
+            color: var(--forest);
+            font-size: 16px;
+            font-family: serif;
+        }
+
+        .status {
+            background: #FFF0EB;
+            color: var(--orange);
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Overlapping Avatar Stack */
+        .item-stack {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .item-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid white;
+            /* Creates the cut-out effect */
+            background: #EEE;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-left: -12px;
+            /* The overlap */
+            position: relative;
+        }
+
+        .item-avatar:first-child {
+            margin-left: 0;
+            z-index: 4;
+        }
+
+        .item-avatar:nth-child(2) {
+            z-index: 3;
+        }
+
+        .item-avatar:nth-child(3) {
+            z-index: 2;
+        }
+
+        .item-avatar:nth-child(4) {
+            z-index: 1;
+        }
+
+        .more-badge {
+            background: var(--forest);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-text {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .action-link {
+            color: var(--forest);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(44, 62, 45, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div class="flow-line"></div>
+
+        <!-- Contextual Header outside card -->
+        <div style="margin-bottom:12px; padding-left:56px;">
+            <h3 style="margin:0; font-size:15px; color:#2C3E2D; font-family:serif;">What to pack</h3>
+        </div>
+
+        <div class="flow-card">
+            <div class="node"></div>
+
+            <div class="header">
+                <span class="title">June's Bag</span>
+                <span class="status">To Pack</span>
+            </div>
+
+            <div class="item-stack">
+                <!-- Item 1 -->
+                <div class="item-avatar" style="background:#FFE0E0;">🔦</div>
+                <!-- Item 2 -->
+                <div class="item-avatar" style="background:#E0F0FF;">🧸</div>
+                <!-- Item 3 -->
+                <div class="item-avatar" style="background:#F0FFE0;">👕</div>
+                <!-- + More -->
+                <div class="item-avatar more-badge">+2</div>
+            </div>
+
+            <div class="footer">
+                <span class="info-text">5 items at Daddy's</span>
+                <a href="#" class="action-link">Open bag →</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

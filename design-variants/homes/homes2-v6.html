@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept 6 - Detailed Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #2C3E2D;
+            --forest-light: #5D6D5E;
+            --white: #FFFFFF;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Inter', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .dashboard-container {
+            max-width: 420px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .flow-line {
+            position: absolute;
+            top: 40px;
+            bottom: 40px;
+            left: 50%;
+            width: 2px;
+            background: #E0E0E0;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 24px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+            margin-bottom: 40px;
+            border: 1px solid #EAEAEA;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .home-identity {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar-stack {
+            position: relative;
+            width: 52px;
+            height: 52px;
+        }
+
+        .av-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--white);
+            position: absolute;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .av-img.home {
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .av-img.child {
+            bottom: 0;
+            right: 0;
+            z-index: 2;
+            width: 28px;
+            height: 28px;
+        }
+
+        .home-info h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0 0 2px 0;
+            color: var(--forest);
+        }
+
+        .local-time {
+            font-size: 11px;
+            font-weight: 600;
+            color: #888;
+            background: #F5F5F5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status-badge {
+            background: #F0F0F0;
+            color: #666;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .status-badge.active {
+            background: var(--forest);
+            color: var(--white);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background: #FAFAFA;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-val {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .stat-lbl {
+            font-size: 10px;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        .view-link {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--forest);
+            display: block;
+            border-top: 1px solid #EEE;
+            padding-top: 12px;
+        }
+
+        /* Bag Card */
+        .bag-card {
+            text-align: center;
+            padding: 32px 24px;
+            max-width: 280px;
+            margin: 0 auto 40px auto;
+            border-radius: 24px;
+            cursor: default;
+        }
+
+        .bag-card:hover {
+            transform: none;
+        }
+
+        .item-stack {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+            height: 52px;
+            align-items: center;
+        }
+
+        .stack-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 3px solid var(--white);
+            background: #F0F0F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-left: -16px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .stack-circle:first-child {
+            margin-left: 0;
+            z-index: 4;
+        }
+
+        .stack-circle:nth-child(2) {
+            z-index: 3;
+            background: #E8F5E9;
+        }
+
+        .stack-circle:nth-child(3) {
+            z-index: 2;
+            background: #FFFDE7;
+        }
+
+        .stack-circle:nth-child(4) {
+            z-index: 1;
+            background: #333;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            border-color: var(--white);
+        }
+
+        .stack-circle:hover {
+            transform: scale(1.15) translateY(-2px);
+            z-index: 10;
+        }
+
+        .btn-primary {
+            background: var(--forest);
+            color: var(--white);
+            padding: 12px 0;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            display: block;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(44, 62, 45, 0.15);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .section-header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .section-header span {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .invite-full {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .invite-btn-full {
+            display: block;
+            width: 100%;
+            background: white;
+            border: 1px solid #DDD;
+            padding: 12px;
+            border-radius: 12px;
+            color: var(--forest);
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .invite-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <div class="flow-line"></div>
+
+        <div class="section-header">
+            <h1>June's home right now</h1>
+            <span>Tap a home to view details or switch location.</span>
+        </div>
+
+        <!-- Active Home -->
+        <a href="#" class="card">
+            <div class="card-top">
+                <div class="home-identity">
+                    <div class="avatar-stack">
+                        <img src="https://api.dicebear.com/7.x/initials/svg?seed=DH" class="av-img home" alt="Home">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=June" class="av-img child" alt="June">
+                    </div>
+                    <div class="home-info">
+                        <h2>Daddy's Home</h2>
+                        <span class="local-time">17:22</span>
+                    </div>
+                </div>
+                <div class="status-badge active">Here</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                <div class="stat-item"><span class="stat-val">1</span><span class="stat-lbl">Person</span></div>
+                <div class="stat-item"><span class="stat-val">5</span><span class="stat-lbl">Items</span></div>
+                <div class="stat-item"><span class="stat-val">--</span><span class="stat-lbl">Mins</span></div>
+            </div>
+
+            <span class="view-link">View all items →</span>
+        </a>
+
+        <!-- Bag -->
+        <div class="card bag-card">
+            <div class="item-stack">
+                <div class="stack-circle">📱</div>
+                <div class="stack-circle"><img
+                        src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=64&h=64"
+                        style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Dog"></div>
+                <div class="stack-circle">🧸</div>
+                <div class="stack-circle">+2</div>
+            </div>
+
+            <h3 style="margin:0 0 4px 0; font-family:'DM Serif Display'; font-size:20px;">Bag is ready</h3>
+            <p style="margin:0 0 20px 0; font-size:13px; opacity:0.6;">5 items packed</p>
+            <a href="#" class="btn-primary">Open bag</a>
+        </div>
+
+        <!-- Other Home -->
+        <a href="#" class="card">
+            <div class="card-top">
+                <div class="home-identity">
+                    <div class="avatar-stack">
+                        <img src="https://api.dicebear.com/7.x/initials/svg?seed=MH" class="av-img home" alt="Home">
+                    </div>
+                    <div class="home-info">
+                        <h2>Mommy's Home</h2>
+                        <span class="local-time">17:22</span>
+                    </div>
+                </div>
+                <div class="status-badge">Switch</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                <div class="stat-item"><span class="stat-val">1</span><span class="stat-lbl">Person</span></div>
+                <div class="stat-item"><span class="stat-val">3</span><span class="stat-lbl">Items</span></div>
+            </div>
+
+            <span class="view-link">View all items →</span>
+        </a>
+
+        <!-- Invite CTA -->
+        <div class="invite-full">
+            <span class="invite-label">Need to share this with a co-parent?</span>
+            <a href="#" class="invite-btn-full">Invite a caregiver</a>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

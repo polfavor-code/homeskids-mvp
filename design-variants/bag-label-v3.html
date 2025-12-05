@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bag Label - Concept 3</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --pink: #FF6B9D;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        .handle {
+            width: 140px;
+            height: 40px;
+            border: 8px solid #8D7B68;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            margin: 0 auto;
+            position: relative;
+            top: 8px;
+            z-index: 0;
+        }
+
+        /* Luggage Tag Style */
+        .luggage-tag {
+            position: absolute;
+            top: 15px;
+            right: 50%;
+            margin-right: -90px;
+            /* Hangs off right side */
+            z-index: 10;
+            transform: rotate(-5deg);
+            transform-origin: top left;
+        }
+
+        .strap-loop {
+            width: 60px;
+            height: 4px;
+            background: #A09080;
+            position: absolute;
+            top: 0;
+            left: -50px;
+            transform: rotate(-15deg);
+        }
+
+        .tag-shape {
+            background: var(--pink);
+            width: 80px;
+            height: 120px;
+            clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        /* Hole */
+        .tag-shape::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            background: #8D7B68;
+            border-radius: 50%;
+        }
+
+        .tag-name {
+            font-weight: 800;
+            font-size: 18px;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        .tag-sub {
+            font-size: 10px;
+            opacity: 0.8;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.06);
+            position: relative;
+            z-index: 1;
+            min-height: 200px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="handle"></div>
+
+        <div class="luggage-tag">
+            <div class="strap-loop"></div>
+            <div class="tag-shape">
+                <span class="tag-name">June</span>
+                <span class="tag-sub">TRAVEL</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin:0 0 20px 0; color:var(--forest); font-family:serif;">Packing List</h2>
+            <div style="background:#F5F5F5; height:12px; border-radius:6px; margin-bottom:20px;">
+                <div style="width:75%; height:100%; background:var(--forest); border-radius:6px;"></div>
+            </div>
+            <p style="color:#666;">3 of 4 items packed</p>
+        </div>
+    </div>
+
+</body>
+
+</html>

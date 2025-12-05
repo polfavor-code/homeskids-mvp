@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Bag - Concept 5</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+            --teal: #4CA1AF;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .sub {
+            font-size: 13px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-family: serif;
+            font-size: 28px;
+            color: var(--forest);
+            margin: 4px 0;
+        }
+
+        /* Stacked Effect */
+        .stack-wrapper {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .card-shadow {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: -10px;
+            bottom: -10px;
+            background: #E2E8E3;
+            border-radius: 24px;
+            z-index: 0;
+        }
+
+        .card-front {
+            position: relative;
+            z-index: 1;
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(44, 62, 45, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .bag-intro {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .big-icon {
+            width: 56px;
+            height: 56px;
+            background: #F5F5F5;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .intro-text h3 {
+            margin: 0;
+            color: var(--forest);
+            font-size: 18px;
+        }
+
+        .intro-text p {
+            margin: 2px 0 0;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .preview-list {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .preview-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: white;
+            border: 1px solid #EEE;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+        }
+
+        .check-badge {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 16px;
+            height: 16px;
+            background: var(--teal);
+            border-radius: 50%;
+            border: 2px solid white;
+            color: white;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .more-items {
+            font-size: 12px;
+            color: #888;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #F5F5F5;
+            padding-top: 20px;
+        }
+
+        .status-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--teal);
+        }
+
+        .open-link {
+            color: var(--forest);
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        /* Missing */
+        .missing-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .missing-head {
+            font-size: 14px;
+            font-weight: 700;
+            color: #C53030;
+            margin-bottom: 12px;
+        }
+
+        .missing-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #444;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div class="sub">Daddy's → Mommy's</div>
+            <h1>Check June’s bag</h1>
+        </div>
+
+        <div class="stack-wrapper">
+            <div class="card-shadow"></div>
+            <div class="card-front">
+                <div class="bag-intro">
+                    <div class="big-icon">🧳</div>
+                    <div class="intro-text">
+                        <h3>June's Travel Bag</h3>
+                        <p>4 items to pack at Daddy's</p>
+                    </div>
+                </div>
+
+                <div class="preview-list">
+                    <div class="preview-item">🔦<div class="check-badge">✓</div>
+                    </div>
+                    <div class="preview-item">📱<div class="check-badge">✓</div>
+                    </div>
+                    <div class="preview-item">💊<div class="check-badge">✓</div>
+                    </div>
+                    <div class="preview-item" style="border-style:dashed;">📂</div>
+                    <div class="more-items"></div>
+                </div>
+
+                <div class="action-row">
+                    <span class="status-text">75% Packed</span>
+                    <a href="#" class="open-link">Open bag →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="missing-section">
+            <div class="missing-head">Missing from Daddy's Home</div>
+            <div class="missing-row">
+                <span>👟</span> Soccer Cleats
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

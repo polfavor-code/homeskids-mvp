@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .sticker-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(44, 62, 45, 0.08);
+            border: 1px solid #EAEAEA;
+        }
+
+        /* Decorative Stickers */
+        .sticker {
+            position: absolute;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        .sticker-1 {
+            top: -10px;
+            right: -10px;
+            font-size: 60px;
+            transform: rotate(15deg);
+        }
+
+        .sticker-2 {
+            bottom: -10px;
+            left: 10px;
+            font-size: 40px;
+            transform: rotate(-10deg);
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .bag-id {
+            font-family: serif;
+            font-size: 18px;
+            color: var(--forest);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pill {
+            background: #E8F5E9;
+            color: #2E7D32;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .list {
+            background: rgba(249, 246, 240, 0.8);
+            border-radius: 12px;
+            padding: 12px;
+            backdrop-filter: blur(4px);
+        }
+
+        .list-item {
+            font-size: 14px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .link {
+            display: block;
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--forest);
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div style="margin-bottom:12px;">
+            <h3 style="margin:0; font-size:16px; color:#2C3E2D; font-family:serif;">What to pack</h3>
+            <p style="margin:2px 0 0; font-size:12px; color:#888;">At Daddy's home</p>
+        </div>
+
+        <div class="sticker-card">
+            <div class="sticker sticker-1">🌍</div>
+            <div class="sticker sticker-2">⭐</div>
+
+            <div class="content">
+                <div class="top">
+                    <div class="bag-id">
+                        <span style="font-size:20px;">🧳</span> June's Bag
+                    </div>
+                    <span class="pill">TO PACK</span>
+                </div>
+
+                <div class="list">
+                    <div class="list-item">
+                        <span>🔦</span> Flashlight
+                    </div>
+                </div>
+
+                <a href="#" class="link">Open travel bag →</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bag Label - Concept 5</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --pink: #FF6B9D;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        .handle {
+            width: 140px;
+            height: 40px;
+            border: 6px solid #5D4037;
+            border-bottom: none;
+            border-radius: 16px 16px 0 0;
+            margin: 0 auto;
+            position: relative;
+            top: 6px;
+            z-index: 0;
+        }
+
+        /* Leather Strap Label */
+        .strap-mount {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .leather-loop {
+            width: 8px;
+            height: 24px;
+            background: #8D6E63;
+            border-radius: 4px;
+        }
+
+        .label-card {
+            background: white;
+            border: 4px solid var(--pink);
+            border-radius: 12px;
+            padding: 8px 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: rotate(-2deg);
+            margin-top: -4px;
+        }
+
+        .label-name {
+            font-weight: 800;
+            color: var(--pink);
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        .label-tiny {
+            font-size: 9px;
+            color: #888;
+            font-weight: 600;
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 48px 24px 24px;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.06);
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="handle"></div>
+
+        <div class="strap-mount">
+            <div class="leather-loop"></div>
+            <div class="label-card">
+                <div class="label-name">June</div>
+                <div class="label-tiny">PROPERTY OF</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <span style="font-weight:700; color:var(--forest);">Packing List</span>
+                <span style="color:#AAA;">3/4</span>
+            </div>
+
+            <div style="display:flex; gap:12px;">
+                <div style="width:40px; height:40px; background:#F5F5F5; border-radius:8px;"></div>
+                <div style="width:40px; height:40px; background:#F5F5F5; border-radius:8px;"></div>
+                <div style="width:40px; height:40px; background:#F5F5F5; border-radius:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

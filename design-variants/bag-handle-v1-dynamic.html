@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handle Concept 1 - Dynamic Resizing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=DM+Serif+Display&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+
+            /* Pink Theme */
+            --pink-handle: #F8BBD0;
+            --pink-handle-dark: #F48FB1;
+            --pink-tag: #FFF0F5;
+            --pink-border: #F06292;
+
+            /* Blue Theme */
+            --blue-handle: #BBDEFB;
+            --blue-handle-dark: #90CAF9;
+            --blue-tag: #E3F2FD;
+            --blue-border: #64B5F6;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 80px;
+        }
+
+        .variant-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* --- CONCEPT 1: ROPE TIE (DYNAMIC) --- */
+
+        /* Handle Base */
+        .handle-area {
+            height: 40px;
+            width: 140px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .handle {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px 20px 0 0;
+            border: 10px solid;
+            border-bottom: none;
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            z-index: 0;
+        }
+
+        /* Rope & Tag Container */
+        .rope-knot {
+            position: absolute;
+            top: -5px;
+            left: 82%;
+            /* Off-center anchor point */
+            z-index: 10;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+            transform-origin: top center;
+            animation: swing 4s ease-in-out infinite alternate;
+
+            /* Flex column to center the tag relative to the string */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 0;
+            /* Zero width so it centers on the 'left' position */
+        }
+
+        @keyframes swing {
+            from {
+                transform: rotate(6deg);
+            }
+
+            to {
+                transform: rotate(-6deg);
+            }
+        }
+
+        .knot-loop {
+            width: 18px;
+            height: 18px;
+            border: 3px solid #D7CCC8;
+            border-radius: 50%;
+            background: #EFEBE9;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .string {
+            width: 2px;
+            height: 22px;
+            background: #D7CCC8;
+            margin-top: -2px;
+            /* Connect to knot */
+            flex-shrink: 0;
+        }
+
+        .tag {
+            background: white;
+            padding: 5px 14px 7px;
+            /* Slightly more bottom padding for handwriting font */
+            border-radius: 4px;
+            transform: rotate(-15deg);
+            transform-origin: 50% -5px;
+            /* Pivot around the hole/string connection */
+            border: 2px solid;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+            /* Dynamic Sizing Logic */
+            min-width: 40px;
+            max-width: 200px;
+            /* Prevent it from getting absurdly wide */
+            white-space: nowrap;
+            /* Keep name on one line */
+            text-align: center;
+            margin-top: -2px;
+            /* Connect to string */
+        }
+
+        /* Tag Hole */
+        .tag::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: #FFF;
+            border: 2px solid #D7CCC8;
+            border-radius: 50%;
+        }
+
+        .child-name {
+            font-family: 'Caveat', cursive;
+            font-size: 22px;
+            line-height: 1;
+            color: var(--forest);
+        }
+
+        /* Card (Standard) */
+        .bag-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 40px 24px 24px;
+            box-shadow: 0 12px 32px rgba(44, 62, 45, 0.08);
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-content {
+            opacity: 0.6;
+            filter: grayscale(0.2);
+        }
+
+        /* --- PINK VARIANT --- */
+        .pink-theme .handle {
+            border-color: var(--pink-handle);
+            background: transparent;
+        }
+
+        .pink-theme .tag {
+            background: var(--pink-tag);
+            border-color: var(--pink-border);
+        }
+
+        /* --- BLUE VARIANT --- */
+        .blue-theme .handle {
+            border-color: var(--blue-handle);
+            background: transparent;
+        }
+
+        .blue-theme .tag {
+            background: var(--blue-tag);
+            border-color: var(--blue-border);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SHORT NAME EXAMPLE -->
+    <div class="container pink-theme">
+        <div class="variant-label">Short Name (Pink)</div>
+
+        <div class="handle-area">
+            <div class="handle"></div>
+
+            <div class="rope-knot">
+                <div class="knot-loop"></div>
+                <div class="string"></div>
+                <div class="tag">
+                    <div class="child-name">Jo</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0 0 10px 0; font-family:serif; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- LONG NAME EXAMPLE -->
+    <div class="container blue-theme">
+        <div class="variant-label">Long Name (Blue)</div>
+
+        <div class="handle-area">
+            <div class="handle"></div>
+
+            <div class="rope-knot">
+                <div class="knot-loop"></div>
+                <div class="string"></div>
+                <div class="tag">
+                    <div class="child-name">Christopher</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0 0 10px 0; font-family:serif; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VERY LONG NAME EXAMPLE -->
+    <div class="container pink-theme">
+        <div class="variant-label">Very Long Name (Pink)</div>
+
+        <div class="handle-area">
+            <div class="handle"></div>
+
+            <div class="rope-knot">
+                <div class="knot-loop"></div>
+                <div class="string"></div>
+                <div class="tag">
+                    <div class="child-name">Maximillian</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0 0 10px 0; font-family:serif; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

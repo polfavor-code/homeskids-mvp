@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --sand: #EBE6DC;
+            --white: #FFFFFF;
+            --orange: #D76F4B;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .section-header {
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+
+        .section-title {
+            font-family: "DM Serif Display", serif;
+            color: var(--forest);
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .section-subtitle {
+            color: #7A8A7B;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        /* Suitcase Card */
+        .suitcase-wrapper {
+            position: relative;
+            padding-top: 20px;
+        }
+
+        .handle {
+            width: 80px;
+            height: 24px;
+            border: 4px solid #C5BDB0;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        .bag-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.08);
+            position: relative;
+            z-index: 1;
+            border: 1px solid rgba(44, 62, 45, 0.05);
+        }
+
+        .bag-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .bag-identity {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--orange);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .bag-title {
+            font-weight: 700;
+            color: var(--forest);
+            font-size: 16px;
+        }
+
+        .status-pill {
+            background: #F0F5F1;
+            color: var(--forest);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--cream);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .item-icon {
+            width: 36px;
+            height: 36px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--forest);
+            display: block;
+        }
+
+        .item-sub {
+            font-size: 12px;
+            color: #889;
+        }
+
+        .action-link {
+            display: block;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--forest);
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div class="section-header">
+            <h3 class="section-title">What to pack</h3>
+            <p class="section-subtitle">Pack items now at Daddy’s home</p>
+        </div>
+
+        <div class="suitcase-wrapper">
+            <div class="handle"></div>
+            <div class="bag-card">
+                <div class="bag-header">
+                    <div class="bag-identity">
+                        <div class="avatar">J</div>
+                        <span class="bag-title">June’s bag</span>
+                    </div>
+                    <span class="status-pill">To pack</span>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-icon">🔦</div>
+                    <div class="item-info">
+                        <span class="item-name">Flashlight</span>
+                        <span class="item-sub">Requested by Mom</span>
+                    </div>
+                </div>
+
+                <a href="#" class="action-link">Open travel bag →</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard V2 - Organic Theme</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap');
+
+        :root {
+            /* Brand Colors */
+            --bg: #F9F6F0;
+            /* Cream/Off-white Background */
+            --card: #FFFFFF;
+            /* Pure White for Cards */
+            --dark: #2C3E2D;
+            /* Forest Green (Primary Text/Headers) */
+            --accent: #D76F4B;
+            /* Terracotta (Buttons/Alerts/Highlights) */
+
+            /* Utility Colors */
+            --soft-green: #E8EFE8;
+            /* Light Green for secondary backgrounds */
+            --border: #EBE6DC;
+            /* Soft Beige for borders and hard shadows */
+            --text-sub: #888899;
+            /* Secondary Text */
+
+            /* Gradients */
+            --gradient-ai: linear-gradient(90deg, #FF9A9E 0%, #FECFEF 99%);
+            /* Pink Gradient */
+
+            /* Typography */
+            --font-head: 'DM Serif Display', serif;
+            --font-body: 'Karla', sans-serif;
+
+            /* Spacing & Radius */
+            --radius-card: 24px;
+            --radius-btn: 12px;
+        }
+
+        body {
+            background-color: var(--bg);
+            font-family: var(--font-body);
+            color: var(--dark);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Card */
+        .header-card {
+            background: var(--card);
+            border-radius: var(--radius-card);
+            padding: 24px;
+            margin-bottom: 32px;
+            border: 1px solid var(--border);
+            /* Tactile hard shadow effect */
+            box-shadow: 0 4px 0 var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* AI Gradient Line on Header */
+        .header-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: var(--gradient-ai);
+        }
+
+        .greeting {
+            font-family: var(--font-head);
+            font-size: 26px;
+            margin: 10px 0 4px 0;
+            /* Added top margin for gradient line */
+            color: var(--dark);
+        }
+
+        .sub-greeting {
+            font-size: 15px;
+            color: var(--text-sub);
+            margin: 0 0 20px 0;
+            line-height: 1.4;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: var(--soft-green);
+            padding: 12px;
+            border-radius: 16px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+            border: 1px solid transparent;
+        }
+
+        .stat-box.alert {
+            background: #FFF0EB;
+            /* Light terracotta tint */
+            color: var(--accent);
+            border: 1px solid rgba(215, 111, 75, 0.2);
+        }
+
+        .primary-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: var(--dark);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: var(--radius-btn);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: var(--font-body);
+        }
+
+        .action-btn.secondary {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--dark);
+        }
+
+        /* Section Title */
+        .section-title {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .section-title h2 {
+            font-family: var(--font-head);
+            font-size: 22px;
+            margin: 0;
+            color: var(--dark);
+        }
+
+        .section-title p {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+
+        /* Vertical Flow */
+        .flow-container {
+            position: relative;
+            padding: 0 10px;
+        }
+
+        .flow-line {
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 50%;
+            width: 2px;
+            background: var(--border);
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius-card);
+            padding: 28px;
+            position: relative;
+            z-index: 10;
+            margin-bottom: 32px;
+            border: 1px solid var(--border);
+            /* Soft diffuse shadow for main cards as per spec */
+            box-shadow: 0 10px 25px -5px rgba(44, 62, 45, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--soft-green);
+            padding-bottom: 12px;
+        }
+
+        .home-name {
+            font-family: var(--font-head);
+            font-size: 22px;
+            margin: 0;
+            color: var(--dark);
+        }
+
+        .local-time {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-sub);
+            background: var(--soft-green);
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .status-badge {
+            background: var(--dark);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-stats {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-val {
+            display: block;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .stat-lbl {
+            font-size: 11px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+
+        /* Bag Card */
+        .bag-card {
+            text-align: center;
+            max-width: 300px;
+            margin: 0 auto 32px;
+            border-radius: 40px;
+            /* Slightly rounder for bag */
+        }
+
+        .bag-title {
+            font-family: var(--font-head);
+            font-size: 22px;
+            margin-bottom: 16px;
+            color: var(--dark);
+        }
+
+        /* Stacked Items */
+        .stack-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            height: 60px;
+        }
+
+        .stack-item {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 4px solid var(--card);
+            /* Match card bg */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-left: -20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            background-color: #F5F5F5;
+        }
+
+        .stack-item:nth-child(1) {
+            margin-left: 0;
+            z-index: 4;
+            background-color: #FFE4E1;
+        }
+
+        .stack-item:nth-child(2) {
+            z-index: 3;
+            background-color: #F0F8FF;
+        }
+
+        .stack-item:nth-child(3) {
+            z-index: 2;
+            background-color: #F0FFF0;
+        }
+
+        .stack-item:nth-child(4) {
+            z-index: 1;
+            background-color: #E8E8E8;
+            color: #4A5D4B;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stack-item:hover {
+            transform: scale(1.1) translateY(-2px);
+            z-index: 10;
+        }
+
+        .bag-btn {
+            background: var(--dark);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: var(--radius-btn);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            /* Tactile hard shadow for primary button */
+            box-shadow: 0 4px 0 #1A261B;
+            transition: transform 0.1s;
+        }
+
+        .bag-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .switch-btn {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            background: transparent;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-btn);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+            cursor: pointer;
+        }
+
+        .switch-btn:hover {
+            border-color: var(--dark);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- Header Card -->
+        <div class="header-card">
+            <h1 class="greeting">Hi Paul,</h1>
+            <p class="sub-greeting">Here’s what you need for June today.</p>
+
+            <div class="stats-grid">
+                <div class="stat-box">2 homes</div>
+                <div class="stat-box">11 items total</div>
+                <div class="stat-box">2 to pack</div>
+                <div class="stat-box alert">1 missing</div>
+            </div>
+
+            <div class="primary-actions">
+                <button class="action-btn">+ Add item</button>
+                <button class="action-btn secondary">Request</button>
+                <button class="action-btn secondary">Invite</button>
+            </div>
+        </div>
+
+        <!-- Section Title -->
+        <div class="section-title">
+            <h2>June’s home right now</h2>
+            <p>Tap a home to view details or switch location.</p>
+        </div>
+
+        <!-- Flow -->
+        <div class="flow-container">
+            <div class="flow-line"></div>
+
+            <!-- Active Home -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="home-name">Ellishouse</h3>
+                        <div class="local-time">02:07</div>
+                    </div>
+                    <div class="status-badge">Here</div>
+                </div>
+                <div class="card-stats">
+                    <div class="stat-item"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                    <div class="stat-item"><span class="stat-val">2</span><span class="stat-lbl">People</span></div>
+                    <div class="stat-item"><span class="stat-val">3</span><span class="stat-lbl">Items</span></div>
+                </div>
+            </div>
+
+            <!-- Bag -->
+            <div class="card bag-card">
+                <h3 class="bag-title">June's Travel Bag</h3>
+                <div class="stack-container">
+                    <div class="stack-item">📱</div>
+                    <div class="stack-item"><img
+                            src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=64&h=64"
+                            style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Dog"></div>
+                    <div class="stack-item">🧸</div>
+                    <div class="stack-item">+2</div>
+                </div>
+                <p style="margin-bottom:20px; font-weight:700; font-size:15px; color:var(--dark);">2 items to pack</p>
+                <button class="bag-btn">Open bag</button>
+            </div>
+
+            <!-- Other Home -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="home-name">Daddieshouse</h3>
+                        <div class="local-time">02:07</div>
+                    </div>
+                </div>
+                <div class="card-stats">
+                    <div class="stat-item"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                    <div class="stat-item"><span class="stat-val">1</span><span class="stat-lbl">Person</span></div>
+                    <div class="stat-item"><span class="stat-val">8</span><span class="stat-lbl">Items</span></div>
+                </div>
+                <button class="switch-btn">Switch to this home</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

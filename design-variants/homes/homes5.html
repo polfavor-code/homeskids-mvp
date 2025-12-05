@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept 5 - Forest Accent</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #203A28;
+            --gold: #D4AF37;
+            --white: #FFFFFF;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .dashboard-container {
+            max-width: 420px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Thick Line */
+        .thick-line {
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 50%;
+            width: 4px;
+            background: #E5E5E5;
+            transform: translateX(-2px);
+            z-index: 0;
+            border-radius: 4px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            margin-bottom: 40px;
+        }
+
+        /* Active Card Header */
+        .active-header {
+            background: var(--forest);
+            color: var(--white);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .inactive-header {
+            background: var(--white);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #EEE;
+        }
+
+        .home-title h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .home-title span {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.8;
+        }
+
+        .avatar-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-col {
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 16px;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-lbl {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .bag-card {
+            background: var(--white);
+            border: 2px solid var(--forest);
+            padding: 20px;
+            text-align: center;
+            max-width: 280px;
+            margin: 0 auto 40px auto;
+            border-radius: 20px;
+        }
+
+        .bag-btn {
+            background: var(--forest);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 700;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <div class="thick-line"></div>
+
+        <div style="text-align:center; margin-bottom:24px; font-family:'DM Serif Display'; font-size:18px;">June's home
+            right now</div>
+
+        <!-- Active Home -->
+        <div class="card">
+            <div class="active-header">
+                <div class="home-title">
+                    <span>Current Location</span>
+                    <h2>Daddy's Home</h2>
+                </div>
+                <img src="https://api.dicebear.com/7.x/initials/svg?seed=DH" class="avatar-circle" alt="Home">
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-col">
+                        <span class="stat-num">Map</span>
+                        <span class="stat-lbl">View</span>
+                    </div>
+                    <div class="stat-col">
+                        <span class="stat-num">1</span>
+                        <span class="stat-lbl">Person</span>
+                    </div>
+                    <div class="stat-col">
+                        <span class="stat-num">5</span>
+                        <span class="stat-lbl">Items</span>
+                    </div>
+                    <div class="stat-col">
+                        <span class="stat-num">--</span>
+                        <span class="stat-lbl">Time</span>
+                    </div>
+                </div>
+                <div style="margin-top:16px; text-align:center; font-size:12px; font-weight:700; color:#203A28;">View
+                    all items →</div>
+            </div>
+        </div>
+
+        <!-- Bag -->
+        <div class="card bag-card">
+            <h3 style="margin:0; font-family:'DM Serif Display';">Travel Bag</h3>
+            <p style="margin:4px 0 0 0; font-size:13px; color:#666;">1 item to pack</p>
+            <button class="bag-btn">Open Bag</button>
+        </div>
+
+        <!-- Other Home -->
+        <div class="card">
+            <div class="inactive-header">
+                <div class="home-title">
+                    <span style="color:#888;">Switch Location</span>
+                    <h2>Mommy's Home</h2>
+                </div>
+                <img src="https://api.dicebear.com/7.x/initials/svg?seed=MH" class="avatar-circle"
+                    style="border-color:#EEE;" alt="Home">
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-col">
+                        <span class="stat-num">Map</span>
+                        <span class="stat-lbl">View</span>
+                    </div>
+                    <div class="stat-col">
+                        <span class="stat-num">1</span>
+                        <span class="stat-lbl">Person</span>
+                    </div>
+                    <div class="stat-col">
+                        <span class="stat-num">3</span>
+                        <span class="stat-lbl">Items</span>
+                    </div>
+                </div>
+                <div style="margin-top:16px; text-align:center; font-size:12px; font-weight:700; color:#203A28;">View
+                    all items →</div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

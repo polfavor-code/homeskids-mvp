@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .zipper-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .zipper-strip {
+            background: #F4F4F4;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px dashed #D0D0D0;
+        }
+
+        .zipper-pull {
+            width: 12px;
+            height: 24px;
+            background: #999;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .strip-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .header-group {
+            margin-bottom: 16px;
+        }
+
+        .title {
+            font-family: serif;
+            font-size: 20px;
+            color: var(--forest);
+            margin: 0;
+        }
+
+        .sub {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .items-list {
+            border-left: 2px solid var(--forest);
+            padding-left: 16px;
+            margin-bottom: 20px;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--forest);
+            border-radius: 50%;
+        }
+
+        .name {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: var(--forest);
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div style="margin-bottom:12px; padding-left:4px;">
+            <h3 style="margin:0; font-size:16px; color:#2C3E2D; font-family:serif;">Request packing</h3>
+            <p style="margin:4px 0 0; font-size:12px; color:#888;">Ask for items from Mom's</p>
+        </div>
+
+        <div class="zipper-card">
+            <div class="zipper-strip">
+                <div class="zipper-pull"></div>
+                <span class="strip-text">June's Bag</span>
+            </div>
+
+            <div class="card-body">
+                <div class="header-group">
+                    <h2 class="title">1 item requested</h2>
+                    <p class="sub">To be added at Mommy's Home</p>
+                </div>
+
+                <div class="items-list">
+                    <div class="item">
+                        <span class="name">📚 Math Textbook</span>
+                    </div>
+                </div>
+
+                <a href="#" class="btn">Open travel bag</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

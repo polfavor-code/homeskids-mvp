@@ -2,7 +2,6 @@ import React from "react";
 import Link from "next/link";
 import { Item } from "@/lib/mockData";
 import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
-import ItemPhoto from "@/components/ItemPhoto";
 
 interface HomeCardProps {
     caregiver: CaregiverProfile;
@@ -11,72 +10,85 @@ interface HomeCardProps {
     isChildHere: boolean;
 }
 
-export default function HomeCard({ caregiver, child, items, isChildHere }: HomeCardProps) {
-    return (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-            {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${caregiver.avatarColor}`}
-                    >
-                        {caregiver.avatarInitials}
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-gray-900">{caregiver.label}’s Home</h3>
-                        <p className="text-xs text-gray-400">Last updated 2 hours ago</p>
-                    </div>
-                </div>
-                {isChildHere && (
-                    <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-xs font-semibold">
-                        <div className="w-4 h-4 rounded-full bg-blue-200 flex items-center justify-center text-[10px]">
-                            {child?.avatarInitials || "C"}
-                        </div>
-                        {child?.name || "Child"} is here
-                    </div>
-                )}
-            </div>
+export default function HomeCard({ caregiver, child, items, isChildHere, caregivers }: HomeCardProps & { caregivers: CaregiverProfile[] }) {
+    // Count missing items at this location
+    const missingItems = items.filter(item => item.isMissing);
 
-            {/* Content */}
-            <div>
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        Items here
-                    </span>
-                    {items.length > 0 && (
-                        <Link href="/items" className="text-xs text-primary font-medium hover:underline">
-                            View all items
-                        </Link>
+    return (
+        <div className="bg-white rounded-2xl overflow-hidden border border-border" style={{ boxShadow: '0 4px 20px rgba(44, 62, 45, 0.05)' }}>
+            {/* Top Accent Bar */}
+            <div className="h-1.5 bg-gradient-to-r from-forest to-teal" />
+
+            <div className="p-5">
+                {/* Header Section */}
+                <div className="pb-4 border-b border-border">
+                    <h3 className="font-dmSerif text-xl text-forest">{caregiver.label}'s Home</h3>
+                    <p className="text-xs text-textSub mt-0.5">Local time</p>
+
+                    {/* Status Pill - June's home right now */}
+                    {isChildHere && (
+                        <div className="inline-flex items-center gap-1.5 bg-softGreen text-forest px-3 py-1.5 rounded-full text-xs font-semibold mt-3">
+                            <span>🏠</span>
+                            <span>{child?.name || "June"}'s home right now</span>
+                        </div>
                     )}
                 </div>
 
-                {items.length > 0 ? (
-                    <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                        {items.slice(0, 3).map((item) => (
-                            <Link
-                                key={item.id}
-                                href={`/items/${item.id}`}
-                                className="flex flex-col gap-1 min-w-[72px] group"
-                            >
-                                <div className="w-[72px] h-[72px] rounded-xl bg-gray-100 flex items-center justify-center text-xl overflow-hidden border border-transparent group-hover:border-primary/20 transition-colors">
-                                    <ItemPhoto
-                                        photoPath={item.photoUrl}
-                                        itemName={item.name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <span className="text-xs text-gray-600 truncate w-full text-center group-hover:text-primary transition-colors">
-                                    {item.name}
-                                </span>
-                            </Link>
-                        ))}
+                {/* Location & People Section */}
+                <div className="py-4 border-b border-border">
+                    <span className="text-[10px] font-bold text-textSub uppercase tracking-wide">Location & People</span>
+                    <div className="mt-2 space-y-1.5">
+                        <div className="flex items-center gap-2 text-sm text-forest">
+                            <span>📍</span>
+                            <span>Location · <a href="#" className="text-primary hover:underline">View map</a></span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-forest">
+                            <span>👥</span>
+                            <span>1 person in this home</span>
+                        </div>
                     </div>
-                ) : (
-                    <div className="py-4 text-center">
-                        <p className="text-sm text-gray-400">No items here yet.</p>
+                </div>
+
+                {/* Inventory Section */}
+                <div className="py-4 border-b border-border">
+                    <span className="text-[10px] font-bold text-textSub uppercase tracking-wide">Inventory</span>
+                    <div className="mt-2">
+                        <div className="flex items-center gap-2 text-sm text-forest">
+                            <span>🎒</span>
+                            <span>
+                                {items.length} items here
+                                {missingItems.length > 0 && (
+                                    <span className="text-terracotta font-semibold"> · {missingItems.length} missing</span>
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Travel Section */}
+                <div className="pt-4">
+                    <span className="text-[10px] font-bold text-textSub uppercase tracking-wide">Travel</span>
+                    <div className="mt-2">
+                        <div className="flex items-center gap-2 text-sm text-textSub">
+                            <span>🚗</span>
+                            <span>Driving time: coming soon</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* View Items Link */}
+                {items.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                        <Link
+                            href={`/items?filter=${caregiver.id}`}
+                            className="text-sm font-semibold text-forest hover:text-terracotta transition-colors flex items-center gap-1"
+                        >
+                            View all items →
+                        </Link>
                     </div>
                 )}
             </div>
         </div>
     );
 }
+

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept 1 - Minimalist Serenity</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #2C3E2D;
+            --forest-light: #5D6D5E;
+            --blush: #E89F95;
+            --white: #FFFFFF;
+            --border: #E5E0D8;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Inter', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 420px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Vertical Connector Line */
+        .connector-line {
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 50%;
+            width: 2px;
+            background: linear-gradient(to bottom, transparent, #D1CDC7 10%, #D1CDC7 90%, transparent);
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        .node {
+            width: 10px;
+            height: 10px;
+            background: var(--bg-cream);
+            border: 2px solid #D1CDC7;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        .node.top {
+            top: -5px;
+        }
+
+        .node.middle-top {
+            top: 38%;
+        }
+
+        .node.middle-bottom {
+            top: 62%;
+        }
+
+        .node.bottom {
+            bottom: -5px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(44, 62, 45, 0.04);
+            border: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .home-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatars {
+            display: flex;
+            align-items: center;
+        }
+
+        .avatar-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 3px solid var(--white);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            object-fit: cover;
+        }
+
+        .avatar-circle.overlap {
+            margin-left: -15px;
+        }
+
+        h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .status-pill {
+            background-color: var(--forest);
+            color: var(--white);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.02em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-pill.inactive {
+            background-color: #F0F0F0;
+            color: var(--forest-light);
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            padding: 16px 0;
+            border-top: 1px solid #F5F5F5;
+            border-bottom: 1px solid #F5F5F5;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--forest-light);
+            font-weight: 500;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            stroke: var(--forest);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .view-link {
+            display: block;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--forest);
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .view-link:hover {
+            opacity: 0.7;
+        }
+
+        /* Middle Bag Card */
+        .bag-card {
+            text-align: center;
+            padding: 32px 24px;
+            max-width: 300px;
+            margin: 0 auto 40px auto;
+        }
+
+        .bag-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .bag-preview {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .bag-item {
+            width: 40px;
+            height: 40px;
+            background: #F0F0F0;
+            border-radius: 50%;
+            border: 3px solid var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-left: -10px;
+        }
+
+        .bag-item:first-child {
+            margin-left: 0;
+        }
+
+        .btn-outline {
+            display: inline-block;
+            padding: 10px 24px;
+            border: 1px solid var(--forest);
+            border-radius: 50px;
+            color: var(--forest);
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            background: transparent;
+        }
+
+        /* Section Title */
+        .section-label {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .section-label h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 18px;
+            margin: 0 0 4px 0;
+        }
+
+        .section-label p {
+            font-size: 12px;
+            color: var(--forest-light);
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Connector Line -->
+        <div class="connector-line"></div>
+        <!-- Nodes to cover line ends -->
+        <div class="node top"></div>
+        <div class="node middle-top"></div>
+        <div class="node middle-bottom"></div>
+        <div class="node bottom"></div>
+
+        <!-- Section Header -->
+        <div class="section-label">
+            <h3>June's home right now</h3>
+            <p>Tap a home to switch location</p>
+        </div>
+
+        <!-- Active Home Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="home-info">
+                    <div class="avatars">
+                        <img src="https://api.dicebear.com/7.x/initials/svg?seed=DH&backgroundColor=E89F95"
+                            class="avatar-circle" alt="Home">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=June" class="avatar-circle overlap"
+                            alt="June">
+                    </div>
+                    <div>
+                        <h2>Daddy's Home</h2>
+                    </div>
+                </div>
+                <div class="status-pill">
+                    <span style="width:6px; height:6px; background:#fff; border-radius:50%;"></span>
+                    June is here
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Map
+                </div>
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    1 person
+                </div>
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                        </path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    5 items
+                </div>
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <rect x="1" y="3" width="15" height="13"></rect>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                    </svg>
+                    Soon
+                </div>
+            </div>
+
+            <a href="#" class="view-link">View all items →</a>
+        </div>
+
+        <!-- Bag Card -->
+        <div class="card bag-card">
+            <div class="bag-title">Bag is ready!</div>
+            <div class="bag-preview">
+                <div class="bag-item">🧸</div>
+                <div class="bag-item">👕</div>
+                <div class="bag-item" style="background:#2C3E2D; color:white; font-size:12px; font-weight:bold;">+1
+                </div>
+            </div>
+            <a href="#" class="btn-outline">Open travel bag</a>
+        </div>
+
+        <!-- Other Home Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="home-info">
+                    <div class="avatars">
+                        <img src="https://api.dicebear.com/7.x/initials/svg?seed=MH&backgroundColor=C5E1A5"
+                            class="avatar-circle" alt="Home">
+                    </div>
+                    <div>
+                        <h2>Mommy's Home</h2>
+                    </div>
+                </div>
+                <div class="status-pill inactive">
+                    Switch here
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Map
+                </div>
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    1 person
+                </div>
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                        </path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    3 items
+                </div>
+            </div>
+
+            <a href="#" class="view-link">View all items →</a>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

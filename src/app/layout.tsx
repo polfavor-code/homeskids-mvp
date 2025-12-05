@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { ItemsProvider } from "@/lib/ItemsContext";
 import { AppStateProvider } from "@/lib/AppStateContext";
 import { AuthProvider } from "@/lib/AuthContext";
+import { ContactsProvider } from "@/lib/ContactsContext";
+import { HealthProvider } from "@/lib/HealthContext";
+import { DocumentsProvider } from "@/lib/DocumentsContext";
 import "../styles/globals.css";
 import Script from "next/script";
 
@@ -37,7 +40,13 @@ export default function RootLayout({
             <body>
                 <AuthProvider>
                     <AppStateProvider>
-                        <ItemsProvider>{children}</ItemsProvider>
+                        <ItemsProvider>
+                            <ContactsProvider>
+                                <HealthProvider>
+                                    <DocumentsProvider>{children}</DocumentsProvider>
+                                </HealthProvider>
+                            </ContactsProvider>
+                        </ItemsProvider>
                     </AppStateProvider>
                 </AuthProvider>
                 <Script id="register-sw" strategy="afterInteractive">

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            padding: 0 10px;
+        }
+
+        .heading h4 {
+            margin: 0;
+            color: var(--forest);
+            font-family: serif;
+            font-size: 17px;
+        }
+
+        .heading span {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .duffel-card {
+            background: white;
+            border-radius: 32px;
+            /* Very round corners */
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Straps */
+        .strap {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 32px;
+            background: rgba(44, 62, 45, 0.03);
+            border-left: 1px dashed rgba(44, 62, 45, 0.1);
+            border-right: 1px dashed rgba(44, 62, 45, 0.1);
+            z-index: 0;
+        }
+
+        .strap-left {
+            left: 40px;
+        }
+
+        .strap-right {
+            right: 40px;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .top-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .avatar-circle {
+            width: 28px;
+            height: 28px;
+            background: #D76F4B;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .bag-name {
+            font-weight: 700;
+            color: var(--forest);
+            font-size: 16px;
+        }
+
+        .badge {
+            margin-left: auto;
+            background: var(--forest);
+            color: white;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+
+        .info-text {
+            font-size: 13px;
+            color: #666;
+            margin-left: 40px;
+        }
+
+        .item-preview {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #F8F8F8;
+            padding: 10px;
+            border-radius: 16px;
+            margin-top: 8px;
+        }
+
+        .preview-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #DDD;
+        }
+
+        .preview-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .action {
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .action a {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--forest);
+            text-decoration: none;
+            border-bottom: 1px solid var(--forest);
+            padding-bottom: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div class="heading">
+            <h4>What to pack</h4>
+            <span>At Daddy's home</span>
+        </div>
+
+        <div class="duffel-card">
+            <div class="strap strap-left"></div>
+            <div class="strap strap-right"></div>
+
+            <div class="content">
+                <div class="top-row">
+                    <div class="avatar-circle">J</div>
+                    <span class="bag-name">June’s Bag</span>
+                    <span class="badge">TO PACK</span>
+                </div>
+
+                <p class="info-text">Pack 1 item at Daddy’s home</p>
+
+                <div class="item-preview">
+                    <div class="preview-img" style="display:flex;align-items:center;justify-content:center;">💊</div>
+                    <span class="preview-text">Allergy Meds</span>
+                </div>
+
+                <div class="action">
+                    <a href="#">Open travel bag</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

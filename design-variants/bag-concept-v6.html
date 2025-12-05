@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Bag - Concept 6</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-family: serif;
+            font-size: 26px;
+            color: var(--forest);
+            margin: 0;
+        }
+
+        .sticker-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(44, 62, 45, 0.08);
+            border: 1px solid #EAEAEA;
+            margin-bottom: 24px;
+        }
+
+        /* Stickers */
+        .sticker {
+            position: absolute;
+            opacity: 0.15;
+            pointer-events: none;
+            filter: grayscale(20%);
+        }
+
+        .s1 {
+            top: -10px;
+            right: -10px;
+            font-size: 80px;
+            transform: rotate(15deg);
+        }
+
+        .s2 {
+            bottom: -20px;
+            left: -10px;
+            font-size: 60px;
+            transform: rotate(-10deg);
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .bag-label {
+            font-weight: 700;
+            color: var(--forest);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .avatar-mini {
+            width: 24px;
+            height: 24px;
+            background: #D76F4B;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .list-box {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+        }
+
+        .icon {
+            font-size: 18px;
+        }
+
+        .name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status {
+            margin-left: auto;
+            font-size: 11px;
+            font-weight: 700;
+            color: #AAA;
+        }
+
+        .status.packed {
+            color: var(--forest);
+        }
+
+        .btn-area {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn {
+            background: var(--forest);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-block;
+            box-shadow: 0 4px 12px rgba(44, 62, 45, 0.2);
+        }
+
+        .missing-alert {
+            background: #FFF5F5;
+            border: 1px solid #FEB2B2;
+            border-radius: 12px;
+            padding: 12px;
+            color: #9B2C2C;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Check June’s bag</h1>
+            <p style="font-size:14px; color:#666;">Daddy's Home → Mommy's Home</p>
+        </div>
+
+        <div class="sticker-card">
+            <div class="sticker s1">🌍</div>
+            <div class="sticker s2">⭐</div>
+
+            <div class="content">
+                <div class="top-row">
+                    <div class="bag-label">
+                        <div class="avatar-mini">J</div>
+                        June's Bag
+                    </div>
+                    <div style="font-size:12px; font-weight:600; color:#888;">3/4 Packed</div>
+                </div>
+
+                <div class="list-box">
+                    <div class="list-item">
+                        <span class="icon">🔦</span>
+                        <span class="name">Flashlight</span>
+                        <span class="status packed">PACKED</span>
+                    </div>
+                    <div class="list-item">
+                        <span class="icon">📱</span>
+                        <span class="name">iPad</span>
+                        <span class="status packed">PACKED</span>
+                    </div>
+                    <div class="list-item">
+                        <span class="icon">📂</span>
+                        <span class="name">School Folder</span>
+                        <span class="status">TO PACK</span>
+                    </div>
+                </div>
+
+                <div class="btn-area">
+                    <a href="#" class="btn">Open bag →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="missing-alert">
+            <span style="font-size:18px;">⚠️</span>
+            <div>
+                <strong>Missing: Soccer Cleats</strong><br>
+                Not found at Daddy's.
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

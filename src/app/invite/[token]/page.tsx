@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAppState } from "@/lib/AppStateContext";
 import { supabase } from "@/lib/supabase";
+import Logo from "@/components/Logo";
 
 export default function InvitePage() {
     const params = useParams();
@@ -18,6 +19,8 @@ export default function InvitePage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [error, setError] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         const fetchInvite = async () => {
@@ -39,9 +42,13 @@ export default function InvitePage() {
         e.preventDefault();
         if (!invite) return;
 
-        // Fix 1: Validate password confirmation for signup
+        setError("");
+        setSubmitting(true);
+
+        // Validate password confirmation for signup
         if (view === "signup" && password !== confirmPassword) {
-            alert("Passwords don't match. Please try again.");
+            setError("Passwords don't match. Please try again.");
+            setSubmitting(false);
             return;
         }
 
@@ -56,9 +63,10 @@ export default function InvitePage() {
                 });
                 if (authError) throw authError;
 
-                // Fix 2: Check that authData.user exists after signup
+                // Check that authData.user exists after signup
                 if (!authData.user) {
-                    alert("Please check your email for a confirmation link before continuing.");
+                    setError("Please check your email for a confirmation link before continuing.");
+                    setSubmitting(false);
                     return;
                 }
 
@@ -70,9 +78,10 @@ export default function InvitePage() {
                         id: userId,
                         email,
                         name: invite.invitee_name || email.split("@")[0],
-                        label: invite.invitee_label, // Save the label from the invite
+                        label: invite.invitee_label,
+                        relationship: invite.invitee_role || null,
                         avatar_initials: invite.invitee_name?.[0]?.toUpperCase() || email[0].toUpperCase(),
-                        onboarding_completed: true, // Skip onboarding for invited users
+                        onboarding_completed: true,
                     });
                     if (profileError) {
                         console.error("Profile creation error:", profileError);
@@ -91,11 +100,11 @@ export default function InvitePage() {
             }
 
             if (userId) {
-                // 3. Add to family_members
+                // Add to family_members with the role from the invite
                 const { error: memberError } = await supabase.from("family_members").insert({
                     family_id: invite.family_id,
                     user_id: userId,
-                    role: "parent", // Default role
+                    role: invite.invitee_role || "parent",
                 });
 
                 if (memberError) {
@@ -103,7 +112,43 @@ export default function InvitePage() {
                     throw new Error("Failed to join family");
                 }
 
-                // 4. Migrate items assigned to this invite to the new user
+                // Add home_access entries for the homes selected during invite
+                if (invite.home_ids && invite.home_ids.length > 0) {
+                    const accessEntries = invite.home_ids.map((homeId: string) => ({
+                        home_id: homeId,
+                        caregiver_id: userId,
+                    }));
+
+                    const { error: accessError } = await supabase
+                        .from("home_access")
+                        .insert(accessEntries);
+
+                    if (accessError) {
+                        console.error("Home access creation error:", accessError);
+                        // Don't throw - home access can be set up later
+                    }
+
+                    // Also update legacy accessible_caregiver_ids array on homes
+                    for (const homeId of invite.home_ids) {
+                        const { data: home } = await supabase
+                            .from("homes")
+                            .select("accessible_caregiver_ids")
+                            .eq("id", homeId)
+                            .single();
+
+                        if (home) {
+                            const currentIds = home.accessible_caregiver_ids || [];
+                            if (!currentIds.includes(userId)) {
+                                await supabase
+                                    .from("homes")
+                                    .update({ accessible_caregiver_ids: [...currentIds, userId] })
+                                    .eq("id", homeId);
+                            }
+                        }
+                    }
+                }
+
+                // Migrate items assigned to this invite to the new user
                 const { error: updateItemsError } = await supabase
                     .from("items")
                     .update({
@@ -114,157 +159,262 @@ export default function InvitePage() {
 
                 if (updateItemsError) {
                     console.error("Failed to migrate items:", updateItemsError);
-                    // Don't throw here, as the user is already joined. Just log it.
                 }
 
-                // 5. Update invite status
+                // Update invite status
                 await supabase
                     .from("invites")
                     .update({ status: "accepted" })
                     .eq("id", invite.id);
 
-                // Refresh app state (will happen automatically on redirect/mount)
                 setOnboardingCompleted(true);
-                // Fix 3: Use router.push for consistent client-side routing
                 router.push("/");
             }
 
         } catch (err: any) {
             console.error("Join failed:", err);
-            alert(err.message);
+            setError(err.message);
+            setSubmitting(false);
         }
     };
 
-    // Marketing block component
-    const MarketingBlock = () => (
-        <div className="mb-6">
-            <p className="text-gray-500 font-medium mb-4">
-                Co-parenting central hub.
-            </p>
-            <ul className="text-sm text-gray-500 space-y-1 inline-block text-left">
-                <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    All info and schedules in one place.
-                </li>
-                <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    Track what moves between homes.
-                </li>
-                <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    Share important contacts.
-                </li>
-            </ul>
-        </div>
-    );
+    // Get content for the left panel based on current view
+    const getLeftPanelContent = () => {
+        if (view === "landing") {
+            return {
+                description: `You've been invited to join ${invite?.families?.name || "a family"} on homes.kids.`,
+                bullets: [
+                    "One shared place for everything your child needs between homes.",
+                    "Plan what moves in the bag between homes.",
+                    "Important contacts and home details, all in one hub.",
+                ],
+            };
+        }
+        if (view === "login") {
+            return {
+                description: "Welcome back! Log in to join the family.",
+                bullets: [
+                    "Access shared items and schedules.",
+                    "Stay in sync with your co-parent.",
+                    "Keep track of what's where.",
+                ],
+            };
+        }
+        return {
+            description: "Create your account to get started.",
+            bullets: [
+                "Set up your profile in seconds.",
+                "Start tracking items right away.",
+                "Both parents see the same information.",
+            ],
+        };
+    };
+
+    const leftContent = getLeftPanelContent();
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="min-h-screen bg-cream flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-forest"></div>
             </div>
         );
     }
 
     if (!invite) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center px-4">
-                <div className="max-w-md w-full text-center">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid Invite</h1>
-                    <p className="text-gray-600">This invite link is invalid or has expired.</p>
-                    <Link href="/" className="text-primary hover:underline mt-4 inline-block">
-                        Go Home
-                    </Link>
+            <div className="min-h-screen flex">
+                {/* Brand Side */}
+                <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
+                    <Logo size="lg" variant="light" />
+                    <p className="text-lg opacity-90 mt-4">Co-parenting central hub.</p>
                 </div>
-            </div>
-        );
-    }
 
-    if (view === "landing") {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center px-4">
-                <div className="max-w-md w-full">
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 text-center">
-                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
-                            👋
+                {/* Content Side */}
+                <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
+                    <div className="w-full max-w-sm text-center">
+                        <div className="lg:hidden mb-8">
+                            <Logo size="md" variant="dark" />
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                            You've been invited to join {invite.families?.name || "a family"}.
-                        </h1>
 
-                        <MarketingBlock />
-
-                        <p className="text-sm text-gray-600 mb-8">
-                            Join to help track what moves between homes.
-                        </p>
-
-                        <div className="space-y-4">
-                            <button
-                                onClick={() => setView("signup")}
-                                className="w-full px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
-                            >
-                                Accept invite
-                            </button>
-                            <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600">
-                                Decline
-                            </Link>
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </div>
+                        <h2 className="font-dmSerif text-2xl text-forest mb-2">Invalid Invite</h2>
+                        <p className="text-textSub mb-6">This invite link is invalid or has expired.</p>
+                        <Link
+                            href="/"
+                            className="inline-block py-3 px-6 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors"
+                        >
+                            Go Home
+                        </Link>
                     </div>
                 </div>
             </div>
         );
     }
 
-    if (view === "login") {
+    // Landing view
+    if (view === "landing") {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center px-4">
-                <div className="max-w-md w-full">
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50">
+            <div className="min-h-screen flex">
+                {/* Brand Side - Gradient */}
+                <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
+                    <Logo size="lg" variant="light" />
+
+                    <p className="text-lg opacity-90 mt-4 mb-8">{leftContent.description}</p>
+
+                    <ul className="max-w-sm space-y-4">
+                        {leftContent.bullets.map((bullet, index) => (
+                            <li
+                                key={index}
+                                className={`flex items-start gap-3 text-white/85 text-sm ${index < leftContent.bullets.length - 1 ? "border-b border-white/10 pb-4" : "pb-4"}`}
+                            >
+                                <span className="opacity-60 mt-0.5">→</span>
+                                <span>{bullet}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* Form Side */}
+                <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
+                    <div className="w-full max-w-sm">
+                        {/* Mobile Logo */}
+                        <div className="lg:hidden text-center mb-8">
+                            <Logo size="md" variant="dark" />
+                            <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
+                        </div>
+
                         <div className="text-center mb-6">
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                                Welcome back
-                            </h1>
-                            <p className="text-sm text-gray-600">
-                                Log in to join {invite?.families?.name || "the family"}
+                            <div className="w-16 h-16 bg-teal/20 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
+                                👋
+                            </div>
+                            <h2 className="font-dmSerif text-2xl text-forest mb-2">
+                                You're invited!
+                            </h2>
+                            <p className="text-textSub text-sm">
+                                Join {invite?.families?.name || "the family"} on homes.kids
                             </p>
                         </div>
 
+                        {invite.invitee_name && (
+                            <div className="bg-white border border-border rounded-xl p-4 mb-6 text-center">
+                                <p className="text-sm text-textSub">You'll be joining as</p>
+                                <p className="font-semibold text-forest">{invite.invitee_name}</p>
+                                {invite.invitee_label && (
+                                    <p className="text-xs text-textSub">({invite.invitee_label})</p>
+                                )}
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => setView("signup")}
+                            className="w-full py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors mb-3"
+                        >
+                            Accept invite
+                        </button>
+
+                        <Link
+                            href="/"
+                            className="block text-center text-sm text-textSub hover:text-forest transition-colors"
+                        >
+                            Decline
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Login view
+    if (view === "login") {
+        return (
+            <div className="min-h-screen flex">
+                {/* Brand Side - Gradient */}
+                <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
+                    <Logo size="lg" variant="light" />
+
+                    <p className="text-lg opacity-90 mt-4 mb-8">{leftContent.description}</p>
+
+                    <ul className="max-w-sm space-y-4">
+                        {leftContent.bullets.map((bullet, index) => (
+                            <li
+                                key={index}
+                                className={`flex items-start gap-3 text-white/85 text-sm ${index < leftContent.bullets.length - 1 ? "border-b border-white/10 pb-4" : "pb-4"}`}
+                            >
+                                <span className="opacity-60 mt-0.5">→</span>
+                                <span>{bullet}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* Form Side */}
+                <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
+                    <div className="w-full max-w-sm">
+                        {/* Mobile Logo */}
+                        <div className="lg:hidden text-center mb-8">
+                            <Logo size="md" variant="dark" />
+                            <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
+                        </div>
+
+                        <h2 className="font-dmSerif text-2xl text-forest mb-2">
+                            Welcome back
+                        </h2>
+                        <p className="text-textSub text-sm mb-6">
+                            Log in to join {invite?.families?.name || "the family"}
+                        </p>
+
                         <form onSubmit={handleJoin} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-forest mb-1.5">
                                     Email
                                 </label>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    placeholder="you@example.com"
+                                    className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
                                 />
                             </div>
+
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-forest mb-1.5">
                                     Password
                                 </label>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    placeholder="••••••••"
+                                    className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
                                 />
                             </div>
+
+                            {error && (
+                                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                                    {error}
+                                </p>
+                            )}
+
                             <button
                                 type="submit"
-                                className="w-full px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                                disabled={submitting}
+                                className="w-full py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
                             >
-                                Log in and join
+                                {submitting ? "Logging in..." : "Log in and join"}
                             </button>
                         </form>
-                        <div className="mt-4 text-center">
+
+                        <div className="mt-6 text-center">
                             <button
                                 onClick={() => setView("signup")}
-                                className="text-sm text-primary hover:underline"
+                                className="text-sm font-medium text-forest hover:text-teal transition-colors"
                             >
-                                Need an account? Create one
+                                Need an account? Create one →
                             </button>
                         </div>
                     </div>
@@ -275,65 +425,103 @@ export default function InvitePage() {
 
     // Signup view
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center px-4">
-            <div className="max-w-md w-full">
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50">
-                    <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                            Create account
-                        </h1>
-                        <p className="text-sm text-gray-600">
-                            Create an account to join {invite?.families?.name || "the family"}
-                        </p>
+        <div className="min-h-screen flex">
+            {/* Brand Side - Gradient */}
+            <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
+                <Logo size="lg" variant="light" />
+
+                <p className="text-lg opacity-90 mt-4 mb-8">{leftContent.description}</p>
+
+                <ul className="max-w-sm space-y-4">
+                    {leftContent.bullets.map((bullet, index) => (
+                        <li
+                            key={index}
+                            className={`flex items-start gap-3 text-white/85 text-sm ${index < leftContent.bullets.length - 1 ? "border-b border-white/10 pb-4" : "pb-4"}`}
+                        >
+                            <span className="opacity-60 mt-0.5">→</span>
+                            <span>{bullet}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+
+            {/* Form Side */}
+            <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
+                <div className="w-full max-w-sm">
+                    {/* Mobile Logo */}
+                    <div className="lg:hidden text-center mb-8">
+                        <Logo size="md" variant="dark" />
+                        <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
                     </div>
+
+                    <h2 className="font-dmSerif text-2xl text-forest mb-2">
+                        Create account
+                    </h2>
+                    <p className="text-textSub text-sm mb-6">
+                        Create an account to join {invite?.families?.name || "the family"}
+                    </p>
 
                     <form onSubmit={handleJoin} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-forest mb-1.5">
                                 Email
                             </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="you@example.com"
+                                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
                             />
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-forest mb-1.5">
                                 Password
                             </label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
                             />
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-forest mb-1.5">
                                 Confirm Password
                             </label>
                             <input
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="••••••••"
+                                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
                             />
                         </div>
+
+                        {error && (
+                            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                                {error}
+                            </p>
+                        )}
+
                         <button
                             type="submit"
-                            className="w-full px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                            disabled={submitting}
+                            className="w-full py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
                         >
-                            Create account and join
+                            {submitting ? "Creating account..." : "Create account and join"}
                         </button>
                     </form>
-                    <div className="mt-4 text-center">
+
+                    <div className="mt-6 text-center">
                         <button
                             onClick={() => setView("login")}
-                            className="text-sm text-primary hover:underline"
+                            className="text-sm font-medium text-forest hover:text-teal transition-colors"
                         >
-                            Already have an account? Log in
+                            Already have an account? Log in →
                         </button>
                     </div>
                 </div>

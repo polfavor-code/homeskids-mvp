@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handle Concept 14 - Embroidery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+
+            /* Pink Theme */
+            --pink-handle: #F8BBD0;
+            --pink-thread: #E91E63;
+
+            /* Blue Theme */
+            --blue-handle: #BBDEFB;
+            --blue-thread: #2196F3;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        .variant-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .handle-area {
+            height: 40px;
+            width: 140px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .handle {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px 20px 0 0;
+            border: 10px solid;
+            border-bottom: none;
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            z-index: 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 5px;
+        }
+
+        /* Embroidery */
+        .child-name {
+            font-family: 'Caveat', cursive;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .bag-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 40px 24px 24px;
+            box-shadow: 0 12px 32px rgba(44, 62, 45, 0.08);
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-content {
+            opacity: 0.6;
+            filter: grayscale(0.2);
+        }
+
+        /* Themes */
+        .pink-theme .handle {
+            border-color: var(--pink-handle);
+            background: rgba(248, 187, 208, 0.2);
+        }
+
+        .pink-theme .child-name {
+            color: var(--pink-thread);
+        }
+
+        .blue-theme .handle {
+            border-color: var(--blue-handle);
+            background: rgba(187, 222, 251, 0.2);
+        }
+
+        .blue-theme .child-name {
+            color: var(--blue-thread);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container pink-theme">
+        <div class="variant-label">Girl Version</div>
+        <div class="handle-area">
+            <div class="handle">
+                <span class="child-name">June</span>
+            </div>
+        </div>
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container blue-theme">
+        <div class="variant-label">Boy Version</div>
+        <div class="handle-area">
+            <div class="handle">
+                <span class="child-name">Noah</span>
+            </div>
+        </div>
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

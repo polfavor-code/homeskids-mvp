@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Bag - Concept 2</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --orange: #D76F4B;
+            --teal: #4CA1AF;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .back-link {
+            font-size: 13px;
+            color: #888;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-family: serif;
+            font-size: 26px;
+            color: var(--forest);
+            margin: 0 0 6px 0;
+        }
+
+        .subline {
+            font-size: 14px;
+            color: #666;
+            margin: 0;
+        }
+
+        /* Duffel Card */
+        .duffel-card {
+            background: white;
+            border-radius: 40px;
+            /* Pill shape */
+            padding: 32px 24px;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Straps */
+        .strap {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            background: rgba(44, 62, 45, 0.03);
+            border-left: 1px dashed rgba(44, 62, 45, 0.1);
+            border-right: 1px dashed rgba(44, 62, 45, 0.1);
+            z-index: 0;
+        }
+
+        .strap-left {
+            left: 15%;
+        }
+
+        .strap-right {
+            right: 15%;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--forest);
+            color: white;
+            padding: 6px 16px 6px 6px;
+            border-radius: 30px;
+        }
+
+        .avatar {
+            width: 28px;
+            height: 28px;
+            background: var(--orange);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-text {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background: #EEE;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            width: 75%;
+            height: 100%;
+            background: var(--teal);
+        }
+
+        .task-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--forest);
+            margin-bottom: 16px;
+        }
+
+        .item-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .grid-item {
+            background: #F8F8F8;
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item-emoji {
+            font-size: 20px;
+        }
+
+        .item-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .check {
+            margin-left: auto;
+            color: var(--teal);
+            font-weight: bold;
+        }
+
+        .open-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--forest);
+            border-radius: 20px;
+            color: var(--forest);
+            text-align: center;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .open-btn:hover {
+            background: var(--forest);
+            color: white;
+        }
+
+        /* Missing Section - Collapsible Style */
+        .missing-toggle {
+            margin-top: 24px;
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .alert-icon {
+            color: #E53E3E;
+            margin-right: 8px;
+        }
+
+        .missing-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .missing-count {
+            background: #FED7D7;
+            color: #9B2C2C;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <a href="#" class="back-link">← Back to home</a>
+            <h1>Check June’s bag</h1>
+            <p class="subline">Daddy’s Home → Mommy’s Home</p>
+        </div>
+
+        <div class="duffel-card">
+            <div class="strap strap-left"></div>
+            <div class="strap strap-right"></div>
+
+            <div class="content">
+                <div class="card-top">
+                    <div class="user-badge">
+                        <div class="avatar">J</div>
+                        <span class="badge-text">June’s Bag</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="task-title">Pack 4 items at Daddy’s</div>
+
+                <div class="item-grid">
+                    <div class="grid-item">
+                        <span class="item-emoji">🔦</span>
+                        <span class="item-text">Flashlight</span>
+                        <span class="check">✓</span>
+                    </div>
+                    <div class="grid-item">
+                        <span class="item-emoji">📱</span>
+                        <span class="item-text">iPad</span>
+                        <span class="check">✓</span>
+                    </div>
+                    <div class="grid-item">
+                        <span class="item-emoji">💊</span>
+                        <span class="item-text">Meds</span>
+                        <span class="check">✓</span>
+                    </div>
+                    <div class="grid-item" style="background:white; border:1px dashed #CCC;">
+                        <span class="item-emoji">📂</span>
+                        <span class="item-text">Folder</span>
+                    </div>
+                </div>
+
+                <a href="#" class="open-btn">Open travel bag →</a>
+            </div>
+        </div>
+
+        <div class="missing-toggle">
+            <div style="display:flex; align-items:center;">
+                <span class="alert-icon">⚠️</span>
+                <span class="missing-label">Missing from Daddy’s</span>
+            </div>
+            <span class="missing-count">1 Item</span>
+        </div>
+    </div>
+
+</body>
+
+</html>

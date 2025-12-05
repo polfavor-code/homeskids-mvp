@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Item, MOCK_ITEMS } from "@/lib/mockData";
+import { supabase } from "@/lib/supabase";
 
 export type MissingMessage = {
     id: string;
@@ -17,10 +18,14 @@ interface ItemsContextType {
     addItem: (item: Omit<Item, "id">) => Promise<{ success: boolean; error?: string; item?: Item }>;
     updateItemLocation: (
         itemId: string,
-        newLocation: { caregiverId?: string; toBeFound?: boolean }
+        newLocation: { caregiverId?: string; homeId?: string; toBeFound?: boolean }
     ) => void;
     updateItemRequested: (itemId: string, requested: boolean) => void;
+    updateItemPacked: (itemId: string, packed: boolean) => void;
     updateItemName: (itemId: string, newName: string) => Promise<void>;
+    updateItemNotes: (itemId: string, notes: string) => Promise<void>;
+    updateItemCategory: (itemId: string, category: string) => Promise<void>;
+    updateItemPhoto: (itemId: string, photoUrl: string | null) => Promise<void>;
     missingMessages: MissingMessage[];
     addMissingMessage: (message: {
         itemId: string;
@@ -41,14 +46,11 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
 
     // Fetch items from Supabase and subscribe to auth changes
     useEffect(() => {
-        let authSubscription: any = null;
         let realtimeChannel: any = null;
         let isMounted = true;
 
         const fetchItems = async () => {
             try {
-                const { supabase } = await import("@/lib/supabase");
-
                 // Use getSession for more reliable auth state on initial load
                 const { data: { session } } = await supabase.auth.getSession();
                 const user = session?.user;
@@ -83,6 +85,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                             name: item.name,
                             category: item.category,
                             locationCaregiverId: item.location_caregiver_id || (item.location_invite_id ? `pending-${item.location_invite_id}` : null),
+                            locationHomeId: item.location_home_id || null, // NEW: home-based location
                             isRequestedForNextVisit: item.is_requested_for_next_visit,
                             isPacked: item.is_packed,
                             isMissing: item.is_missing,
@@ -176,47 +179,36 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             }
         };
 
-        // Subscribe to auth state changes first, then do initial fetch
-        const setupAuthListener = async () => {
-            const { supabase } = await import("@/lib/supabase");
-            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-                console.log("Auth state changed:", event);
-                // Reset loading state when auth changes
-                if (isMounted) {
-                    // Clear existing realtime subscription on auth change
-                    if (realtimeChannel) {
-                        supabase.removeChannel(realtimeChannel);
-                        realtimeChannel = null;
-                    }
-                    setIsLoaded(false);
-                    fetchItems();
+        // Fetch immediately on mount
+        fetchItems();
+
+        // Subscribe to auth state changes for updates
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log("Items: Auth state changed:", event);
+            // Reset loading state when auth changes
+            if (isMounted) {
+                // Clear existing realtime subscription on auth change
+                if (realtimeChannel) {
+                    supabase.removeChannel(realtimeChannel);
+                    realtimeChannel = null;
                 }
-            });
-            authSubscription = subscription;
-
-            // After setting up the listener, do the initial fetch
-            fetchItems();
-        };
-
-        setupAuthListener();
+                setIsLoaded(false);
+                fetchItems();
+            }
+        });
 
         // Cleanup function
         return () => {
             isMounted = false;
-            if (authSubscription) {
-                authSubscription.unsubscribe();
-            }
+            authSubscription.unsubscribe();
             if (realtimeChannel) {
-                import("@/lib/supabase").then(({ supabase }) => {
-                    supabase.removeChannel(realtimeChannel);
-                });
+                supabase.removeChannel(realtimeChannel);
             }
         };
     }, []);
 
     const addItem = async (item: Omit<Item, "id">): Promise<{ success: boolean; error?: string; item?: Item }> => {
         try {
-            const { supabase } = await import("./supabase");
             const { data: { user } } = await supabase.auth.getUser();
 
             if (!user) {
@@ -254,6 +246,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     category: item.category,
                     location_caregiver_id: locationCaregiverId,
                     location_invite_id: locationInviteId,
+                    location_home_id: item.locationHomeId || null, // NEW: home-based location
                     notes: item.notes,
                     family_id: familyMember.family_id,
                     photo_url: item.photoUrl,
@@ -279,15 +272,15 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 name: data.name,
                 category: data.category,
                 locationCaregiverId: data.location_caregiver_id || (data.location_invite_id ? `pending-${data.location_invite_id}` : null),
+                locationHomeId: data.location_home_id || null,
                 notes: data.notes,
                 photoUrl: data.photo_url,
                 isRequestedForNextVisit: false,
                 isPacked: false,
                 isMissing: item.isMissing,
             };
-            // No need to manually update state as realtime subscription will catch it
-            // But for instant feedback we can keep it, or rely on fetchItems
-            // setItems((prev) => [...prev, newItem]); 
+            // Immediately update local state for instant feedback
+            setItems((prev) => [...prev, newItem]);
             return { success: true, item: newItem };
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : "Failed to add item. Please try again.";
@@ -298,18 +291,27 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
 
     const updateItemLocation = async (
         itemId: string,
-        newLocation: { caregiverId?: string; toBeFound?: boolean }
+        newLocation: { caregiverId?: string; homeId?: string; toBeFound?: boolean }
     ) => {
         try {
-            const { supabase } = await import("@/lib/supabase");
-
             const updates: any = {};
 
             if (newLocation.toBeFound) {
                 updates.is_missing = true;
                 updates.is_requested_for_next_visit = false;
                 updates.is_packed = false;
+            } else if (newLocation.homeId) {
+                // NEW: home-based location (primary method)
+                updates.location_home_id = newLocation.homeId;
+                updates.is_missing = false;
+                updates.is_requested_for_next_visit = false;
+                updates.is_packed = false;
+                // Clear legacy caregiver location if setting home
+                if (newLocation.caregiverId) {
+                    updates.location_caregiver_id = newLocation.caregiverId;
+                }
             } else if (newLocation.caregiverId) {
+                // Legacy: caregiver-based location (fallback)
                 updates.location_caregiver_id = newLocation.caregiverId;
                 updates.is_missing = false;
                 updates.is_requested_for_next_visit = false;
@@ -322,49 +324,152 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
+            // Immediately update local state for instant feedback
+            setItems((prev) =>
+                prev.map((item) => {
+                    if (item.id !== itemId) return item;
+                    return {
+                        ...item,
+                        isMissing: newLocation.toBeFound || false,
+                        locationCaregiverId: newLocation.caregiverId || item.locationCaregiverId,
+                        locationHomeId: newLocation.homeId || item.locationHomeId,
+                        isRequestedForNextVisit: false,
+                        isPacked: false,
+                    };
+                })
+            );
+
             const { error } = await supabase
                 .from("items")
                 .update(updates)
                 .eq("id", itemId);
 
             if (error) throw error;
-
-            // Local state update handled by realtime
         } catch (error) {
             console.error("Failed to update item location:", error);
         }
     };
 
     const updateItemRequested = async (itemId: string, requested: boolean) => {
-        try {
-            const { supabase } = await import("@/lib/supabase");
+        // Immediately update local state
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId ? { ...item, isRequestedForNextVisit: requested } : item
+            )
+        );
 
+        try {
             const { error } = await supabase
                 .from("items")
                 .update({ is_requested_for_next_visit: requested })
                 .eq("id", itemId);
 
             if (error) throw error;
-
-            // Local state update handled by realtime
         } catch (error) {
             console.error("Failed to update item request status:", error);
         }
     };
 
-    const updateItemName = async (itemId: string, newName: string) => {
-        try {
-            const { supabase } = await import("@/lib/supabase");
+    const updateItemPacked = async (itemId: string, packed: boolean) => {
+        // Immediately update local state
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId ? { ...item, isPacked: packed } : item
+            )
+        );
 
+        try {
+            const { error } = await supabase
+                .from("items")
+                .update({ is_packed: packed })
+                .eq("id", itemId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error("Failed to update item packed status:", error);
+        }
+    };
+
+    const updateItemName = async (itemId: string, newName: string) => {
+        // Immediately update local state
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId ? { ...item, name: newName } : item
+            )
+        );
+
+        try {
             const { error } = await supabase
                 .from("items")
                 .update({ name: newName })
                 .eq("id", itemId);
 
             if (error) throw error;
-            // Local state update handled by realtime
         } catch (error) {
             console.error("Failed to update item name:", error);
+            throw error;
+        }
+    };
+
+    const updateItemNotes = async (itemId: string, notes: string) => {
+        // Immediately update local state
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId ? { ...item, notes: notes || undefined } : item
+            )
+        );
+
+        try {
+            const { error } = await supabase
+                .from("items")
+                .update({ notes: notes || null })
+                .eq("id", itemId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error("Failed to update item notes:", error);
+            throw error;
+        }
+    };
+
+    const updateItemCategory = async (itemId: string, category: string) => {
+        // Immediately update local state
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId ? { ...item, category } : item
+            )
+        );
+
+        try {
+            const { error } = await supabase
+                .from("items")
+                .update({ category })
+                .eq("id", itemId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error("Failed to update item category:", error);
+            throw error;
+        }
+    };
+
+    const updateItemPhoto = async (itemId: string, photoUrl: string | null) => {
+        // Immediately update local state
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId ? { ...item, photoUrl: photoUrl || undefined } : item
+            )
+        );
+
+        try {
+            const { error } = await supabase
+                .from("items")
+                .update({ photo_url: photoUrl })
+                .eq("id", itemId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error("Failed to update item photo:", error);
             throw error;
         }
     };
@@ -388,8 +493,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
         return missingMessages.filter((msg) => msg.itemId === itemId);
     };
 
-    const markItemFound = (itemId: string) => {
-        // Optimistic update
+    const markItemFound = async (itemId: string) => {
+        // Optimistic update - immediately update local state
         setItems((prev) =>
             prev.map((item) => {
                 if (item.id !== itemId) return item;
@@ -406,14 +511,25 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             authorCaregiverId: "system",
             text: "Marked as found",
         });
+
+        // Update database
+        try {
+            await supabase
+                .from("items")
+                .update({ is_missing: false })
+                .eq("id", itemId);
+        } catch (error) {
+            console.error("Failed to mark item as found:", error);
+        }
     };
 
     const deleteItem = async (itemId: string): Promise<{ success: boolean; error?: string }> => {
-        try {
-            const { supabase } = await import("@/lib/supabase");
+        // Optimistically remove from local state
+        const previousItems = items;
+        setItems((prev) => prev.filter((item) => item.id !== itemId));
 
+        try {
             // 1. Delete associated missing messages first (cleanup)
-            // We don't check for error here strictly, as there might be none
             await supabase
                 .from("missing_messages")
                 .delete()
@@ -428,16 +544,18 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             if (error) throw error;
 
             if (count === 0) {
-                // This almost always means RLS policy blocked the delete
+                // Rollback optimistic update
+                setItems(previousItems);
                 return {
                     success: false,
                     error: "Permission denied. Please run this SQL in Supabase: create policy \"Enable delete for family members\" on items for delete using (family_id in (select family_id from family_members where user_id = auth.uid()));"
                 };
             }
 
-            // Success - local state will be updated by realtime subscription
             return { success: true };
         } catch (error) {
+            // Rollback optimistic update
+            setItems(previousItems);
             const errorMsg = error instanceof Error ? error.message : "Failed to delete item";
             console.error("Failed to delete item:", error);
             return { success: false, error: errorMsg };
@@ -452,12 +570,16 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 addItem,
                 updateItemLocation,
                 updateItemRequested,
+                updateItemPacked,
+                updateItemName,
+                updateItemNotes,
+                updateItemCategory,
+                updateItemPhoto,
                 missingMessages,
                 addMissingMessage,
                 getMissingMessagesForItem,
                 markItemFound,
                 deleteItem,
-                updateItemName,
             }}
         >
             {children}

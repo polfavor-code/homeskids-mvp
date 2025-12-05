@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+            --teal: #4CA1AF;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 380px;
+            width: 100%;
+        }
+
+        .float-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 12px 32px rgba(44, 62, 45, 0.1), 0 2px 6px rgba(44, 62, 45, 0.05);
+            text-align: center;
+        }
+
+        .icon-float {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--forest), var(--teal));
+            border-radius: 16px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: -48px auto 16px;
+            box-shadow: 0 8px 16px rgba(44, 62, 45, 0.2);
+        }
+
+        .title {
+            font-family: serif;
+            font-size: 20px;
+            color: var(--forest);
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        .preview-pill {
+            background: #F8F8F8;
+            border-radius: 30px;
+            padding: 6px 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--forest);
+            border-radius: 12px;
+            color: var(--forest);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--forest);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div style="margin-bottom:32px; text-align:center;">
+            <h3 style="margin:0; font-size:16px; color:#2C3E2D; font-family:serif;">What to pack</h3>
+        </div>
+
+        <div class="float-card">
+            <div class="icon-float">🎒</div>
+
+            <h2 class="title">June's Bag</h2>
+            <p class="subtitle">Pack 1 item at Daddy's home</p>
+
+            <div class="preview-pill">
+                <span>🔦</span> Flashlight
+            </div>
+
+            <a href="#" class="btn">Open travel bag</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

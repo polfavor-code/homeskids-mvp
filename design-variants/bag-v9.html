@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .ticket-card {
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .stub-left {
+            flex: 1;
+            padding: 20px;
+            border-right: 2px dashed #E5E5E5;
+            position: relative;
+        }
+
+        /* Perforation circles */
+        .stub-left::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 12px;
+            height: 12px;
+            background: var(--bg);
+            border-radius: 50%;
+        }
+
+        .stub-left::before {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 12px;
+            height: 12px;
+            background: var(--bg);
+            border-radius: 50%;
+        }
+
+        .stub-right {
+            width: 80px;
+            background: #FAFAFA;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--forest);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .avatar {
+            width: 24px;
+            height: 24px;
+            background: #D76F4B;
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            line-height: 24px;
+            font-size: 12px;
+        }
+
+        .title {
+            font-weight: 700;
+            color: var(--forest);
+            font-size: 15px;
+        }
+
+        .item {
+            font-size: 13px;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .check {
+            color: #4CA1AF;
+        }
+
+        .action-icon {
+            font-size: 20px;
+        }
+
+        .action-label {
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div style="margin-bottom:12px;">
+            <h3 style="margin:0; font-size:16px; color:#2C3E2D; font-family:serif;">Request packing</h3>
+        </div>
+
+        <div class="ticket-card">
+            <div class="stub-left">
+                <div class="header">
+                    <div class="avatar">J</div>
+                    <span class="title">June's Bag</span>
+                </div>
+                <div class="item">
+                    <span class="check">✓</span>
+                    <span>Flashlight (Requested)</span>
+                </div>
+            </div>
+
+            <a href="#" class="stub-right" style="text-decoration:none;">
+                <span class="action-icon">🎒</span>
+                <span class="action-label">Open</span>
+            </a>
+        </div>
+    </div>
+
+</body>
+
+</html>

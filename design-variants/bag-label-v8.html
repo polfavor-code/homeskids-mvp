@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bag Label - Concept 8</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --pink: #FF6B9D;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        .handle {
+            width: 140px;
+            height: 40px;
+            border: 8px solid #555;
+            border-bottom: none;
+            border-radius: 20px 20px 0 0;
+            margin: 0 auto;
+            position: relative;
+            top: 8px;
+            z-index: 0;
+        }
+
+        /* Button Tag */
+        .button-strap {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 40px;
+            background: var(--pink);
+            z-index: 10;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 4px;
+        }
+
+        .button {
+            width: 10px;
+            height: 10px;
+            background: #333;
+            border-radius: 50%;
+        }
+
+        .tag-plate {
+            position: absolute;
+            top: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 2px solid var(--pink);
+            padding: 6px 16px;
+            border-radius: 20px;
+            z-index: 11;
+            font-weight: 700;
+            color: var(--pink);
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 48px 24px 24px;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.06);
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="handle"></div>
+
+        <div class="button-strap">
+            <div class="button"></div>
+        </div>
+        <div class="tag-plate">JUNE</div>
+
+        <div class="card">
+            <div style="text-align:center;">
+                <h2 style="margin:0; color:var(--forest);">Travel Bag</h2>
+                <p style="font-size:12px; color:#888; margin-top:4px;">Ready to pack</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
