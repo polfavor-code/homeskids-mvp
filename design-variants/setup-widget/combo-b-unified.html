@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Widget - Combination B (Unified)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Shared Styles */
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --soft-green: #E8EFE8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--cream);
+            border-right: 1px solid var(--border);
+            height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 40px;
+            padding-left: 12px;
+            color: var(--forest);
+            text-decoration: none;
+            display: block;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--forest);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .nav-item.active {
+            background-color: var(--forest);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        /* UNIFIED CONTAINER */
+        /* A single card at the bottom that holds both */
+        .bottom-container {
+            margin-top: auto;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(44, 62, 45, 0.04);
+        }
+
+        /* WIDGET PART (Variant 5 - Checklist style simplified) */
+        .widget-part {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(to bottom, #fff, #fafafa);
+        }
+
+        .widget-header {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-sub);
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .widget-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 15px;
+            margin: 0 0 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .check-circle {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid var(--forest);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .action-sm {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--forest);
+            text-decoration: underline;
+            margin-top: 4px;
+            display: block;
+            margin-left: 20px;
+        }
+
+        /* USER PART */
+        .user-part {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .user-part:hover {
+            background: #f5f5f5;
+        }
+
+        .user-avatar-sm {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--forest);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .user-name-sm {
+            font-size: 13px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <a href="#" class="logo">homes.kids</a>
+
+        <a href="#" class="nav-item active">
+            <div class="nav-icon"></div>Homes
+        </a>
+        <a href="#" class="nav-item">
+            <div class="nav-icon"></div>June's Items
+        </a>
+
+        <!-- UNIFIED LAYOUT: Both items inside one "Account & Setup" card -->
+
+        <div class="bottom-container">
+            <!-- Widget Part -->
+            <div class="widget-part">
+                <div class="widget-header">Setup (2/4)</div>
+                <div class="widget-title">
+                    <div class="check-circle"></div>
+                    Add contacts
+                </div>
+                <a href="#" class="action-sm">Complete now</a>
+            </div>
+
+            <!-- User Part -->
+            <div class="user-part">
+                <div class="user-avatar-sm">N</div>
+                <div class="user-name-sm">stepmom's Account</div>
+            </div>
+        </div>
+
+    </nav>
+
+    <main style="flex:1; padding: 40px;">
+        <h1 style="font-family: 'DM Serif Display';">Dashboard Preview</h1>
+    </main>
+
+</body>
+
+</html>

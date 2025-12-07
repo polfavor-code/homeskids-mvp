@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Widget - Variant 3 (Floating Pill)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Shared Styles */
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --soft-green: #E8EFE8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--cream);
+            border-right: 1px solid var(--border);
+            height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 40px;
+            padding-left: 12px;
+            color: var(--forest);
+            text-decoration: none;
+            display: block;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--forest);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .nav-item.active {
+            background-color: var(--forest);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        /* VARIANT 3: Floating Dark Pill */
+        /* High contrast, floats at bottom, dark forest background for distinction */
+        .widget-pill {
+            margin-top: auto;
+            margin-bottom: 20px;
+            background: var(--forest);
+            color: white;
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(44, 62, 45, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pill-bg-icon {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 60px;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        .pill-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .pill-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 18px;
+            margin: 0 0 6px 0;
+            color: white;
+        }
+
+        .pill-desc {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .pill-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pill-btn {
+            background: white;
+            color: var(--forest);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .pill-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pill-nav-btn {
+            width: 24px;
+            height: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .pill-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <a href="#" class="logo">homes.kids</a>
+
+        <a href="#" class="nav-item active">
+            <div class="nav-icon"></div>Homes
+        </a>
+        <a href="#" class="nav-item">
+            <div class="nav-icon"></div>June's Items
+        </a>
+
+        <!-- WIDGET VARIANT 3 -->
+        <div class="widget-pill">
+            <div class="pill-bg-icon">👤</div>
+            <div class="pill-label">Next Step</div>
+            <h3 class="pill-title">Add contacts</h3>
+            <p class="pill-desc">Keep school and emergency numbers handy.</p>
+
+            <div class="pill-actions">
+                <a href="#" class="pill-btn">Add</a>
+                <div class="pill-nav">
+                    <div class="pill-nav-btn">←</div>
+                    <div class="pill-nav-btn">→</div>
+                </div>
+            </div>
+        </div>
+
+    </nav>
+
+    <main style="flex:1; padding: 40px;">
+        <h1 style="font-family: 'DM Serif Display';">Dashboard Preview</h1>
+    </main>
+
+</body>
+
+</html>

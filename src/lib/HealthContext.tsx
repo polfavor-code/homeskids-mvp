@@ -3,7 +3,20 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 
-// Types
+// 3-state health status enum
+export type HealthStatusValue = "skipped" | "none" | "has";
+
+// Health status for each category
+export interface HealthStatus {
+    allergiesStatus: HealthStatusValue;
+    allergiesDetails: string | null;
+    medicationStatus: HealthStatusValue;
+    medicationDetails: string | null;
+    dietaryStatus: HealthStatusValue;
+    dietaryDetails: string | null;
+}
+
+// Types for detailed health data (legacy - kept for detailed views)
 export interface Allergy {
     id: string;
     name: string;
@@ -41,21 +54,61 @@ export interface DietaryNeeds {
     dislikes?: string;
 }
 
+// Legacy health flags (for backwards compatibility during migration)
+export interface HealthFlags {
+    noKnownAllergies: boolean;
+    noDietaryRestrictions: boolean;
+    noRegularMedication: boolean;
+}
+
+// Default health status
+const defaultHealthStatus: HealthStatus = {
+    allergiesStatus: "skipped",
+    allergiesDetails: null,
+    medicationStatus: "skipped",
+    medicationDetails: null,
+    dietaryStatus: "skipped",
+    dietaryDetails: null,
+};
+
 interface HealthContextType {
+    // New 3-state model
+    healthStatus: HealthStatus;
+    updateHealthStatus: (category: "allergies" | "medication" | "dietary", status: HealthStatusValue, details?: string | null) => Promise<{ success: boolean; error?: string }>;
+    skipAllHealthForNow: (overrideChildId?: string, overrideFamilyId?: string) => Promise<{ success: boolean; error?: string }>;
+
+    // Computed values for the new model
+    isHealthReviewed: boolean; // True if ANY category is not 'skipped'
+    isAllSkipped: boolean; // True if ALL categories are 'skipped'
+
+    // Legacy detailed health data (for detailed health pages)
     allergies: Allergy[];
     medications: Medication[];
     dietaryNeeds: DietaryNeeds;
+    healthFlags: HealthFlags; // Legacy - derived from healthStatus for backwards compat
     isLoaded: boolean;
-    // Allergy operations
+
+    // Legacy computed values
+    isHealthComplete: boolean;
+    hasAnyHealthData: boolean;
+
+    // Allergy operations (legacy detailed)
     addAllergy: (allergy: Omit<Allergy, "id">) => Promise<{ success: boolean; error?: string }>;
     updateAllergy: (id: string, updates: Partial<Omit<Allergy, "id">>) => Promise<{ success: boolean; error?: string }>;
     deleteAllergy: (id: string) => Promise<{ success: boolean; error?: string }>;
-    // Medication operations
+
+    // Medication operations (legacy detailed)
     addMedication: (medication: Omit<Medication, "id">) => Promise<{ success: boolean; error?: string }>;
     updateMedication: (id: string, updates: Partial<Omit<Medication, "id">>) => Promise<{ success: boolean; error?: string }>;
     deleteMedication: (id: string) => Promise<{ success: boolean; error?: string }>;
-    // Dietary needs operations
+
+    // Dietary needs operations (legacy detailed)
     updateDietaryNeeds: (needs: DietaryNeeds) => Promise<{ success: boolean; error?: string }>;
+
+    // Legacy health flags operations (deprecated - use updateHealthStatus instead)
+    updateHealthFlags: (flags: Partial<HealthFlags>, overrideChildId?: string) => Promise<{ success: boolean; error?: string }>;
+    confirmNoHealthNeeds: (overrideChildId?: string) => Promise<{ success: boolean; error?: string }>;
+
     // File operations (for medication prescriptions/photos)
     uploadFile: (file: File) => Promise<{ success: boolean; path?: string; error?: string }>;
     getFileUrl: (path: string) => Promise<string | null>;
@@ -72,10 +125,18 @@ const defaultDietaryNeeds: DietaryNeeds = {
     dislikes: "",
 };
 
+const defaultHealthFlags: HealthFlags = {
+    noKnownAllergies: false,
+    noDietaryRestrictions: false,
+    noRegularMedication: false,
+};
+
 export function HealthProvider({ children }: { children: ReactNode }) {
+    const [healthStatus, setHealthStatus] = useState<HealthStatus>(defaultHealthStatus);
     const [allergies, setAllergies] = useState<Allergy[]>([]);
     const [medications, setMedications] = useState<Medication[]>([]);
     const [dietaryNeeds, setDietaryNeeds] = useState<DietaryNeeds>(defaultDietaryNeeds);
+    const [healthFlags, setHealthFlags] = useState<HealthFlags>(defaultHealthFlags);
     const [isLoaded, setIsLoaded] = useState(false);
     const [familyId, setFamilyId] = useState<string | null>(null);
     const [childId, setChildId] = useState<string | null>(null);
@@ -88,6 +149,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             if (!user) {
                 setAllergies([]);
                 setMedications([]);
+                setHealthStatus(defaultHealthStatus);
                 setIsLoaded(true);
                 return;
             }
@@ -107,14 +169,71 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             setFamilyId(familyMember.family_id);
 
             // Get child for this family
-            const { data: childData } = await supabase
+            const { data: childData, error: childError } = await supabase
                 .from("children")
                 .select("id")
                 .eq("family_id", familyMember.family_id)
                 .single();
 
+            if (childError) {
+                console.error("Failed to fetch child:", childError);
+            }
+
             if (childData) {
                 setChildId(childData.id);
+
+                // Fetch new health status from child_health_status table
+                const { data: healthStatusData, error: healthStatusError } = await supabase
+                    .from("child_health_status")
+                    .select("*")
+                    .eq("child_id", childData.id)
+                    .single();
+
+                if (healthStatusData && !healthStatusError) {
+                    setHealthStatus({
+                        allergiesStatus: healthStatusData.allergies_status || "skipped",
+                        allergiesDetails: healthStatusData.allergies_details || null,
+                        medicationStatus: healthStatusData.medication_status || "skipped",
+                        medicationDetails: healthStatusData.medication_details || null,
+                        dietaryStatus: healthStatusData.dietary_status || "skipped",
+                        dietaryDetails: healthStatusData.dietary_details || null,
+                    });
+
+                    // Derive legacy healthFlags from new status
+                    setHealthFlags({
+                        noKnownAllergies: healthStatusData.allergies_status === "none",
+                        noRegularMedication: healthStatusData.medication_status === "none",
+                        noDietaryRestrictions: healthStatusData.dietary_status === "none",
+                    });
+                } else {
+                    // No health status record yet - try legacy flags
+                    const { data: flagsData, error: flagsError } = await supabase
+                        .from("children")
+                        .select("no_known_allergies, no_dietary_restrictions, no_regular_medication")
+                        .eq("id", childData.id)
+                        .single();
+
+                    if (flagsData && !flagsError) {
+                        // Migrate legacy flags to new status model
+                        const migratedStatus: HealthStatus = {
+                            allergiesStatus: flagsData.no_known_allergies ? "none" : "skipped",
+                            allergiesDetails: null,
+                            medicationStatus: flagsData.no_regular_medication ? "none" : "skipped",
+                            medicationDetails: null,
+                            dietaryStatus: flagsData.no_dietary_restrictions ? "none" : "skipped",
+                            dietaryDetails: null,
+                        };
+                        setHealthStatus(migratedStatus);
+                        setHealthFlags({
+                            noKnownAllergies: flagsData.no_known_allergies || false,
+                            noDietaryRestrictions: flagsData.no_dietary_restrictions || false,
+                            noRegularMedication: flagsData.no_regular_medication || false,
+                        });
+                    } else {
+                        setHealthStatus(defaultHealthStatus);
+                        setHealthFlags(defaultHealthFlags);
+                    }
+                }
             }
 
             // Fetch allergies (wrapped in try-catch for RLS errors)
@@ -186,7 +305,6 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                     .single();
 
                 if (dietError && dietError.code !== "PGRST116") {
-                    // PGRST116 = no rows found, which is fine
                     console.warn("Could not fetch dietary needs:", dietError.message);
                 }
 
@@ -225,6 +343,140 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         };
     }, []);
 
+    // Update health status for a specific category
+    const updateHealthStatus = async (
+        category: "allergies" | "medication" | "dietary",
+        status: HealthStatusValue,
+        details?: string | null
+    ): Promise<{ success: boolean; error?: string }> => {
+        if (!childId || !familyId) {
+            return { success: false, error: "No child found" };
+        }
+
+        try {
+            // Build update object
+            const statusColumn = `${category}_status`;
+            const detailsColumn = `${category}_details`;
+
+            const updateData: any = {
+                [statusColumn]: status,
+                [detailsColumn]: status === "has" ? (details?.trim() || null) : null,
+            };
+
+            // Check if record exists
+            const { data: existing } = await supabase
+                .from("child_health_status")
+                .select("id")
+                .eq("child_id", childId)
+                .single();
+
+            if (existing) {
+                // Update existing record
+                const { error } = await supabase
+                    .from("child_health_status")
+                    .update(updateData)
+                    .eq("child_id", childId);
+
+                if (error) throw error;
+            } else {
+                // Insert new record
+                const { error } = await supabase
+                    .from("child_health_status")
+                    .insert({
+                        child_id: childId,
+                        family_id: familyId,
+                        ...updateData,
+                    });
+
+                if (error) throw error;
+            }
+
+            // Update local state
+            setHealthStatus(prev => ({
+                ...prev,
+                [`${category}Status`]: status,
+                [`${category}Details`]: status === "has" ? (details?.trim() || null) : null,
+            } as HealthStatus));
+
+            // Update legacy flags for backwards compatibility
+            if (category === "allergies") {
+                setHealthFlags(prev => ({ ...prev, noKnownAllergies: status === "none" }));
+            } else if (category === "medication") {
+                setHealthFlags(prev => ({ ...prev, noRegularMedication: status === "none" }));
+            } else if (category === "dietary") {
+                setHealthFlags(prev => ({ ...prev, noDietaryRestrictions: status === "none" }));
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            console.error("Failed to update health status:", error);
+            return { success: false, error: error.message };
+        }
+    };
+
+    // Skip all health categories for now (used by dashboard step)
+    const skipAllHealthForNow = async (overrideChildId?: string, overrideFamilyId?: string): Promise<{ success: boolean; error?: string }> => {
+        const targetChildId = overrideChildId || childId;
+        const targetFamilyId = overrideFamilyId || familyId;
+
+        if (!targetChildId || !targetFamilyId) {
+            return { success: false, error: "No child found" };
+        }
+
+        try {
+            const updateData = {
+                allergies_status: "skipped" as const,
+                allergies_details: null,
+                medication_status: "skipped" as const,
+                medication_details: null,
+                dietary_status: "skipped" as const,
+                dietary_details: null,
+            };
+
+            // Check if record exists
+            const { data: existing } = await supabase
+                .from("child_health_status")
+                .select("id")
+                .eq("child_id", targetChildId)
+                .single();
+
+            if (existing) {
+                const { error } = await supabase
+                    .from("child_health_status")
+                    .update(updateData)
+                    .eq("child_id", targetChildId);
+
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from("child_health_status")
+                    .insert({
+                        child_id: targetChildId,
+                        family_id: targetFamilyId,
+                        ...updateData,
+                    });
+
+                if (error) throw error;
+            }
+
+            setHealthStatus({
+                allergiesStatus: "skipped",
+                allergiesDetails: null,
+                medicationStatus: "skipped",
+                medicationDetails: null,
+                dietaryStatus: "skipped",
+                dietaryDetails: null,
+            });
+
+            setHealthFlags(defaultHealthFlags);
+
+            return { success: true };
+        } catch (error: any) {
+            console.error("Failed to skip health:", error);
+            return { success: false, error: error.message };
+        }
+    };
+
     const addAllergy = async (allergy: Omit<Allergy, "id">): Promise<{ success: boolean; error?: string }> => {
         if (!familyId || !childId) {
             return { success: false, error: "No family or child found" };
@@ -259,6 +511,10 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             };
 
             setAllergies((prev) => [...prev, newAllergy]);
+
+            // Auto-update health status to 'has' when adding allergy
+            await updateHealthStatus("allergies", "has", allergy.name);
+
             return { success: true };
         } catch (error: any) {
             console.error("Failed to add allergy:", error);
@@ -294,7 +550,14 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
             if (error) throw error;
 
-            setAllergies((prev) => prev.filter((a) => a.id !== id));
+            const newAllergies = allergies.filter((a) => a.id !== id);
+            setAllergies(newAllergies);
+
+            // If no allergies left, reset status to skipped
+            if (newAllergies.length === 0) {
+                await updateHealthStatus("allergies", "skipped");
+            }
+
             return { success: true };
         } catch (error: any) {
             console.error("Failed to delete allergy:", error);
@@ -386,6 +649,10 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             };
 
             setMedications((prev) => [...prev, newMedication]);
+
+            // Auto-update health status to 'has' when adding medication
+            await updateHealthStatus("medication", "has", medication.name);
+
             return { success: true };
         } catch (error: any) {
             console.error("Failed to add medication:", error);
@@ -432,7 +699,15 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
             if (error) throw error;
 
-            setMedications((prev) => prev.filter((m) => m.id !== id));
+            const newMedications = medications.filter((m) => m.id !== id);
+            setMedications(newMedications);
+
+            // If no active medications left, reset status to skipped
+            const activeMeds = newMedications.filter(m => m.isActive);
+            if (activeMeds.length === 0) {
+                await updateHealthStatus("medication", "skipped");
+            }
+
             return { success: true };
         } catch (error: any) {
             console.error("Failed to delete medication:", error);
@@ -485,9 +760,133 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             }
 
             setDietaryNeeds(needs);
+
+            // Auto-update health status based on whether there's dietary data
+            const hasDietaryData = Boolean(needs.dietType || needs.instructions || needs.likes || needs.dislikes);
+            if (hasDietaryData) {
+                await updateHealthStatus("dietary", "has", needs.dietType || needs.instructions || "Dietary preferences set");
+            }
+
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update dietary needs:", error);
+            return { success: false, error: error.message };
+        }
+    };
+
+    // Legacy method - updates old boolean flags on children table
+    const updateHealthFlags = async (flags: Partial<HealthFlags>, overrideChildId?: string): Promise<{ success: boolean; error?: string }> => {
+        const targetChildId = overrideChildId || childId;
+
+        if (!targetChildId) {
+            console.error("updateHealthFlags: No child ID available");
+            return { success: false, error: "No child found" };
+        }
+
+        try {
+            const dbUpdates: any = {};
+            if (flags.noKnownAllergies !== undefined) dbUpdates.no_known_allergies = flags.noKnownAllergies;
+            if (flags.noDietaryRestrictions !== undefined) dbUpdates.no_dietary_restrictions = flags.noDietaryRestrictions;
+            if (flags.noRegularMedication !== undefined) dbUpdates.no_regular_medication = flags.noRegularMedication;
+
+            const { error } = await supabase
+                .from("children")
+                .update(dbUpdates)
+                .eq("id", targetChildId);
+
+            if (error) throw error;
+
+            setHealthFlags((prev) => ({ ...prev, ...flags }));
+
+            // Also update new health status model
+            if (flags.noKnownAllergies !== undefined) {
+                await updateHealthStatus("allergies", flags.noKnownAllergies ? "none" : "skipped");
+            }
+            if (flags.noRegularMedication !== undefined) {
+                await updateHealthStatus("medication", flags.noRegularMedication ? "none" : "skipped");
+            }
+            if (flags.noDietaryRestrictions !== undefined) {
+                await updateHealthStatus("dietary", flags.noDietaryRestrictions ? "none" : "skipped");
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            console.error("Failed to update health flags:", error);
+            return { success: false, error: error.message };
+        }
+    };
+
+    // Legacy convenience method - marks all as "none"
+    const confirmNoHealthNeeds = async (overrideChildId?: string): Promise<{ success: boolean; error?: string }> => {
+        const targetChildId = overrideChildId || childId;
+        const targetFamilyId = familyId;
+
+        if (!targetChildId || !targetFamilyId) {
+            return { success: false, error: "No child found" };
+        }
+
+        try {
+            // Update new health status table
+            const updateData = {
+                allergies_status: "none" as const,
+                allergies_details: null,
+                medication_status: "none" as const,
+                medication_details: null,
+                dietary_status: "none" as const,
+                dietary_details: null,
+            };
+
+            const { data: existing } = await supabase
+                .from("child_health_status")
+                .select("id")
+                .eq("child_id", targetChildId)
+                .single();
+
+            if (existing) {
+                const { error } = await supabase
+                    .from("child_health_status")
+                    .update(updateData)
+                    .eq("child_id", targetChildId);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from("child_health_status")
+                    .insert({
+                        child_id: targetChildId,
+                        family_id: targetFamilyId,
+                        ...updateData,
+                    });
+                if (error) throw error;
+            }
+
+            // Also update legacy flags
+            await supabase
+                .from("children")
+                .update({
+                    no_known_allergies: true,
+                    no_dietary_restrictions: true,
+                    no_regular_medication: true,
+                })
+                .eq("id", targetChildId);
+
+            setHealthStatus({
+                allergiesStatus: "none",
+                allergiesDetails: null,
+                medicationStatus: "none",
+                medicationDetails: null,
+                dietaryStatus: "none",
+                dietaryDetails: null,
+            });
+
+            setHealthFlags({
+                noKnownAllergies: true,
+                noDietaryRestrictions: true,
+                noRegularMedication: true,
+            });
+
+            return { success: true };
+        } catch (error: any) {
+            console.error("Failed to confirm no health needs:", error);
             return { success: false, error: error.message };
         }
     };
@@ -497,13 +896,46 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         await fetchData();
     };
 
+    // Computed values for legacy support
+    const activeMedications = medications.filter((m) => m.isActive);
+    const hasDietaryData = Boolean(dietaryNeeds.dietType || dietaryNeeds.instructions || dietaryNeeds.likes || dietaryNeeds.dislikes);
+    const hasAnyHealthData = allergies.length > 0 || activeMedications.length > 0 || hasDietaryData;
+
+    // Legacy isHealthComplete - true if any health info exists or any flag is set
+    const isHealthComplete = hasAnyHealthData ||
+        healthFlags.noKnownAllergies ||
+        healthFlags.noDietaryRestrictions ||
+        healthFlags.noRegularMedication;
+
+    // New computed values for 3-state model
+    const isHealthReviewed =
+        healthStatus.allergiesStatus !== "skipped" ||
+        healthStatus.medicationStatus !== "skipped" ||
+        healthStatus.dietaryStatus !== "skipped";
+
+    const isAllSkipped =
+        healthStatus.allergiesStatus === "skipped" &&
+        healthStatus.medicationStatus === "skipped" &&
+        healthStatus.dietaryStatus === "skipped";
+
     return (
         <HealthContext.Provider
             value={{
+                // New 3-state model
+                healthStatus,
+                updateHealthStatus,
+                skipAllHealthForNow,
+                isHealthReviewed,
+                isAllSkipped,
+
+                // Legacy
                 allergies,
                 medications,
                 dietaryNeeds,
+                healthFlags,
                 isLoaded,
+                isHealthComplete,
+                hasAnyHealthData,
                 addAllergy,
                 updateAllergy,
                 deleteAllergy,
@@ -511,6 +943,8 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 updateMedication,
                 deleteMedication,
                 updateDietaryNeeds,
+                updateHealthFlags,
+                confirmNoHealthNeeds,
                 uploadFile,
                 getFileUrl,
                 refreshData,

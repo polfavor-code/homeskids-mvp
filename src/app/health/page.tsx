@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import { useAppState } from "@/lib/AppStateContext";
-import { useHealth, DietType } from "@/lib/HealthContext";
+import { useHealth, DietType, HealthStatusValue } from "@/lib/HealthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { HealthIcon, AllergyIcon, MedicationIcon } from "@/components/icons/DuotoneIcons";
+import { getStatusSummaryText, HealthCategory } from "@/components/health/HealthStatusCard";
 
 // Emoji map for allergy categories
 const allergyEmoji: Record<string, string> = {
@@ -32,8 +33,17 @@ const dietTypeLabels: Record<DietType, string> = {
 export default function HealthPage() {
     useEnsureOnboarding();
     const { child } = useAppState();
-    const { allergies, medications, dietaryNeeds, isLoaded } = useHealth();
+    const {
+        healthStatus,
+        allergies,
+        medications,
+        dietaryNeeds,
+        isLoaded,
+        hasAnyHealthData,
+        updateHealthStatus,
+    } = useHealth();
     const childName = child?.name || "your child";
+    const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
 
     // Get severity badge colors
     const getSeverityStyle = (severity: string) => {
@@ -62,6 +72,15 @@ export default function HealthPage() {
     const activeMedications = medications.filter((m) => m.isActive);
     const regularMedications = activeMedications.filter((m) => !m.isAsNeeded);
 
+    // Check if dietary data exists
+    const hasDietaryData = Boolean(dietaryNeeds.dietType || dietaryNeeds.instructions || dietaryNeeds.likes || dietaryNeeds.dislikes);
+
+    // Check for empty state (no data AND all statuses are 'skipped')
+    const showEmptyState = !hasAnyHealthData &&
+        healthStatus.allergiesStatus === "skipped" &&
+        healthStatus.medicationStatus === "skipped" &&
+        healthStatus.dietaryStatus === "skipped";
+
     if (!isLoaded) {
         return (
             <AppShell>
@@ -71,6 +90,176 @@ export default function HealthPage() {
             </AppShell>
         );
     }
+
+    // Empty State UI - when no health data exists and all skipped
+    if (showEmptyState) {
+        return (
+            <AppShell>
+                <div className="space-y-6">
+                    {/* Page Header */}
+                    <div>
+                        <h1 className="text-2xl font-dmSerif text-forest">Health information</h1>
+                        <p className="text-sm text-textSub mt-1">
+                            No information provided yet for {childName}.
+                        </p>
+                    </div>
+
+                    {/* Intro text */}
+                    <div className="card-organic p-5 bg-softGreen/30">
+                        <p className="text-sm text-forest leading-relaxed">
+                            If {childName} has allergies, dietary needs, or takes medication, you can add them here so every caregiver stays informed.
+                        </p>
+                    </div>
+
+                    {/* Allergies Row */}
+                    <div className="card-organic p-5">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0">
+                                <AllergyIcon size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-forest">Allergies</h3>
+                                <p className="text-sm text-textSub mt-0.5">
+                                    Add known allergies or confirm there are none.
+                                </p>
+                                <div className="flex flex-wrap gap-3 mt-3">
+                                    <Link
+                                        href="/health/allergies"
+                                        className="px-4 py-2 bg-forest text-white rounded-xl text-sm font-semibold hover:bg-forest/90 transition-colors"
+                                    >
+                                        Add allergy
+                                    </Link>
+                                    <button
+                                        onClick={async () => {
+                                            setUpdatingCategory('allergies');
+                                            await updateHealthStatus('allergies', 'none');
+                                            setUpdatingCategory(null);
+                                        }}
+                                        disabled={updatingCategory === 'allergies'}
+                                        className="px-4 py-2 text-forest text-sm font-medium hover:text-teal transition-colors disabled:opacity-50"
+                                    >
+                                        {updatingCategory === 'allergies' ? 'Saving...' : 'No allergies'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Diet Row */}
+                    <div className="card-organic p-5">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+                                    <line x1="6" y1="1" x2="6" y2="4" />
+                                    <line x1="10" y1="1" x2="10" y2="4" />
+                                    <line x1="14" y1="1" x2="14" y2="4" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-forest">Diet & food notes</h3>
+                                <p className="text-sm text-textSub mt-0.5">
+                                    Note dietary needs, preferences, or restrictions.
+                                </p>
+                                <div className="flex flex-wrap gap-3 mt-3">
+                                    <Link
+                                        href="/health/diet"
+                                        className="px-4 py-2 bg-forest text-white rounded-xl text-sm font-semibold hover:bg-forest/90 transition-colors"
+                                    >
+                                        Add diet note
+                                    </Link>
+                                    <button
+                                        onClick={async () => {
+                                            setUpdatingCategory('dietary');
+                                            await updateHealthStatus('dietary', 'none');
+                                            setUpdatingCategory(null);
+                                        }}
+                                        disabled={updatingCategory === 'dietary'}
+                                        className="px-4 py-2 text-forest text-sm font-medium hover:text-teal transition-colors disabled:opacity-50"
+                                    >
+                                        {updatingCategory === 'dietary' ? 'Saving...' : 'No dietary restrictions'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Medication Row */}
+                    <div className="card-organic p-5">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                                <MedicationIcon size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-forest">Medication</h3>
+                                <p className="text-sm text-textSub mt-0.5">
+                                    Add regular medication or confirm none is needed.
+                                </p>
+                                <div className="flex flex-wrap gap-3 mt-3">
+                                    <Link
+                                        href="/health/medication"
+                                        className="px-4 py-2 bg-forest text-white rounded-xl text-sm font-semibold hover:bg-forest/90 transition-colors"
+                                    >
+                                        Add medication
+                                    </Link>
+                                    <button
+                                        onClick={async () => {
+                                            setUpdatingCategory('medication');
+                                            await updateHealthStatus('medication', 'none');
+                                            setUpdatingCategory(null);
+                                        }}
+                                        disabled={updatingCategory === 'medication'}
+                                        className="px-4 py-2 text-forest text-sm font-medium hover:text-teal transition-colors disabled:opacity-50"
+                                    >
+                                        {updatingCategory === 'medication' ? 'Saving...' : 'No regular medication'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </AppShell>
+        );
+    }
+
+    // Helper to render status row
+    const renderStatusRow = (
+        category: HealthCategory,
+        status: HealthStatusValue,
+        details: string | null,
+        href: string
+    ) => {
+        const summaryText = getStatusSummaryText(category, status, details);
+        const isSkipped = status === "skipped";
+
+        return (
+            <div className={`flex items-center gap-3 py-4 px-3 rounded-xl ${isSkipped ? 'bg-amber-50/50' : 'bg-softGreen/50'}`}>
+                <div className={`w-6 h-6 rounded-full ${isSkipped ? 'bg-amber-400' : 'bg-green-500'} flex items-center justify-center text-white flex-shrink-0`}>
+                    {isSkipped ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                            <path d="M12 9v2m0 4h.01" />
+                        </svg>
+                    ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    )}
+                </div>
+                <div className="flex-1">
+                    <p className={`text-sm ${isSkipped ? 'text-amber-700' : 'text-forest'} font-medium`}>
+                        {summaryText}
+                    </p>
+                </div>
+                <Link
+                    href={href}
+                    className="text-xs text-textSub hover:text-forest underline underline-offset-2"
+                >
+                    Change
+                </Link>
+            </div>
+        );
+    };
 
     return (
         <AppShell>
@@ -126,26 +315,23 @@ export default function HealthPage() {
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 text-textSub">
-                            <p className="text-sm">No allergies recorded yet.</p>
-                            <Link href="/health/allergies" className="text-sm text-forest font-medium hover:text-teal mt-2 inline-block">
-                                Add allergies →
+                            <Link
+                                href="/health/allergies"
+                                className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-forest hover:text-teal transition-colors"
+                            >
+                                View full allergy details
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
                             </Link>
                         </div>
-                    )}
-
-                    {allergies.length > 0 && (
-                        <Link
-                            href="/health/allergies"
-                            className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-forest hover:text-teal transition-colors"
-                        >
-                            View full allergy details
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                        </Link>
+                    ) : (
+                        renderStatusRow(
+                            "allergies",
+                            healthStatus.allergiesStatus,
+                            healthStatus.allergiesDetails,
+                            "/health/allergies"
+                        )
                     )}
                 </div>
 
@@ -184,26 +370,23 @@ export default function HealthPage() {
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 text-textSub">
-                            <p className="text-sm">No medications recorded yet.</p>
-                            <Link href="/health/medication" className="text-sm text-forest font-medium hover:text-teal mt-2 inline-block">
-                                Add medication →
+                            <Link
+                                href="/health/medication"
+                                className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-forest hover:text-teal transition-colors"
+                            >
+                                View full medication list
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
                             </Link>
                         </div>
-                    )}
-
-                    {activeMedications.length > 0 && (
-                        <Link
-                            href="/health/medication"
-                            className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-forest hover:text-teal transition-colors"
-                        >
-                            View full medication list
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                        </Link>
+                    ) : (
+                        renderStatusRow(
+                            "medication",
+                            healthStatus.medicationStatus,
+                            healthStatus.medicationDetails,
+                            "/health/medication"
+                        )
                     )}
                 </div>
 
@@ -224,7 +407,7 @@ export default function HealthPage() {
                         </div>
                     </div>
 
-                    {dietaryNeeds.dietType ? (
+                    {hasDietaryData ? (
                         <div className="space-y-3">
                             <div className="p-3 rounded-xl bg-green-50/50 border border-green-100">
                                 <div className="flex items-center gap-2 mb-1">
@@ -232,7 +415,7 @@ export default function HealthPage() {
                                     <h3 className="font-semibold text-forest text-sm">
                                         {dietaryNeeds.dietType === "other" && dietaryNeeds.customDescription
                                             ? dietaryNeeds.customDescription
-                                            : dietTypeLabels[dietaryNeeds.dietType]}
+                                            : dietTypeLabels[dietaryNeeds.dietType] || "Custom dietary notes"}
                                     </h3>
                                 </div>
                                 {dietaryNeeds.instructions && (
@@ -252,12 +435,12 @@ export default function HealthPage() {
                             </Link>
                         </div>
                     ) : (
-                        <div className="text-center py-6 text-textSub">
-                            <p className="text-sm">No dietary needs added yet.</p>
-                            <Link href="/health/diet" className="text-sm text-forest font-medium hover:text-teal mt-2 inline-block">
-                                Add dietary needs →
-                            </Link>
-                        </div>
+                        renderStatusRow(
+                            "dietary",
+                            healthStatus.dietaryStatus,
+                            healthStatus.dietaryDetails,
+                            "/health/diet"
+                        )
                     )}
                 </div>
 

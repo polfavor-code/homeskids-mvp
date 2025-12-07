@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Variant 4 (Timeline Flow)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        /* V4: Timeline Flow - Cards connected by a thick arrow flow, indicating movement */
+
+        .flow-container {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            /* Connected */
+            margin: 60px 0;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.05));
+        }
+
+        .flow-segment {
+            background: white;
+            height: 200px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .seg-left {
+            border-radius: 20px 0 0 20px;
+            width: 300px;
+            border-right: 1px dashed var(--border);
+            z-index: 1;
+        }
+
+        .seg-center {
+            width: 340px;
+            background: var(--forest);
+            color: white;
+            z-index: 2;
+            transform: scaleY(1.1);
+            /* Taller */
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(44, 62, 45, 0.2);
+        }
+
+        .seg-right {
+            border-radius: 0 20px 20px 0;
+            width: 300px;
+            border-left: 1px dashed var(--border);
+            z-index: 1;
+        }
+
+        /* Chevron connectors visually via clip-path could be complex, keeping simple block flow for robustness */
+
+        .flow-title {
+            font-family: 'DM Serif Display';
+            font-size: 20px;
+            margin: 0 0 4px 0;
+        }
+
+        .flow-sub {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        .action-chip {
+            margin-top: 16px;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: #f0f0f0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: var(--forest);
+        }
+
+        .center-btn {
+            background: white;
+            color: var(--forest);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-top: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        /* Stacked Hint on Right */
+        .stack-count {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #EBE6DC;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width:260px; border-right:1px solid #EBE6DC;"></div>
+    <div class="main-content">
+        <h1 style="font-family:'DM Serif Display'; font-size:40px;">Hi nata,</h1>
+
+        <div class="flow-container">
+            <div class="flow-segment seg-left">
+                <span class="flow-sub">CURRENT LOCATION</span>
+                <h3 class="flow-title">Daddys home</h3>
+                <div class="action-chip">Active • 1 Item</div>
+            </div>
+
+            <div class="flow-segment seg-center">
+                <span class="flow-sub" style="opacity:0.8; color:white;">TRANSFER</span>
+                <h3 class="flow-title" style="color:white; font-size:24px;">Travel Bag</h3>
+                <button class="center-btn">Manage Transfer</button>
+            </div>
+
+            <div class="flow-segment seg-right">
+                <div class="stack-count">+1</div>
+                <span class="flow-sub">DESTINATIONS</span>
+                <h3 class="flow-title">Mommys home</h3>
+                <button
+                    style="margin-top:16px; border:1px solid var(--border); background:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Switch
+                    view</button>
+            </div>
+        </div>
+
+        <div style="border-top:1px solid #ddd; padding-top:20px;">
+            <h4>Step 2: Contacts</h4>
+        </div>
+    </div>
+</body>
+
+</html>

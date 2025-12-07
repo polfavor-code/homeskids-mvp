@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Widget - Variant 2 (Seamless Integrated)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Shared Styles */
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --soft-green: #E8EFE8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--cream);
+            border-right: 1px solid var(--border);
+            height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 40px;
+            padding-left: 12px;
+            color: var(--forest);
+            text-decoration: none;
+            display: block;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--forest);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .nav-item.active {
+            background-color: var(--forest);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        /* VARIANT 2: Seamless Integrated */
+        /* No white card background. Blends into sidebar. separated by line. Cleaner. */
+        .widget-area {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .step-count {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step-progress-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .step-progress-fill {
+            width: 50%;
+            height: 100%;
+            background: var(--forest);
+        }
+
+        .step-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 18px;
+            margin: 0 0 6px 0;
+            line-height: 1.2;
+        }
+
+        .step-desc {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin: 0 0 16px 0;
+            line-height: 1.4;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-link {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--forest);
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            cursor: pointer;
+        }
+
+        .skip-link {
+            font-size: 13px;
+            color: var(--text-sub);
+            text-decoration: none;
+            margin-left: auto;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <a href="#" class="logo">homes.kids</a>
+
+        <a href="#" class="nav-item active">
+            <div class="nav-icon"></div>Homes
+        </a>
+        <a href="#" class="nav-item">
+            <div class="nav-icon"></div>June's Items
+        </a>
+
+        <!-- WIDGET VARIANT 2 -->
+        <div class="widget-area">
+            <div class="step-count">
+                STEP 2 OF 4
+                <div class="step-progress-bar">
+                    <div class="step-progress-fill"></div>
+                </div>
+            </div>
+
+            <h3 class="step-title">Add important contacts</h3>
+            <p class="step-desc">Save school, doctor and emergency contacts so everyone has them.</p>
+
+            <div class="btn-row">
+                <a class="action-link">Add contacts →</a>
+                <a class="skip-link">Skip</a>
+            </div>
+        </div>
+
+    </nav>
+
+    <main style="flex:1; padding: 40px;">
+        <h1 style="font-family: 'DM Serif Display';">Dashboard Preview</h1>
+    </main>
+
+</body>
+
+</html>

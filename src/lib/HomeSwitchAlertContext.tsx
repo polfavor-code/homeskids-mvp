@@ -143,11 +143,16 @@ export function HomeSwitchAlertProvider({ children }: { children: ReactNode }) {
 
                     const newData = payload.new as any;
                     const oldData = payload.old as any;
-                    const newHomeId = newData.current_home_id;
-                    const oldHomeId = oldData.current_home_id;
+                    const newHomeId = newData?.current_home_id;
+                    const oldHomeId = oldData?.current_home_id;
 
-                    // Only trigger if home actually changed
-                    if (!newHomeId || newHomeId === oldHomeId) {
+                    // Only trigger if current_home_id actually changed
+                    // Check both that newHomeId exists AND that it's different from oldHomeId
+                    // Also use lastKnownHomeId as fallback if oldHomeId is undefined
+                    const previousHomeId = oldHomeId || lastKnownHomeId.current;
+
+                    if (!newHomeId || newHomeId === previousHomeId) {
+                        console.log("Home switch alert: No home change detected, skipping", { newHomeId, previousHomeId, oldHomeId });
                         return;
                     }
 

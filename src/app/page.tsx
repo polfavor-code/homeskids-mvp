@@ -5,12 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MissingItemAlert from "@/components/home/MissingItemAlert";
-import HomeCardFullWidth from "@/components/home/HomeCardFullWidth";
-import TravelBagPreview from "@/components/home/TravelBagPreview";
+import HomesHorizontalSection from "@/components/home/HomesHorizontalSection";
+import WelcomeDashboard from "@/components/home/WelcomeDashboard";
+import SetupSteps from "@/components/home/SetupSteps";
 import { ToastContainer, ToastData } from "@/components/Toast";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
+import { useHealth } from "@/lib/HealthContext";
+import { useContacts } from "@/lib/ContactsContext";
+import { useDocuments } from "@/lib/DocumentsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useHomeSwitchAlert } from "@/lib/HomeSwitchAlertContext";
 
@@ -30,6 +34,21 @@ export default function Home() {
         currentJuneCaregiverId, // Legacy fallback
         isLoaded: appStateLoaded
     } = useAppState();
+
+    // Health context for health step
+    const {
+        healthStatus,
+        isHealthReviewed,
+        isAllSkipped,
+        skipAllHealthForNow,
+        isLoaded: healthLoaded
+    } = useHealth();
+
+    // Contacts context for roadmap
+    const { contacts, isLoaded: contactsLoaded } = useContacts();
+
+    // Documents context for roadmap
+    const { documents, isLoaded: documentsLoaded } = useDocuments();
 
     // Toast state (for errors and info messages)
     const [toasts, setToasts] = useState<ToastData[]>([]);
@@ -129,7 +148,7 @@ export default function Home() {
     };
 
     // Show loading state while auth/data is loading to prevent flash of content
-    if (authLoading || !appStateLoaded || !itemsLoaded) {
+    if (authLoading || !appStateLoaded || !itemsLoaded || !contactsLoaded || !documentsLoaded) {
         return (
             <div className="min-h-screen bg-cream flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-forest"></div>
@@ -167,27 +186,18 @@ export default function Home() {
         );
     }
 
-    // Global empty state for items
+    // Global empty state for items - Show generic welcome dashboard
     if (items.length === 0) {
+        // Get current user's name (e.g. "paul")
+        const currentUser = caregivers.find(c => c.isCurrentUser);
+        const userName = currentUser?.name || user?.user_metadata?.name?.split(' ')[0] || 'there';
+
         return (
             <AppShell>
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                    <div className="w-20 h-20 bg-softGreen rounded-full flex items-center justify-center text-4xl mb-6">
-                        🧸
-                    </div>
-                    <h2 className="text-xl font-dmSerif text-forest mb-2">
-                        Add your first item
-                    </h2>
-                    <p className="text-textSub mb-8 max-w-xs mx-auto">
-                        Start by adding one of {child?.name || "your child"}'s things so we can track where it is.
-                    </p>
-                    <Link
-                        href="/items/new"
-                        className="bg-forest text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-forest/90 transition-colors"
-                    >
-                        + New item
-                    </Link>
-                </div>
+                <WelcomeDashboard
+                    userName={userName}
+                    childName={child?.name || "your child"}
+                />
             </AppShell>
         );
     }
@@ -198,124 +208,124 @@ export default function Home() {
 
     return (
         <AppShell>
-            {/* Header Section - V6 Style */}
-            <div className="grid grid-cols-[1fr_auto] gap-5 mb-3 items-start mt-3">
-                <div className="greeting-col">
-                    <h1 className="font-dmSerif text-4xl text-forest leading-none mb-2">
-                        Hi {userName},
-                    </h1>
-                    <p className="text-sm text-forest/60 leading-relaxed">
-                        Here’s everything organized for {child?.name || "your child"}.
-                    </p>
+            {/* Dashboard Container - Width defined by 3 cards */}
+            <div className="dashboard-container">
+                {/* Header Section - V6 Style */}
+                <div className="grid grid-cols-[1fr_auto] gap-5 mb-3 items-start mt-3">
+                    <div className="greeting-col">
+                        <h1 className="font-dmSerif text-4xl text-forest leading-none mb-2">
+                            Hi {userName},
+                        </h1>
+                        <p className="text-sm text-forest/60 leading-relaxed">
+                            Here's everything organized for {child?.name || "your child"}.
+                        </p>
+                    </div>
+
+                    {/* Stats Box */}
+                    <div className="bg-white p-4 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-right min-w-[100px]">
+                        <span className="block text-2xl font-bold text-forest leading-none mb-1">
+                            {items.length}
+                        </span>
+                        <span className="text-[11px] text-forest/60 uppercase font-bold tracking-wide">
+                            ITEMS TOTAL
+                        </span>
+                    </div>
                 </div>
 
-                {/* Stats Box */}
-                <div className="bg-white p-4 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-right min-w-[100px]">
-                    <span className="block text-2xl font-bold text-forest leading-none mb-1">
-                        {items.length}
-                    </span>
-                    <span className="text-[11px] text-forest/60 uppercase font-bold tracking-wide">
-                        ITEMS TOTAL
-                    </span>
+                {/* Action Buttons Row - Tighter spacing to divider */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                    <Link
+                        href="/items/new"
+                        className="bg-forest text-white px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest/90 transition-colors border border-forest"
+                    >
+                        + New item
+                    </Link>
+                    <Link
+                        href="/items/travel-bag"
+                        className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
+                    >
+                        Request packing
+                    </Link>
+                    <Link
+                        href="/settings/caregivers"
+                        className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
+                    >
+                        Invite caregiver
+                    </Link>
                 </div>
-            </div>
 
-            {/* Action Buttons Row */}
-            <div className="flex gap-3 mb-6 overflow-x-auto pb-1 scrollbar-hide">
-                <Link
-                    href="/items/new"
-                    className="bg-forest text-white px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest/90 transition-colors border border-forest"
-                >
-                    + New item
-                </Link>
-                <Link
-                    href="/items/travel-bag"
-                    className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
-                >
-                    Request packing
-                </Link>
-                <Link
-                    href="/settings/caregivers"
-                    className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
-                >
-                    Invite caregiver
-                </Link>
-            </div>
-
-            {/* Missing Item Alert - Inline */}
-            {missingItems.length > 0 && (
-                <div className="mb-6">
-                    <MissingItemAlert missingItems={missingItems} />
-                </div>
-            )}
-
-            {/* Section Header with Decorative Line */}
-            <div className="text-center mb-8 relative">
-                {/* Decorative line behind - Darker as requested */}
-                <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10 -translate-y-1/2 z-0" />
-                {/* Title on top of line */}
-                <h2 className="font-dmSerif text-xl text-forest bg-cream inline-block px-4 relative z-10">
-                    {child?.name || "Child"}'s home right now
-                </h2>
-            </div>
-
-
-
-            {/* Vertical Flow Container */}
-            <div className="relative">
-                {/* Flow Line - behind everything */}
-                <div
-                    className="absolute top-0 bottom-0 left-1/2 w-[2px] -translate-x-1/2 z-0"
-                    style={{ background: "#E0DCD5" }}
-                />
-
-                {/* ACTIVE HOME CARD */}
-                {activeHome && (
-                    <div className="relative z-10 mb-0">
-                        <HomeCardFullWidth
-                            home={activeHome}
-                            ownerCaregiver={getOwnerCaregiver(activeHome)}
-                            child={child}
-                            items={getItemsForHome(activeHome.id)}
-                            isActive={true}
-                            caregiverCount={getValidCaregiverCount(activeHome)}
-                        />
+                {/* Missing Item Alert - Inline */}
+                {missingItems.length > 0 && (
+                    <div className="mb-6">
+                        <MissingItemAlert missingItems={missingItems} />
                     </div>
                 )}
 
-                {/* TRAVEL BAG CARD - includes its own line segments */}
-                <TravelBagPreview
-                    items={items}
+                {/* Section Header with Decorative Line */}
+                <div className="text-center mb-6 relative">
+                    {/* Decorative line behind - Darker as requested */}
+                    <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10 -translate-y-1/2 z-0" />
+                    {/* Title on top of line */}
+                    <h2 className="font-dmSerif text-xl text-forest bg-cream inline-block px-4 relative z-10">
+                        Homes for {child?.name || "Child"}
+                    </h2>
+                </div>
+
+                {/* Horizontal Homes Section */}
+                <HomesHorizontalSection
+                    activeHome={activeHome}
+                    otherHomes={otherHomes}
                     child={child}
+                    getItemsForHome={getItemsForHome}
+                    getOwnerCaregiver={getOwnerCaregiver}
+                    getValidCaregiverCount={getValidCaregiverCount}
+                    onSwitchHome={handleSwitchHome}
+                    switchingHomeId={switchingHomeId}
+                    items={items}
                     currentCaregiver={currentCaregiver}
-                    currentHome={activeHome}
                 />
 
-                {/* OTHER HOME(S) CARDS */}
-                <div className="relative z-10">
-                    {otherHomes.map((home, index) => (
-                        <div key={home.id}>
-                            <HomeCardFullWidth
-                                home={home}
-                                ownerCaregiver={getOwnerCaregiver(home)}
-                                child={child}
-                                items={getItemsForHome(home.id)}
-                                isActive={false}
-                                onSwitch={() => handleSwitchHome(home.id)}
-                                caregiverCount={getValidCaregiverCount(home)}
-                                isSwitching={switchingHomeId === home.id}
-                            />
-                            {/* Spacing between other home cards */}
-                            {index < otherHomes.length - 1 && (
-                                <div className="h-4" />
-                            )}
-                        </div>
-                    ))}
-                </div>
+                {/* Bottom Advisor - Setup Steps (Dynamic) */}
+                <SetupSteps
+                    child={child}
+                    items={items}
+                    caregivers={caregivers}
+                    healthStatus={healthStatus}
+                    isHealthReviewed={isHealthReviewed}
+                    isAllSkipped={isAllSkipped}
+                    healthLoaded={healthLoaded}
+                    skipAllHealthForNow={skipAllHealthForNow}
+                    addToast={addToast}
+                />
             </div>
 
             {/* Toast notifications */}
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
+
+            <style jsx>{`
+                .dashboard-container {
+                    width: 100%;
+                    max-width: 1084px;
+                    margin: 0 auto;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: calc(100vh - 120px);
+                }
+
+                @media (max-width: 1150px) {
+                    .dashboard-container {
+                        max-width: 100%;
+                        padding: 0 24px;
+                    }
+                }
+
+                @media (max-width: 1100px) {
+                    .dashboard-container {
+                        max-width: 400px;
+                        padding: 0;
+                    }
+                }
+            `}</style>
         </AppShell>
     );
 }

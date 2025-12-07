@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Widget - Variant 5 (Accordian List)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Shared Styles */
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --soft-green: #E8EFE8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--cream);
+            border-right: 1px solid var(--border);
+            height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 40px;
+            padding-left: 12px;
+            color: var(--forest);
+            text-decoration: none;
+            display: block;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--forest);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .nav-item.active {
+            background-color: var(--forest);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        /* VARIANT 5: Checklist / Accordion */
+        /* Shows context of other steps, current one expanded. */
+        .widget-checklist {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .checklist-header {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+
+        .check-item.active {
+            opacity: 1;
+        }
+
+        .check-circle {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--forest);
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 0px;
+        }
+
+        .check-circle.completed {
+            background: var(--forest);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+        }
+
+        .check-circle.completed::after {
+            content: '✓';
+        }
+
+        .check-content {
+            flex: 1;
+        }
+
+        .check-title {
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+
+        .check-desc {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 4px;
+            display: none;
+        }
+
+        .check-item.active .check-desc {
+            display: block;
+        }
+
+        .check-action-btn {
+            display: inline-block;
+            background: var(--soft-green);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            text-decoration: none;
+            color: var(--forest);
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        .check-action-btn:hover {
+            background: #dce4dc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <a href="#" class="logo">homes.kids</a>
+
+        <a href="#" class="nav-item active">
+            <div class="nav-icon"></div>Homes
+        </a>
+        <a href="#" class="nav-item">
+            <div class="nav-icon"></div>June's Items
+        </a>
+
+        <!-- WIDGET VARIANT 5 -->
+        <div class="widget-checklist">
+            <div class="checklist-header">Setup Progress (2/4)</div>
+
+            <div class="check-item">
+                <div class="check-circle completed"></div>
+                <div class="check-content">
+                    <div class="check-title">Add your first home</div>
+                </div>
+            </div>
+
+            <div class="check-item active">
+                <div class="check-circle"></div>
+                <div class="check-content">
+                    <div class="check-title">Add important contacts</div>
+                    <div class="check-desc">School, doctor & emergency list.</div>
+                    <a href="#" class="check-action-btn">Add now</a>
+                </div>
+            </div>
+
+            <div class="check-item">
+                <div class="check-circle"></div>
+                <div class="check-content">
+                    <div class="check-title">Upload documents</div>
+                </div>
+            </div>
+        </div>
+
+    </nav>
+
+    <main style="flex:1; padding: 40px;">
+        <h1 style="font-family: 'DM Serif Display';">Dashboard Preview</h1>
+    </main>
+
+</body>
+
+</html>

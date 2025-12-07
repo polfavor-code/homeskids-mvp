@@ -6,6 +6,7 @@ import { useAuth } from "./AuthContext";
 
 export type ChildProfile = {
     id: string;
+    familyId: string;
     name: string;
     avatarInitials: string;
     avatarUrl?: string; // URL from Supabase storage
@@ -163,6 +164,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 childCurrentHomeId = childrenData.current_home_id || null;
                 setChild({
                     id: childrenData.id,
+                    familyId: familyId,
                     name: childrenData.name,
                     avatarInitials: childrenData.avatar_initials || childrenData.name[0],
                     avatarUrl: childAvatarUrl,

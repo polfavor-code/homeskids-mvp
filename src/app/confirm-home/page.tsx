@@ -190,7 +190,7 @@ export default function ConfirmHomePage() {
                                 onClick={handleSkip}
                                 className="px-6 py-3 border border-border rounded-xl font-medium text-forest hover:bg-white transition-colors"
                             >
-                                Skip
+                                Skip for now
                             </button>
                             <button
                                 onClick={handleConfirmHome}

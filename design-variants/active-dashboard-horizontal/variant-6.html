@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Variant 6 (Compact Tiles)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        /* V6: Compact Tiles - Small, grid-like, very dense */
+
+        .tile-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .tile {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            width: 280px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tile-bag {
+            background: var(--forest);
+            color: white;
+            width: 320px;
+            /* Wider */
+        }
+
+        .tile-header {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            opacity: 0.7;
+            margin-bottom: 8px;
+        }
+
+        .tile-title {
+            font-family: 'DM Serif Display';
+            font-size: 18px;
+            margin: 0 0 12px 0;
+        }
+
+        .tile-footer {
+            margin-top: auto;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding-top: 8px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Stacked Hint on Right Tile */
+        .stacked-tile {
+            box-shadow: 4px 4px 0 #EBE6DC;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width:260px; border-right:1px solid #EBE6DC;"></div>
+    <div class="main-content">
+        <h1 style="font-family:'DM Serif Display'; font-size:40px; margin-bottom:40px;">Hi nata,</h1>
+
+        <div class="tile-row">
+            <!-- Active Home -->
+            <div class="tile">
+                <div class="tile-header">📍 Current Location</div>
+                <h3 class="tile-title">Daddys home</h3>
+                <div class="tile-footer">
+                    <span>1 Active Item</span>
+                    <a href="#" style="color:var(--forest); font-weight:700;">View</a>
+                </div>
+            </div>
+
+            <!-- Bag -->
+            <div class="tile tile-bag">
+                <div class="tile-header" style="color:white; opacity:0.8;">🎒 Transfer</div>
+                <h3 class="tile-title" style="font-size:24px;">Travel Bag</h3>
+                <div class="tile-footer" style="border-color:rgba(255,255,255,0.2);">
+                    <span>Empty</span>
+                    <a href="#" style="color:white; font-weight:700;">Check</a>
+                </div>
+            </div>
+
+            <!-- Other Home -->
+            <div class="tile stacked-tile">
+                <div class="tile-header">Other Location</div>
+                <h3 class="tile-title">Mommys home</h3>
+                <div class="tile-footer">
+                    <span>1 Item</span>
+                    <a href="#" style="color:var(--forest); font-weight:700;">Switch</a>
+                </div>
+            </div>
+        </div>
+
+        <div style="background:white; padding:16px; border-radius:12px;">
+            <h4>Step 2: Add Contacts</h4>
+        </div>
+    </div>
+</body>
+
+</html>

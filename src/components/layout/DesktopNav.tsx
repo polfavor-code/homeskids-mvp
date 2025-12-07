@@ -19,7 +19,6 @@ import {
     ChevronDownIcon,
     ChevronRightIcon,
 } from '@/components/icons/DuotoneIcons';
-import SidebarOnboardingCard from './SidebarOnboardingCard';
 
 const iconMap = {
     HomeIcon,
@@ -36,7 +35,7 @@ export default function DesktopNav() {
     const pathname = usePathname();
     const { caregivers } = useAppState();
     const { user } = useAuth();
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     // Get current user from caregivers (the one marked as current user)
@@ -121,9 +120,16 @@ export default function DesktopNav() {
                             <Link
                                 href={item.route}
                                 onClick={(e) => {
-                                    if (hasSubItems && !isCollapsed) {
+                                    if (hasSubItems) {
                                         e.preventDefault();
-                                        toggleSection(item.label);
+                                        if (isCollapsed) {
+                                            // When collapsed, expand sidebar and open this section
+                                            setIsCollapsed(false);
+                                            setExpandedSections(prev => new Set(prev).add(item.label));
+                                        } else {
+                                            // When expanded, toggle the section
+                                            toggleSection(item.label);
+                                        }
                                     }
                                 }}
                                 className={`flex items-center h-12 rounded-2xl transition-all ${isCollapsed ? 'justify-center px-0' : 'gap-4 px-4'
@@ -178,8 +184,6 @@ export default function DesktopNav() {
                     );
                 })}
 
-                {/* Onboarding Helper Card - After nav items, near Settings */}
-                <SidebarOnboardingCard isCollapsed={isCollapsed} />
             </div>
 
             {/* User Profile - Fixed at bottom */}

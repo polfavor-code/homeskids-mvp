@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Variant 3 (Outline Tech)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        /* V3: "Outline Tech" - High reliance on borders, clean white backdrops, mono-spacing feel */
+
+        .dash-grid {
+            display: flex;
+            gap: 20px;
+            align-items: stretch;
+            margin-top: 40px;
+            margin-bottom: 60px;
+        }
+
+        .dash-block {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .dash-block.featured {
+            flex: 1.2;
+            border-color: var(--forest);
+            background: #F4F7F4;
+        }
+
+        .block-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .block-title {
+            font-family: 'DM Serif Display';
+            font-size: 24px;
+            margin: 0 0 8px 0;
+        }
+
+        .data-point {
+            margin-top: auto;
+            border-top: 1px dashed var(--border);
+            padding-top: 12px;
+        }
+
+        .switch-btn {
+            background: white;
+            border: 2px solid var(--forest);
+            color: var(--forest);
+            padding: 8px;
+            width: 100%;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        /* Stacked Visual - dashed border behind */
+        .stacked-shadow {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: -4px;
+            bottom: -4px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            z-index: -1;
+        }
+
+        .steps-bar {
+            background: var(--forest);
+            color: white;
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .step-link {
+            color: white;
+            text-decoration: underline;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width:260px; border-right:1px solid #EBE6DC;"></div>
+    <div class="main-content">
+        <h1 style="font-family:'DM Serif Display'; font-size:40px;">Hi nata,</h1>
+
+        <div class="dash-grid">
+            <div class="dash-block">
+                <span class="block-label">Where June Is</span>
+                <h2 class="block-title">Daddys home</h2>
+                <div class="data-point">1 Active item</div>
+            </div>
+
+            <div class="dash-block featured">
+                <span class="block-label" style="color:var(--forest);">In Transit</span>
+                <h2 class="block-title">Travel Bag</h2>
+                <div style="margin: 20px 0; text-align:center; font-size:40px;">🎒</div>
+                <button
+                    style="background:var(--forest); color:white; border:none; padding:10px; border-radius:6px; font-weight:700;">Check
+                    Bag</button>
+            </div>
+
+            <div class="dash-block">
+                <div class="stacked-shadow"></div>
+                <span class="block-label">Other Homes</span>
+                <h2 class="block-title">Mommys home</h2>
+                <button class="switch-btn">Switch</button>
+            </div>
+        </div>
+
+        <div class="steps-bar">
+            <span><strong>Setup Step 2:</strong> Add contacts</span>
+            <a href="#" class="step-link">Review →</a>
+        </div>
+    </div>
+</body>
+
+</html>

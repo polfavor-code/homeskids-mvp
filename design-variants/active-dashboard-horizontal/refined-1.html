@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Refined 1 (Classic Horizontal)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --connector-line: #E0DCD4;
+            --soft-green: #E8F0E8;
+            --bag-gradient: linear-gradient(135deg, #2C3E2D 0%, #4CA1AF 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        /* ===== HOMES SECTION: Labels + Cards ===== */
+
+        /* Wrapper for entire homes area */
+        .homes-section {
+            position: relative;
+        }
+
+        /* Top row inside card: section label on left, pagination on right */
+        .card-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        /* In-card section label (subtle) */
+        .card-section-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-sub);
+            font-weight: 600;
+        }
+
+        /* Pagination control inside card header */
+        .card-pagination {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pagination-arrow {
+            width: 20px;
+            height: 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.15s ease;
+            padding: 0;
+            font-size: 14px;
+        }
+
+        .pagination-arrow:hover {
+            color: var(--forest);
+            background: var(--soft-green);
+        }
+
+        .pagination-indicator {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-sub);
+            min-width: 28px;
+            text-align: center;
+        }
+
+        /* Grid for cards ONLY - no labels inside */
+        .homes-row {
+            display: grid;
+            grid-template-columns: 360px 329px 360px; /* travel bag 12% less width (374 * 0.88 = 329) */
+            gap: 32px;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Card column - just holds the card */
+        .home-column {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+        }
+
+        /* Center column (Travel Bag) - anchor for connector line */
+        .home-column.center-column {
+            position: relative;
+        }
+
+        /* Connecting Line - two segments on either side of center card */
+        /* Left segment */
+        .home-column.center-column::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 100%; /* Start from right edge of center column */
+            width: 32px; /* Just the gap */
+            height: 2px;
+            background: #E0DCD5;
+            z-index: 0;
+            transform: translateY(-50%);
+        }
+
+        /* Right segment */
+        .home-column.center-column::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%; /* Start from left edge of center column */
+            width: 32px; /* Just the gap */
+            height: 2px;
+            background: #E0DCD5;
+            z-index: 0;
+            transform: translateY(-50%);
+        }
+
+        /* Responsive - Switch to vertical at 1100px */
+        @media (max-width: 1100px) {
+            .homes-row {
+                display: flex !important;
+                flex-direction: column;
+                gap: 32px;
+                align-items: center;
+                padding-bottom: 24px;
+                position: relative;
+            }
+
+            /* Hide horizontal line segments on mobile */
+            .home-column.center-column::before,
+            .home-column.center-column::after {
+                display: none;
+            }
+
+            /* Vertical line for mobile - on the homes-row */
+            .homes-row::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 50%;
+                width: 2px;
+                background: #E0DCD5;
+                z-index: 0;
+                transform: translateX(-50%);
+            }
+
+            .home-column {
+                width: 100% !important;
+                max-width: 370px;
+                min-width: 280px;
+            }
+
+            .home-column.center-column {
+                max-width: 400px;
+            }
+
+            .travel-card {
+                min-width: auto !important;
+            }
+
+            .main-content {
+                padding: 32px 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .column {
+                max-width: 100%;
+                min-width: auto;
+            }
+
+            .main-content {
+                padding: 24px 16px;
+            }
+
+            .next-stay-button {
+                padding: 4px 10px;
+                font-size: 10px;
+            }
+
+            .next-stay-label {
+                padding: 4px 10px;
+                font-size: 10px;
+            }
+
+            .status-pill {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 0 var(--border);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 200px;
+            width: 100%;
+            z-index: 2;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 var(--border);
+        }
+
+        /* Header - title row with controls on right */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            gap: 8px;
+        }
+
+        .card-title {
+            font-family: 'DM Serif Display';
+            font-size: 22px;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        /* Next Stay Control - Top right of destination card */
+        .next-stay-control {
+            flex-shrink: 0;
+        }
+
+        .next-stay-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 12px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border);
+            background: var(--white);
+            color: var(--forest);
+            white-space: nowrap;
+        }
+
+        .next-stay-button:hover {
+            background: var(--soft-green);
+            border-color: var(--forest);
+        }
+
+        .next-stay-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 12px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--soft-green);
+            color: var(--forest);
+            white-space: nowrap;
+        }
+
+        .next-stay-label .checkmark {
+            font-size: 12px;
+        }
+
+        .badge-here {
+            background: var(--forest);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .badge-here .badge-dot {
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .time-label {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 16px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            background: #F9F9F8;
+            border-radius: 12px;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stat-val {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .stat-lbl {
+            font-size: 9px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+
+        /* Card Footer Area */
+        .card-footer {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Status Button - Full width button style for current home (forest green like left side of travel bag gradient) */
+        .status-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 12px;
+            background: var(--forest); /* #2C3E2D - left side of travel bag gradient */
+            font-family: 'Karla', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+            cursor: default;
+            text-align: center;
+        }
+
+        .status-button .status-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Primary Button - Full width CTA for switching homes */
+        .btn-primary {
+            width: 100%;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 12px;
+            background: var(--forest);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            color: white;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .btn-primary:hover {
+            background: #1e2b1f;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Travel Bag Card */
+        .travel-card {
+            background: var(--bag-gradient);
+            color: white;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 32px;
+            border: none;
+            box-shadow: 0 8px 16px rgba(44, 62, 45, 0.15);
+            min-height: 305px; /* taller */
+            min-width: 329px; /* 12% less width */
+            cursor: default;
+        }
+
+        .travel-card:hover {
+            transform: none;
+            box-shadow: 0 8px 16px rgba(44, 62, 45, 0.15);
+        }
+
+        .bag-title {
+            font-family: 'DM Serif Display';
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .check-circle {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--forest);
+            margin-bottom: 12px;
+        }
+
+        .bag-status {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .bag-btn {
+            background: white;
+            color: var(--forest);
+            text-decoration: none;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            width: 100%;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .bag-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(44, 62, 45, 0.15);
+        }
+
+        /* FOOTER STYLES */
+        .bottom-advisor {
+            margin-top: auto;
+            border-top: 1px solid #EBE6DC;
+            padding-top: 24px;
+        }
+
+        .advisor-step {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-info {
+            flex: 1;
+        }
+
+        .step-overline {
+            font-size: 10px;
+            color: var(--text-sub);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: #EBE6DC;
+            border-radius: 2px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 12px;
+        }
+
+        .progress-fill {
+            width: 50%;
+            height: 100%;
+            background: var(--forest);
+            border-radius: 2px;
+        }
+
+        .step-heading {
+            font-family: 'DM Serif Display';
+            font-size: 22px;
+            margin: 0 0 4px 0;
+        }
+
+        .step-desc {
+            font-size: 14px;
+            color: var(--text-sub);
+        }
+
+        .step-action {
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            color: var(--forest);
+            margin-right: 24px;
+        }
+
+        .step-skip {
+            color: var(--text-sub);
+            font-size: 13px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width:260px; border-right:1px solid #EBE6DC;"></div>
+
+    <div class="main-content">
+        <h1 style="font-family:'DM Serif Display'; font-size:40px; margin-bottom:32px;">Hi nata,</h1>
+
+        <!-- Homes Section -->
+        <div class="homes-section">
+
+            <!-- Cards Row -->
+            <div class="homes-row">
+
+                <!-- COLUMN 1: Current Home -->
+                <div class="home-column" id="current-home-column">
+                    <div class="card" id="current-home-card" onclick="openHomeDetails('daddy')">
+                        <!-- Top row: section label -->
+                        <div class="card-top-row">
+                            <span class="card-section-label">Where June is</span>
+                        </div>
+                        <!-- Title row: home name -->
+                        <div class="card-header">
+                            <h3 class="card-title" id="current-home-title">Daddy's home</h3>
+                        </div>
+                        <div class="time-label">Local time 17:34</div>
+
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-val">Map</span>
+                                <span class="stat-lbl">VIEW</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-val">4</span>
+                                <span class="stat-lbl">PEOPLE</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-val">1</span>
+                                <span class="stat-lbl">ITEMS</span>
+                            </div>
+                        </div>
+
+                        <div class="card-footer">
+                            <!-- Status button - full width, matches Switch button style -->
+                            <div class="status-button">
+                                <span class="status-dot"></span>
+                                June is staying here now
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMN 2: Travel Bag (center) -->
+                <div class="home-column center-column">
+                    <div class="card travel-card">
+                        <h3 class="bag-title">June's Travel Bag</h3>
+                        <div class="check-circle">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="bag-status">No items to pack</div>
+                        <a href="#" class="bag-btn">Open bag &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- COLUMN 3: Destination Home -->
+                <div class="home-column" id="destination-home-column">
+                    <div class="card" id="destination-home-card">
+                        <!-- Top row: section label + pagination -->
+                        <div class="card-top-row">
+                            <span class="card-section-label">Next Destination(s)</span>
+                            <div class="card-pagination">
+                                <button class="pagination-arrow" onclick="event.stopPropagation(); prevDestination()" aria-label="Previous home">‹</button>
+                                <span class="pagination-indicator" id="pagination-indicator">1/2</span>
+                                <button class="pagination-arrow" onclick="event.stopPropagation(); nextDestination()" aria-label="Next home">›</button>
+                            </div>
+                        </div>
+                        <!-- Title row: home name + next stay control -->
+                        <div class="card-header">
+                            <h3 class="card-title" id="destination-home-title">Mommy's home</h3>
+                            <div class="next-stay-control" id="next-stay-control">
+                                <!-- State will be rendered by JavaScript -->
+                            </div>
+                        </div>
+                        <div class="time-label">Local time 17:34</div>
+
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-val">Map</span>
+                                <span class="stat-lbl">VIEW</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-val" id="destination-people">1</span>
+                                <span class="stat-lbl">PERSON</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-val" id="destination-items">1</span>
+                                <span class="stat-lbl">ITEMS</span>
+                            </div>
+                        </div>
+
+                        <div class="card-footer" id="destination-footer">
+                            <!-- Footer will be rendered by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="bottom-advisor">
+            <div class="step-overline">
+                STEP 2 OF 4
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="advisor-step">
+                <div class="step-info">
+                    <h3 class="step-heading">Add important contacts</h3>
+                    <p class="step-desc">Save school, doctor and emergency contacts.</p>
+                </div>
+                <div class="step-actions">
+                    <a href="#" class="step-action">Add contacts →</a>
+                    <span class="step-skip">Skip</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Home state management
+        // - isCurrentHome: the home where June is right now
+        // - isNextStay: the home selected as the next planned stay (only one at a time)
+
+        const homes = [
+            { id: 'mommy', name: "Mommy's home", people: 1, items: 1, isNextStay: true },
+            { id: 'grandma', name: "Grandma's home", people: 2, items: 0, isNextStay: false }
+        ];
+
+        let currentDestinationIndex = 0;
+
+        function renderDestinationCard() {
+            const home = homes[currentDestinationIndex];
+
+            // Update title
+            document.getElementById('destination-home-title').textContent = home.name;
+
+            // Update pagination indicator
+            const paginationIndicator = document.getElementById('pagination-indicator');
+            if (paginationIndicator) {
+                paginationIndicator.textContent = `${currentDestinationIndex + 1} / ${homes.length}`;
+            }
+
+            // Update stats
+            document.getElementById('destination-people').textContent = home.people;
+            document.getElementById('destination-items').textContent = home.items;
+
+            // Render next stay control in header
+            const nextStayControl = document.getElementById('next-stay-control');
+            if (home.isNextStay) {
+                nextStayControl.innerHTML = `
+                    <span class="next-stay-label">
+                        <span class="checkmark">✓</span>
+                        Next stay
+                    </span>
+                `;
+            } else {
+                nextStayControl.innerHTML = `
+                    <button class="next-stay-button" onclick="event.stopPropagation(); setAsNextStay('${home.id}')">
+                        Set as next stay
+                    </button>
+                `;
+            }
+
+            // Render footer - primary action button
+            const footer = document.getElementById('destination-footer');
+            footer.innerHTML = `
+                <button class="btn-primary" onclick="event.stopPropagation(); switchToHome('${home.id}')">
+                    Switch to this home
+                </button>
+            `;
+
+            // Update card click handler
+            document.getElementById('destination-home-card').onclick = () => openHomeDetails(home.id);
+        }
+
+        function setAsNextStay(homeId) {
+            // Clear previous next stay (only one home can be next stay at a time)
+            homes.forEach(h => h.isNextStay = false);
+
+            // Set new next stay
+            const home = homes.find(h => h.id === homeId);
+            if (home) {
+                home.isNextStay = true;
+            }
+
+            // Re-render current card
+            renderDestinationCard();
+
+            console.log(`Set "${home.name}" as next stay`);
+        }
+
+        function switchToHome(homeId) {
+            const home = homes.find(h => h.id === homeId);
+            console.log(`Switching June's current location to: ${home.name}`);
+            // In real app: this would update the current home state and refresh the page
+            // window.location.href = `/switch-home/${homeId}`;
+        }
+
+        function nextDestination() {
+            currentDestinationIndex = (currentDestinationIndex + 1) % homes.length;
+            renderDestinationCard();
+        }
+
+        function prevDestination() {
+            currentDestinationIndex = (currentDestinationIndex - 1 + homes.length) % homes.length;
+            renderDestinationCard();
+        }
+
+        function openHomeDetails(homeId) {
+            console.log(`Opening details for: ${homeId}`);
+            // In real app: window.location.href = `/settings/homes/${homeId}`;
+        }
+
+        // Initial render
+        renderDestinationCard();
+    </script>
+</body>
+
+</html>

@@ -175,77 +175,54 @@ export default function SidebarOnboardingCard({ isCollapsed = false }: SidebarOn
     if (isCollapsed) return null;
 
     return (
-        <div className="mt-3">
-            <div className="bg-white rounded-xl p-3 shadow-sm border border-border/50">
-                {/* Header with dismiss button */}
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] uppercase tracking-wider text-textSub font-semibold">
-                        Getting set up
-                    </span>
-                    <button
-                        onClick={dismissOnboarding}
-                        className="text-textSub/40 hover:text-textSub transition-colors"
-                        title="Dismiss"
-                    >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 4L4 12M4 4L12 12" strokeLinecap="round" />
-                        </svg>
-                    </button>
+        <div className={`mt-auto pt-4 pb-2 px-1 ${isCollapsed ? 'hidden' : 'block'}`}>
+            {/* Step Count & Progress */}
+            <div className="flex items-center gap-2 mb-2">
+                <span className="text-[9px] font-bold text-textSub tracking-wider uppercase">
+                    Step {currentIndex + 1} of {totalSteps}
+                </span>
+                <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-forest transition-all duration-300 ease-out"
+                        style={{ width: `${((currentIndex + 1) / totalSteps) * 100}%` }}
+                    />
                 </div>
+            </div>
 
-                {/* Step label with completion indicator */}
-                <div className="flex items-center gap-2 mb-1">
-                    {isCurrentStepCompleted && (
-                        <span className="text-forest">
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.78 5.28a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L4.22 8.34a.75.75 0 1 1 1.06-1.06l1.72 1.72 3.72-3.72a.75.75 0 0 1 1.06 0z"/>
-                            </svg>
-                        </span>
-                    )}
-                    <p className={`text-[13px] font-semibold ${isCurrentStepCompleted ? 'text-forest/60 line-through' : 'text-forest'}`}>
-                        {currentStep.label}
-                    </p>
-                </div>
+            {/* Title */}
+            <h3 className="font-dmSerif text-[17px] text-forest leading-tight mb-1">
+                {currentStep.label}
+            </h3>
 
-                {/* Description */}
-                <p className="text-[11px] text-textSub leading-relaxed mb-3">
-                    {currentStep.description}
-                </p>
+            {/* Description */}
+            <p className="text-[12px] text-textSub leading-relaxed mb-3 line-clamp-2">
+                {currentStep.description}
+            </p>
 
-                {/* CTA Button - only show if step not completed */}
-                {!isCurrentStepCompleted && (
+            {/* Actions Row */}
+            <div className="flex items-center justify-between">
+                {!isCurrentStepCompleted ? (
                     <Link
                         href={currentStep.targetRoute}
-                        className="block w-full text-center py-1.5 px-3 text-[11px] font-semibold text-white bg-forest rounded-lg hover:bg-forest/90 transition-colors mb-2"
+                        className="text-[12px] font-bold text-forest hover:text-forest/80 transition-colors flex items-center gap-1 underline underline-offset-4"
                     >
-                        {currentStep.ctaLabel}
+                        {currentStep.ctaLabel} <span className="text-[10px]">→</span>
                     </Link>
+                ) : (
+                    <div className="flex items-center gap-1 text-[12px] font-bold text-forest">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.78 5.28a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L4.22 8.34a.75.75 0 1 1 1.06-1.06l1.72 1.72 3.72-3.72a.75.75 0 0 1 1.06 0z" />
+                        </svg>
+                        Done
+                    </div>
                 )}
 
-                {/* Navigation */}
-                <div className="flex items-center justify-between pt-1 border-t border-border/30">
-                    <button
-                        onClick={goToPrev}
-                        className="text-[10px] text-textSub/60 hover:text-textSub transition-colors flex items-center gap-0.5"
-                    >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M10 12L6 8L10 4" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Prev
-                    </button>
-                    <span className="text-[10px] text-textSub/50">
-                        {currentIndex + 1} / {totalSteps}
-                    </span>
-                    <button
-                        onClick={goToNext}
-                        className="text-[10px] text-textSub/60 hover:text-textSub transition-colors flex items-center gap-0.5"
-                    >
-                        Next
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M6 12L10 8L6 4" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </button>
-                </div>
+                <button
+                    onClick={goToNext}
+                    className="text-[11px] text-textSub hover:text-forest transition-colors"
+                >
+                    Skip
+                </button>
             </div>
         </div>
     );
