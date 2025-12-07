@@ -7,8 +7,6 @@ import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
 import { QRCodeSVG } from "qrcode.react";
-import HealthStatusCard from "@/components/health/HealthStatusCard";
-import { HealthStatusValue } from "@/lib/HealthContext";
 
 // Canonical role options - used throughout the app
 // Only Parent and Step-parent can create families via direct signup
@@ -33,7 +31,7 @@ const OTHER_CAREGIVER_ROLE_OPTIONS = [
     { value: "other", label: "Other" },
 ];
 
-type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | "waiting";
+type OnboardingStep = 1 | 2 | 3 | 4 | 5 | "waiting";
 
 // Caregiver info collected during onboarding
 interface CaregiverInfo {
@@ -91,15 +89,6 @@ export default function OnboardingPage() {
     const [homeSetupType, setHomeSetupType] = useState<"multiple" | "single">("multiple");
     const [homeBlocks, setHomeBlocks] = useState<HomeBlock[]>([]);
 
-    // Step 5: Health
-    const [allergiesStatus, setAllergiesStatus] = useState<HealthStatusValue | null>(null);
-    const [allergiesDetails, setAllergiesDetails] = useState("");
-    const [medicationStatus, setMedicationStatus] = useState<HealthStatusValue | null>(null);
-    const [medicationDetails, setMedicationDetails] = useState("");
-    const [dietaryStatus, setDietaryStatus] = useState<HealthStatusValue | null>(null);
-    const [dietaryDetails, setDietaryDetails] = useState("");
-    const [healthErrors, setHealthErrors] = useState<{ allergies?: string; medication?: string; dietary?: string }>({});
-
     // Family ID (created during onboarding)
     const [familyId, setFamilyId] = useState<string | null>(null);
     const [childId, setChildId] = useState<string | null>(null);
@@ -137,29 +126,30 @@ export default function OnboardingPage() {
     };
 
     // Initialize home blocks when caregivers change or child name changes
-    // Names are empty - placeholders will show suggestions
+    // Prefill with suggested names based on caregiver labels
     const initializeHomeBlocks = () => {
         const firstCaregiver = caregivers[0];
         const secondCaregiver = caregivers[1];
 
         if (homeSetupType === "single") {
-            // Single home: empty name, all caregivers checked
+            // Single home: use child's name or first caregiver's label
+            const suggestedName = childName ? `${childName}'s home` : (firstCaregiver ? `${firstCaregiver.label}'s home` : "");
             setHomeBlocks([{
                 id: "home-1",
-                name: "",
+                name: suggestedName,
                 caregiverIds: caregivers.map(c => c.id),
             }]);
         } else {
-            // Multiple homes: empty names, appropriate caregivers checked
+            // Multiple homes: prefill with caregiver labels
             setHomeBlocks([
                 {
                     id: "home-1",
-                    name: "",
+                    name: firstCaregiver ? `${firstCaregiver.label}'s home` : "",
                     caregiverIds: firstCaregiver ? [firstCaregiver.id] : [],
                 },
                 {
                     id: "home-2",
-                    name: "",
+                    name: secondCaregiver ? `${secondCaregiver.label}'s home` : "",
                     caregiverIds: secondCaregiver ? [secondCaregiver.id] : (firstCaregiver ? [firstCaregiver.id] : []),
                 },
             ]);
@@ -499,73 +489,7 @@ export default function OnboardingPage() {
                 }
             }
 
-            // Proceed to Step 5 (Health)
-            setStep(5);
-        } catch (err: any) {
-            console.error("Error creating homes:", err);
-            setError(err.message || "Failed to create homes. Please try again.");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // STEP 5: Handle Health submission
-    const handleStep5Submit = async () => {
-        // Validate that all categories have a selection
-        const errors: { allergies?: string; medication?: string; dietary?: string } = {};
-
-        if (allergiesStatus === null) {
-            errors.allergies = "Please choose an option or skip for now.";
-        }
-        if (medicationStatus === null) {
-            errors.medication = "Please choose an option or skip for now.";
-        }
-        if (dietaryStatus === null) {
-            errors.dietary = "Please choose an option or skip for now.";
-        }
-
-        if (Object.keys(errors).length > 0) {
-            setHealthErrors(errors);
-            return;
-        }
-
-        if (!user || !familyId || !childId) {
-            setError("Session error. Please refresh and try again.");
-            return;
-        }
-
-        setError("");
-        setHealthErrors({});
-        setSaving(true);
-
-        try {
-            // Save health status to child_health_status table
-            const { error: healthError } = await supabase
-                .from("child_health_status")
-                .insert({
-                    child_id: childId,
-                    family_id: familyId,
-                    allergies_status: allergiesStatus,
-                    allergies_details: allergiesStatus === "has" ? allergiesDetails.trim() || null : null,
-                    medication_status: medicationStatus,
-                    medication_details: medicationStatus === "has" ? medicationDetails.trim() || null : null,
-                    dietary_status: dietaryStatus,
-                    dietary_details: dietaryStatus === "has" ? dietaryDetails.trim() || null : null,
-                });
-
-            if (healthError) throw healthError;
-
-            // Also update legacy flags on children table for backwards compatibility
-            await supabase
-                .from("children")
-                .update({
-                    no_known_allergies: allergiesStatus === "none",
-                    no_dietary_restrictions: dietaryStatus === "none",
-                    no_regular_medication: medicationStatus === "none",
-                })
-                .eq("id", childId);
-
-            // Mark onboarding as complete
+            // Mark onboarding as complete and proceed to finish screen
             await supabase
                 .from("profiles")
                 .update({ onboarding_completed: true })
@@ -573,10 +497,10 @@ export default function OnboardingPage() {
 
             setOnboardingCompleted(true);
             await refreshData();
-            setStep(6);
+            setStep(5);
         } catch (err: any) {
-            console.error("Error saving health info:", err);
-            setError(err.message || "Failed to save health information. Please try again.");
+            console.error("Error creating homes:", err);
+            setError(err.message || "Failed to create homes. Please try again.");
         } finally {
             setSaving(false);
         }
@@ -675,16 +599,6 @@ export default function OnboardingPage() {
                 };
             case 5:
                 return {
-                    title: "Health information",
-                    description: `Share what caregivers should know about ${childName || "your child"}.`,
-                    bullets: [
-                        "Record any allergies, medication, or dietary needs.",
-                        "This helps all caregivers keep your child safe.",
-                        "You can always update this later.",
-                    ],
-                };
-            case 6:
-                return {
                     title: "You're all set!",
                     description: "Your family hub is ready.",
                     bullets: [
@@ -768,7 +682,7 @@ export default function OnboardingPage() {
                     <div>
                         <h2 className="font-dmSerif text-2xl text-forest mb-1">About you</h2>
                         <p className="text-textSub text-sm">Tell us a bit about yourself.</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 1 of 5</p>
+                        <p className="text-textSub/60 text-xs mt-1">Step 1 of 4</p>
                     </div>
 
                     <div>
@@ -857,7 +771,7 @@ export default function OnboardingPage() {
                         <div>
                             <h2 className="font-dmSerif text-2xl text-forest mb-1">Other caregiver</h2>
                             <p className="text-textSub text-sm">Is there another adult who also cares for your child?</p>
-                            <p className="text-textSub/60 text-xs mt-1">Step 2 of 5</p>
+                            <p className="text-textSub/60 text-xs mt-1">Step 2 of 4</p>
                         </div>
 
                         <div className="space-y-3">
@@ -900,7 +814,7 @@ export default function OnboardingPage() {
                     <div>
                         <h2 className="font-dmSerif text-2xl text-forest mb-1">Add another caregiver</h2>
                         <p className="text-textSub text-sm">Enter their details.</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 2 of 5</p>
+                        <p className="text-textSub/60 text-xs mt-1">Step 2 of 4</p>
                     </div>
 
                     <div>
@@ -989,7 +903,7 @@ export default function OnboardingPage() {
                     <div>
                         <h2 className="font-dmSerif text-2xl text-forest mb-1">Add your child</h2>
                         <p className="text-textSub text-sm">Enter your child's name to get started.</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 3 of 5</p>
+                        <p className="text-textSub/60 text-xs mt-1">Step 3 of 4</p>
                     </div>
 
                     <div>
@@ -1040,7 +954,7 @@ export default function OnboardingPage() {
                     <div>
                         <h2 className="font-dmSerif text-2xl text-forest mb-1">Set up homes</h2>
                         <p className="text-textSub text-sm">How many homes does {childName || "your child"} have?</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 4 of 5</p>
+                        <p className="text-textSub/60 text-xs mt-1">Step 4 of 4</p>
                     </div>
 
                     {/* Home type selection */}
@@ -1231,78 +1145,8 @@ export default function OnboardingPage() {
             );
         }
 
-        // STEP 5: Health
+        // STEP 5: Finish
         if (step === 5) {
-            return (
-                <div className="space-y-5">
-                    <div>
-                        <h2 className="font-dmSerif text-2xl text-forest mb-1">Health information</h2>
-                        <p className="text-textSub text-sm">
-                            Share what caregivers should know about {childName || "your child"}'s allergies, medication and dietary needs. You can always update this later.
-                        </p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 5 of 5</p>
-                    </div>
-
-                    {/* Health category cards */}
-                    <div className="space-y-4">
-                        <HealthStatusCard
-                            category="allergies"
-                            childName={childName || "your child"}
-                            selectedStatus={allergiesStatus}
-                            details={allergiesDetails}
-                            onStatusChange={setAllergiesStatus}
-                            onDetailsChange={setAllergiesDetails}
-                            error={healthErrors.allergies}
-                        />
-
-                        <HealthStatusCard
-                            category="medication"
-                            childName={childName || "your child"}
-                            selectedStatus={medicationStatus}
-                            details={medicationDetails}
-                            onStatusChange={setMedicationStatus}
-                            onDetailsChange={setMedicationDetails}
-                            error={healthErrors.medication}
-                        />
-
-                        <HealthStatusCard
-                            category="dietary"
-                            childName={childName || "your child"}
-                            selectedStatus={dietaryStatus}
-                            details={dietaryDetails}
-                            onStatusChange={setDietaryStatus}
-                            onDetailsChange={setDietaryDetails}
-                            error={healthErrors.dietary}
-                        />
-                    </div>
-
-                    {error && (
-                        <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                            {error}
-                        </p>
-                    )}
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setStep(4)}
-                            className="px-6 py-3 border border-border rounded-xl font-medium text-forest hover:bg-white transition-colors"
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={handleStep5Submit}
-                            disabled={saving}
-                            className="flex-1 py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
-                        >
-                            {saving ? "Saving..." : "Continue"}
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        // STEP 6: Finish
-        if (step === 6) {
             const handleCopyInviteLink = (token: string) => {
                 const link = `${window.location.origin}/invite/${token}`;
                 navigator.clipboard.writeText(link);
