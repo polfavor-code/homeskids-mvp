@@ -11,13 +11,14 @@ interface InviteCaregiverPanelProps {
     onSuccess?: () => void;
 }
 
+// Canonical role options - consistent across the app
 const ROLE_OPTIONS = [
-    { value: "parent", label: "Co-parent" },
-    { value: "grandparent", label: "Grandparent" },
+    { value: "parent", label: "Parent" },
+    { value: "step_parent", label: "Step-parent" },
+    { value: "family_member", label: "Family member" },
     { value: "nanny", label: "Nanny" },
     { value: "babysitter", label: "Babysitter" },
-    { value: "aunt_uncle", label: "Aunt/Uncle" },
-    { value: "family_friend", label: "Family Friend" },
+    { value: "family_friend", label: "Family friend" },
     { value: "other", label: "Other" },
 ];
 
@@ -274,7 +275,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                         value={inviteName}
                         onChange={(e) => setInviteName(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                        placeholder="e.g., Sarah"
+                        placeholder="e.g., Ellis"
                     />
                 </div>
 
@@ -345,11 +346,10 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                                         key={home.id}
                                         type="button"
                                         onClick={() => handleToggleHome(home.id)}
-                                        className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${
-                                            isSelected
+                                        className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${isSelected
                                                 ? "bg-softGreen/50 border-forest/20"
                                                 : "bg-white border-border hover:border-forest/30"
-                                        }`}
+                                            }`}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`flex-shrink-0 ${isSelected ? "text-forest" : "text-textSub"}`}>
                                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -371,11 +371,10 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                             <button
                                 type="button"
                                 onClick={handleSkipHomeSelection}
-                                className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${
-                                    skipHomeSelection
+                                className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${skipHomeSelection
                                         ? "bg-amber-50 border-amber-200"
                                         : "bg-white border-border hover:border-forest/30"
-                                }`}
+                                    }`}
                             >
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`flex-shrink-0 ${skipHomeSelection ? "text-amber-600" : "text-textSub"}`}>
                                     <circle cx="12" cy="12" r="10" />

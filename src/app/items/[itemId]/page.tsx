@@ -114,17 +114,33 @@ export default function ItemDetailPage({
 
         setUploadingPhoto(true);
         try {
+            // Get user's family ID for family-folder structure
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) {
+                throw new Error("Please log in to upload photos.");
+            }
+
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", session.user.id)
+                .single();
+
+            if (!familyMember) {
+                throw new Error("No family found. Please complete onboarding.");
+            }
+
             const fileExt = file.name.split(".").pop();
-            const fileName = `${item.id}-${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            // Use family-folder structure: {family_id}/{item_id}-{timestamp}.{ext}
+            const fileName = `${familyMember.family_id}/${item.id}-${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from("item-photos")
-                .upload(filePath, file);
+                .upload(fileName, file);
 
             if (uploadError) throw uploadError;
 
-            await updateItemPhoto(item.id, filePath);
+            await updateItemPhoto(item.id, fileName);
         } catch (error) {
             console.error("Error uploading photo:", error);
             alert("Failed to upload photo");

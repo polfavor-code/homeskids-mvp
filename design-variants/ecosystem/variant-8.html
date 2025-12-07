@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CHI Ecosystem - Variant 8 (List)</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: sans-serif;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .list {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            background: #111;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #222;
+            transition: 0.2s;
+        }
+
+        .item:hover {
+            border-color: #555;
+            background: #161616;
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            background: #222;
+            border-radius: 8px;
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info {
+            flex: 1;
+        }
+
+        h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        p {
+            margin: 4px 0 0 0;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .tag {
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #333;
+            margin-right: 15px;
+            color: #aaa;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 8px 16px;
+            background: #222;
+            border-radius: 6px;
+        }
+
+        a:hover {
+            background: #fff;
+            color: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="list">
+        <div class="item">
+            <div class="icon">📱</div>
+            <div class="info">
+                <h3>CHI App <span class="tag">VISITOR</span></h3>
+                <p>Payments and ticketing wallet</p>
+            </div>
+            <div class="actions"><a href="#">Download</a></div>
+        </div>
+        <div class="item">
+            <div class="icon">🎟️</div>
+            <div class="info">
+                <h3>CHI Tickets <span class="tag">VISITOR</span></h3>
+                <p>Event ticketing portal</p>
+            </div>
+            <div class="actions"><a href="#">Launch</a></div>
+        </div>
+        <div class="item">
+            <div class="icon">💳</div>
+            <div class="info">
+                <h3>CHI POS <span class="tag">ADMIN</span></h3>
+                <p>Point of sale tablet app</p>
+            </div>
+            <div class="actions"><a href="#">Download</a></div>
+        </div>
+        <div class="item">
+            <div class="icon">📊</div>
+            <div class="info">
+                <h3>CHI Backstage <span class="tag">ADMIN</span></h3>
+                <p>Management dashboard</p>
+            </div>
+            <div class="actions"><a href="#">Launch</a></div>
+        </div>
+    </div>
+</body>
+
+</html>

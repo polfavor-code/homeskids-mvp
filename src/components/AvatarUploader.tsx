@@ -16,6 +16,31 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
     const [uploading, setUploading] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string>("");
     const [error, setError] = useState("");
+    const [familyId, setFamilyId] = useState<string | null>(null);
+
+    // Fetch user's family ID on mount
+    useEffect(() => {
+        const fetchFamilyId = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.user) return;
+
+                const { data: familyMember } = await supabase
+                    .from("family_members")
+                    .select("family_id")
+                    .eq("user_id", session.user.id)
+                    .single();
+
+                if (familyMember) {
+                    setFamilyId(familyMember.family_id);
+                }
+            } catch (err) {
+                console.error("Failed to fetch family ID:", err);
+            }
+        };
+
+        fetchFamilyId();
+    }, []);
 
     useEffect(() => {
         if (currentAvatarUrl) {
@@ -49,11 +74,16 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
                 return;
             }
 
+            if (!familyId) {
+                throw new Error("No family found. Please complete onboarding.");
+            }
+
             const file = event.target.files[0];
             const fileExt = file.name.split(".").pop();
-            const fileName = `${userId}-${Date.now()}.${fileExt}`;
+            // Use family-folder structure: {family_id}/{user_id}-{timestamp}.{ext}
+            const fileName = `${familyId}/${userId}-${Date.now()}.${fileExt}`;
 
-            // Upload to Supabase storage
+            // Upload to Supabase storage with family-folder structure
             const { data: uploadData, error: uploadError } = await supabase.storage
                 .from("avatars")
                 .upload(fileName, file, {
@@ -65,7 +95,7 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
                 throw uploadError;
             }
 
-            // Update profile with new avatar path
+            // Update profile with new avatar path (includes family folder)
             const { error: updateError } = await supabase
                 .from("profiles")
                 .update({ avatar_url: fileName })

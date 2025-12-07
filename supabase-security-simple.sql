@@ -1,0 +1,122 @@
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can view family member profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can view family member profiles" ON profiles FOR SELECT USING (id IN (SELECT fm2.user_id FROM family_members fm1 JOIN family_members fm2 ON fm1.family_id = fm2.family_id WHERE fm1.user_id = auth.uid()));
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+ALTER TABLE families ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Family members can view family" ON families;
+DROP POLICY IF EXISTS "Family members can update family" ON families;
+DROP POLICY IF EXISTS "Authenticated users can create family" ON families;
+CREATE POLICY "Family members can view family" ON families FOR SELECT USING (id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can update family" ON families FOR UPDATE USING (id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Authenticated users can create family" ON families FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+ALTER TABLE family_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own family memberships" ON family_members;
+DROP POLICY IF EXISTS "Users can view co-members in family" ON family_members;
+DROP POLICY IF EXISTS "Family members can add new members" ON family_members;
+DROP POLICY IF EXISTS "Users can update own membership" ON family_members;
+CREATE POLICY "Users can view own family memberships" ON family_members FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Users can view co-members in family" ON family_members FOR SELECT USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can add new members" ON family_members FOR INSERT WITH CHECK (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()) OR user_id = auth.uid());
+CREATE POLICY "Users can update own membership" ON family_members FOR UPDATE USING (user_id = auth.uid());
+
+ALTER TABLE children ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Family members can view children" ON children;
+DROP POLICY IF EXISTS "Family members can insert children" ON children;
+DROP POLICY IF EXISTS "Family members can update children" ON children;
+DROP POLICY IF EXISTS "Family members can delete children" ON children;
+CREATE POLICY "Family members can view children" ON children FOR SELECT USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can insert children" ON children FOR INSERT WITH CHECK (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can update children" ON children FOR UPDATE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can delete children" ON children FOR DELETE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Family members can view items" ON items;
+DROP POLICY IF EXISTS "Family members can insert items" ON items;
+DROP POLICY IF EXISTS "Family members can update items" ON items;
+DROP POLICY IF EXISTS "Family members can delete items" ON items;
+CREATE POLICY "Family members can view items" ON items FOR SELECT USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can insert items" ON items FOR INSERT WITH CHECK (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can update items" ON items FOR UPDATE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can delete items" ON items FOR DELETE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+
+ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Family members can view invites" ON invites;
+DROP POLICY IF EXISTS "Anyone can view invite by token" ON invites;
+DROP POLICY IF EXISTS "Family members can create invites" ON invites;
+DROP POLICY IF EXISTS "Family members can update invites" ON invites;
+CREATE POLICY "Family members can view invites" ON invites FOR SELECT USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Anyone can view invite by token" ON invites FOR SELECT USING (true);
+CREATE POLICY "Family members can create invites" ON invites FOR INSERT WITH CHECK (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can update invites" ON invites FOR UPDATE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+
+ALTER TABLE homes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Family members can view homes" ON homes;
+DROP POLICY IF EXISTS "Family members can insert homes" ON homes;
+DROP POLICY IF EXISTS "Family members can update homes" ON homes;
+DROP POLICY IF EXISTS "Family members can delete homes" ON homes;
+CREATE POLICY "Family members can view homes" ON homes FOR SELECT USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can insert homes" ON homes FOR INSERT WITH CHECK (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can update homes" ON homes FOR UPDATE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can delete homes" ON homes FOR DELETE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Family members can view contacts" ON contacts;
+DROP POLICY IF EXISTS "Family members can insert contacts" ON contacts;
+DROP POLICY IF EXISTS "Family members can update contacts" ON contacts;
+DROP POLICY IF EXISTS "Family members can delete contacts" ON contacts;
+CREATE POLICY "Family members can view contacts" ON contacts FOR SELECT USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can insert contacts" ON contacts FOR INSERT WITH CHECK (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can update contacts" ON contacts FOR UPDATE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can delete contacts" ON contacts FOR DELETE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Family members can view documents" ON documents;
+DROP POLICY IF EXISTS "Family members can insert documents" ON documents;
+DROP POLICY IF EXISTS "Family members can update documents" ON documents;
+DROP POLICY IF EXISTS "Family members can delete documents" ON documents;
+CREATE POLICY "Family members can view documents" ON documents FOR SELECT USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can insert documents" ON documents FOR INSERT WITH CHECK (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can update documents" ON documents FOR UPDATE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can delete documents" ON documents FOR DELETE USING (family_id IN (SELECT family_id FROM family_members WHERE user_id = auth.uid()));
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', false) ON CONFLICT (id) DO NOTHING;
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Family members can view avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload avatar to family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update avatar in family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete avatar from family folder" ON storage.objects;
+CREATE POLICY "Users can upload avatar to family folder" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can view avatars" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Users can update avatar in family folder" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Users can delete avatar from family folder" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('item-photos', 'item-photos', false) ON CONFLICT (id) DO NOTHING;
+DROP POLICY IF EXISTS "Users can upload item photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view item photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload item photos to family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Family members can view item photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update item photos in family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete item photos from family folder" ON storage.objects;
+CREATE POLICY "Users can upload item photos to family folder" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'item-photos' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can view item photos" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'item-photos' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Users can update item photos in family folder" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'item-photos' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Users can delete item photos from family folder" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'item-photos' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false) ON CONFLICT (id) DO NOTHING;
+DROP POLICY IF EXISTS "Users can upload documents to family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Family members can view documents storage" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update documents in family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete documents from family folder" ON storage.objects;
+CREATE POLICY "Users can upload documents to family folder" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'documents' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Family members can view documents storage" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'documents' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Users can update documents in family folder" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'documents' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));
+CREATE POLICY "Users can delete documents from family folder" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'documents' AND (storage.foldername(name))[1] IN (SELECT family_id::text FROM family_members WHERE user_id = auth.uid()));

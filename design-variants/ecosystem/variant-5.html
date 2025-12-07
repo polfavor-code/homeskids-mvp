@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CHI Ecosystem - Variant 5 (Technical)</title>
+    <style>
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            border: 1px solid #333;
+            padding: 2px;
+        }
+
+        header {
+            border-bottom: 1px solid #333;
+            padding: 20px;
+            text-transform: uppercase;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .card {
+            border: 1px solid #333;
+            margin: -1px 0 0 -1px;
+            padding: 30px;
+        }
+
+        .card:hover {
+            background: #050505;
+        }
+
+        .label {
+            background: #333;
+            color: #000;
+            padding: 2px 6px;
+            font-size: 12px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 20px;
+        }
+
+        p {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: transparent;
+            border: 1px solid #333;
+            color: #888;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button:hover {
+            border-color: #0f0;
+            color: #0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>System Modules // CHI Ecosystem v3.0</header>
+        <div class="grid">
+            <div class="card">
+                <span class="label">VISITOR</span>
+                <h2>CHI_APP_MOBILE</h2>
+                <p>Status: Active. Function: Payments, Ticketing.</p>
+                <button>[ Download ]</button>
+            </div>
+            <div class="card">
+                <span class="label">VISITOR</span>
+                <h2>CHI_TICKETS_WEB</h2>
+                <p>Status: Active. Function: Event Access.</p>
+                <button>[ Launch ]</button>
+            </div>
+            <div class="card">
+                <span class="label">ADMIN</span>
+                <h2>CHI_POS_TABLET</h2>
+                <p>Status: Restoration Needed. Function: Sales.</p>
+                <button>[ Install ]</button>
+            </div>
+            <div class="card">
+                <span class="label">ADMIN</span>
+                <h2>CHI_BACKSTAGE_WEB</h2>
+                <p>Status: Active. Function: Management.</p>
+                <button>[ Access ]</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

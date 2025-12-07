@@ -12,6 +12,8 @@ interface HomeCardFullWidthProps {
     items: Item[];
     isActive: boolean;
     onSwitch?: () => void;
+    caregiverCount?: number; // Optional override for valid caregiver count
+    isSwitching?: boolean; // Loading state for switch button
 }
 
 export default function HomeCardFullWidth({
@@ -21,6 +23,8 @@ export default function HomeCardFullWidth({
     items,
     isActive,
     onSwitch,
+    caregiverCount,
+    isSwitching = false,
 }: HomeCardFullWidthProps) {
     // Get current local time (use home's timezone if available)
     const currentTime = new Date().toLocaleTimeString("en-US", {
@@ -78,10 +82,10 @@ export default function HomeCardFullWidth({
                 </div>
                 <div className="text-center">
                     <span className="block font-bold text-[15px] text-forest mb-0.5">
-                        {home.accessibleCaregiverIds?.length || 1}
+                        {caregiverCount ?? (home.accessibleCaregiverIds?.length || 0)}
                     </span>
                     <span className="text-[11px] text-[#5C705D] uppercase font-semibold">
-                        {(home.accessibleCaregiverIds?.length || 1) === 1 ? 'Person' : 'People'}
+                        {(caregiverCount ?? (home.accessibleCaregiverIds?.length || 0)) === 1 ? 'Person' : 'People'}
                     </span>
                 </div>
                 <div className="text-center">
@@ -98,11 +102,28 @@ export default function HomeCardFullWidth({
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        onSwitch?.();
+                        if (!isSwitching) {
+                            onSwitch?.();
+                        }
                     }}
-                    className="w-full bg-white border-2 border-[#F0F0F0] text-forest py-3.5 rounded-2xl font-semibold mt-5 hover:border-forest transition-colors cursor-pointer"
+                    disabled={isSwitching}
+                    className={`w-full bg-white border-2 border-[#F0F0F0] text-forest py-3.5 rounded-2xl font-semibold mt-5 transition-colors cursor-pointer ${
+                        isSwitching
+                            ? "opacity-60 cursor-not-allowed"
+                            : "hover:border-forest"
+                    }`}
                 >
-                    Switch to this home
+                    {isSwitching ? (
+                        <span className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Switching...
+                        </span>
+                    ) : (
+                        "Switch to this home"
+                    )}
                 </button>
             )}
         </Link>

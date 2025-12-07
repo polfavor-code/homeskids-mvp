@@ -62,7 +62,7 @@ export default function MissingItemAlert({ missingItems }: MissingItemAlertProps
         : `${activeAlerts.length} items are missing`;
 
     return (
-        <div className="bg-terracotta text-white px-5 py-3.5 rounded-xl flex items-center justify-between gap-3">
+        <div className="bg-terracotta text-white p-4 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 <span className="text-xl flex-shrink-0" aria-label="Warning">⚠️</span>
                 <span className="font-semibold text-[15px] truncate">{alertMessage}</span>
@@ -71,13 +71,13 @@ export default function MissingItemAlert({ missingItems }: MissingItemAlertProps
                 <Link
                     href="/items?filter=To be found"
                     onClick={handleView}
-                    className="bg-black/10 hover:bg-black/20 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                    className="bg-white/20 hover:bg-white/30 px-4 py-1.5 rounded-full text-[13px] font-bold transition-colors"
                 >
-                    VIEW
+                    View
                 </Link>
                 <button
                     onClick={handleDismiss}
-                    className="w-7 h-7 rounded-lg hover:bg-black/10 flex items-center justify-center transition-colors"
+                    className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors opacity-60 hover:opacity-100"
                     aria-label="Dismiss alert"
                 >
                     <CloseIcon size={14} />

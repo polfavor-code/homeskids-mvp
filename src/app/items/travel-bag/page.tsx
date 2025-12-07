@@ -1,25 +1,34 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
 import Avatar from "@/components/Avatar";
+import TravelBagTabs, { TravelBagTab } from "@/components/travel-bag/TravelBagTabs";
+import BagEssentialsSection from "@/components/travel-bag/BagEssentialsSection";
+import PreviousTripTab from "@/components/travel-bag/PreviousTripTab";
+import BagHistoryTab from "@/components/travel-bag/BagHistoryTab";
+import TransferDetailModal from "@/components/travel-bag/TransferDetailModal";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState, ChildProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import { useBagTransfers, BagTransfer } from "@/lib/useBagTransfers";
 import { Item } from "@/lib/mockData";
 
 export default function TravelBagCheckPage() {
     useEnsureOnboarding();
+    const searchParams = useSearchParams();
 
-    const { items, updateItemRequested, updateItemPacked } = useItems();
-    const { child, caregivers, homes, currentJuneCaregiverId, currentHomeId } = useAppState();
+    const { items, updateItemRequested, updateItemPacked, cancelItemRequest, confirmRemoveFromBag, keepInBag } = useItems();
+    const { child, caregivers, activeHomes, currentJuneCaregiverId, currentHomeId } = useAppState();
 
     // Get current home (where child is now = origin/packer)
     // and destination home (where child is going = requester)
-    const originHome = homes.find((h) => h.id === currentHomeId) || homes[0];
-    const destinationHome = homes.find((h) => h.id !== currentHomeId);
+    // Only use ACTIVE homes for travel bag
+    const originHome = activeHomes.find((h) => h.id === currentHomeId) || activeHomes[0];
+    const destinationHome = activeHomes.find((h) => h.id !== currentHomeId);
 
     // Legacy: Get caregivers for fallback display
     const originCaregiver = caregivers.find((c) => c.id === originHome?.ownerCaregiverId) ||
@@ -28,25 +37,75 @@ export default function TravelBagCheckPage() {
         caregivers.find((c) => c.id !== currentJuneCaregiverId);
 
     // Determine if current user is the packer (child is at their home) or requester
-    // For now, we use currentJuneCaregiverId to determine perspective
-    // The packer is the one where the child currently is
-    const [viewMode, setViewMode] = useState<"packer" | "requester">("packer");
+    // The packer is at the home where the child currently is (originHome)
+    // The requester is at the other home (destinationHome)
+    const currentUserCaregiver = caregivers.find(c => c.isCurrentUser);
+
+    // Check if current user's home is where the child is (origin)
+    // User is a packer if they have access to the origin home (where child currently is)
+    const userIsAtOrigin = currentUserCaregiver?.accessibleHomeIds?.includes(originHome?.id || "") ||
+                           originHome?.ownerCaregiverId === currentUserCaregiver?.id;
+
+    // Auto-determine view mode based on user's home relationship
+    const [viewMode, setViewMode] = useState<"packer" | "requester">(userIsAtOrigin ? "packer" : "requester");
+
+    // Update view mode when user/home data changes
+    useEffect(() => {
+        if (currentUserCaregiver && originHome) {
+            const isAtOrigin = currentUserCaregiver.accessibleHomeIds?.includes(originHome.id) ||
+                              originHome.ownerCaregiverId === currentUserCaregiver.id;
+            setViewMode(isAtOrigin ? "packer" : "requester");
+        }
+    }, [currentUserCaregiver, originHome]);
+
+    // Tab state - check URL param for initial tab
+    const initialTab = searchParams.get("tab") as TravelBagTab || "current";
+    const [activeTab, setActiveTab] = useState<TravelBagTab>(initialTab);
+
+    // Bag transfers for history/previous trip tabs
+    const { transfers, isLoading: transfersLoading, lastTransfer, hasHistory } = useBagTransfers();
+
+    // Transfer detail modal state
+    const [selectedTransfer, setSelectedTransfer] = useState<BagTransfer | null>(null);
 
     // Local state for dismissed missing items (session only)
     const [dismissedMissingIds, setDismissedMissingIds] = useState<Set<string>>(new Set());
+
+    // State for canceled item confirmation modal
+    const [canceledItemModal, setCanceledItemModal] = useState<Item | null>(null);
 
     const handleDismissMissing = (itemId: string) => {
         setDismissedMissingIds((prev) => new Set(Array.from(prev).concat(itemId)));
     };
 
-    // Helper to check if item is at origin (current home)
+    // Handlers for canceled item modal
+    const handleKeepInBag = async () => {
+        if (canceledItemModal) {
+            await keepInBag(canceledItemModal.id);
+            setCanceledItemModal(null);
+        }
+    };
+
+    const handleRemoveFromBag = async () => {
+        if (canceledItemModal) {
+            await confirmRemoveFromBag(canceledItemModal.id);
+            setCanceledItemModal(null);
+        }
+    };
+
+    // Helper to check if item is at origin (current home where child is)
     const isAtOrigin = (item: Item) => {
-        // Prefer home-based location
-        if (originHome && item.locationHomeId === originHome.id) return true;
-        // Fallback: check if item's caregiver matches home's owner
-        if (originHome?.ownerCaregiverId && item.locationCaregiverId === originHome.ownerCaregiverId) return true;
-        // Fallback: legacy caregiver-based
-        if (item.locationCaregiverId === currentJuneCaregiverId) return true;
+        if (!originHome) return false;
+
+        // Primary: check if item's home matches origin home
+        if (item.locationHomeId === originHome.id) return true;
+
+        // Fallback: check if item's caregiver is the origin home's owner
+        if (originHome.ownerCaregiverId && item.locationCaregiverId === originHome.ownerCaregiverId) return true;
+
+        // Fallback: check if item's caregiver has access to origin home
+        if (item.locationCaregiverId && originHome.accessibleCaregiverIds?.includes(item.locationCaregiverId)) return true;
+
         return false;
     };
 
@@ -68,6 +127,15 @@ export default function TravelBagCheckPage() {
 
     const missingItems = items.filter((item) => item.isMissing && !dismissedMissingIds.has(item.id));
 
+    // Items where requester canceled but still packed - packer needs to confirm removal
+    const canceledButPackedItems = items.filter(
+        (item) =>
+            item.isRequestCanceled &&
+            item.isPacked &&
+            isAtOrigin(item) &&
+            !item.isMissing
+    );
+
     // Split items to pack into packed and unpacked
     const toPackUnpacked = itemsToPack.filter((item) => !item.isPacked);
     const toPackPacked = itemsToPack.filter((item) => item.isPacked);
@@ -84,9 +152,9 @@ export default function TravelBagCheckPage() {
     };
 
     const handleUnrequestItem = async (item: Item) => {
-        await updateItemRequested(item.id, false);
-        // Also unpack it when unrequesting
-        await updateItemPacked(item.id, false);
+        // Use cancelItemRequest - if packed, it sets isRequestCanceled flag
+        // so packer can confirm removal
+        await cancelItemRequest(item.id);
     };
 
     // Check if we have valid home setup
@@ -104,84 +172,109 @@ export default function TravelBagCheckPage() {
 
     return (
         <AppShell>
-            {/* Header */}
-            <div className="text-center mb-6">
+            {/* Header - Compact 3-line layout */}
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h1 className="font-dmSerif text-2xl text-forest mb-1">
+                        {isPacker ? `Pack ${child?.name || "Child"}'s bag` : `Request items for ${child?.name || "Child"}`}
+                    </h1>
+                    <p className="text-sm text-textSub mb-1">
+                        {isPacker
+                            ? `Pack ${child?.name || "your child"}'s things for the next stay at ${destinationHome?.name || "the other home"}.`
+                            : `Request items from ${originHome?.name || "the other home"} for ${child?.name || "your child"}'s next visit.`}
+                    </p>
+                    {originHome && destinationHome && (
+                        <p className="text-xs text-forest/50">
+                            {originHome.name} → {destinationHome.name}
+                        </p>
+                    )}
+                </div>
                 <Link
-                    href="/"
-                    className="text-sm text-textSub hover:text-forest inline-block mb-4 transition-colors"
+                    href="/items/new"
+                    className="bg-forest text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-forest/90 transition-colors flex-shrink-0"
                 >
-                    ← Back to home
+                    + New item
                 </Link>
-                <h1 className="font-dmSerif text-2xl text-forest mb-2">
-                    {isPacker ? `Pack ${child?.name || "Child"}'s bag` : `Request items for ${child?.name || "Child"}`}
-                </h1>
-                <p className="text-sm text-textSub">
-                    {isPacker
-                        ? `Pack ${child?.name || "your child"}'s things for the next stay at ${destinationCaregiver?.label || "the other home"}'s Home.`
-                        : `Request items from ${originCaregiver?.label || "the other home"}'s Home for ${child?.name || "your child"}'s next visit.`}
-                </p>
-
-                {/* Route Hint */}
-                {hasValidSetup && (
-                    <div className="flex items-center justify-center gap-3 mt-5 text-sm font-semibold text-forest/80">
-                        <span>{originCaregiver.label}'s</span>
-                        <div className="h-px w-8 bg-forest/30" />
-                        <div className="w-1.5 h-1.5 bg-forest rounded-full" />
-                        <div className="h-px w-8 bg-forest/30" />
-                        <span>{destinationCaregiver.label}'s</span>
-                    </div>
-                )}
             </div>
 
-            {/* No items at all empty state */}
-            {totalItems === 0 && missingItems.length === 0 ? (
-                <div className="bg-white rounded-2xl p-8 shadow-sm border border-border text-center">
-                    <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-                        📦
+            {/* Tab Navigation */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-border/30 mb-4">
+                <TravelBagTabs activeTab={activeTab} onTabChange={setActiveTab} />
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === "current" ? (
+                /* CURRENT PACKLIST TAB */
+                totalItems === 0 && missingItems.length === 0 ? (
+                    <div className="bg-white rounded-2xl p-8 shadow-sm border border-border text-center">
+                        <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                            📦
+                        </div>
+                        <h3 className="font-bold text-forest mb-2">No items found for {child?.name || "your child"}</h3>
+                        <p className="text-sm text-textSub mb-4 max-w-xs mx-auto">
+                            Add items to start tracking what moves between homes.
+                        </p>
+                        <Link
+                            href="/items/new"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-forest text-white rounded-xl font-medium hover:bg-teal transition-colors"
+                        >
+                            + New item
+                        </Link>
                     </div>
-                    <h3 className="font-bold text-forest mb-2">No items found for {child?.name || "your child"}</h3>
-                    <p className="text-sm text-textSub mb-4 max-w-xs mx-auto">
-                        Add items to start tracking what moves between homes.
-                    </p>
-                    <Link
-                        href="/items/new"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-forest text-white rounded-xl font-medium hover:bg-teal transition-colors"
-                    >
-                        + Add an item
-                    </Link>
+                ) : isPacker ? (
+                    /* PACKER VIEW */
+                    <PackerView
+                        child={child}
+                        originHome={originHome}
+                        destinationHome={destinationHome}
+                        itemsToPack={itemsToPack}
+                        toPackUnpacked={toPackUnpacked}
+                        toPackPacked={toPackPacked}
+                        missingItems={missingItems}
+                        canceledButPackedItems={canceledButPackedItems}
+                        totalToPack={totalToPack}
+                        packedCount={packedCount}
+                        progressPercent={progressPercent}
+                        onTogglePacked={handleTogglePacked}
+                        onDismissMissing={handleDismissMissing}
+                        onShowCanceledModal={setCanceledItemModal}
+                        childId={child?.id}
+                    />
+                ) : (
+                    /* REQUESTER VIEW */
+                    <RequesterView
+                        child={child}
+                        originHome={originHome}
+                        itemsToPack={itemsToPack}
+                        toPackUnpacked={toPackUnpacked}
+                        toPackPacked={toPackPacked}
+                        availableAtOrigin={availableAtOrigin}
+                        totalToPack={totalToPack}
+                        packedCount={packedCount}
+                        progressPercent={progressPercent}
+                        onRequestItem={handleRequestItem}
+                        onUnrequestItem={handleUnrequestItem}
+                        childId={child?.id}
+                    />
+                )
+            ) : activeTab === "previous" ? (
+                /* PREVIOUS TRIP TAB */
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-border/30">
+                    <PreviousTripTab
+                        lastTransfer={lastTransfer}
+                        isLoading={transfersLoading}
+                        onViewItems={setSelectedTransfer}
+                    />
                 </div>
-            ) : isPacker ? (
-                /* PACKER VIEW */
-                <PackerView
-                    child={child}
-                    originCaregiver={originCaregiver}
-                    destinationCaregiver={destinationCaregiver}
-                    itemsToPack={itemsToPack}
-                    toPackUnpacked={toPackUnpacked}
-                    toPackPacked={toPackPacked}
-                    missingItems={missingItems}
-                    totalToPack={totalToPack}
-                    packedCount={packedCount}
-                    progressPercent={progressPercent}
-                    onTogglePacked={handleTogglePacked}
-                    onDismissMissing={handleDismissMissing}
-                />
             ) : (
-                /* REQUESTER VIEW */
-                <RequesterView
-                    child={child}
-                    originCaregiver={originCaregiver}
-                    destinationCaregiver={destinationCaregiver}
-                    itemsToPack={itemsToPack}
-                    toPackUnpacked={toPackUnpacked}
-                    toPackPacked={toPackPacked}
-                    availableAtOrigin={availableAtOrigin}
-                    totalToPack={totalToPack}
-                    packedCount={packedCount}
-                    progressPercent={progressPercent}
-                    onRequestItem={handleRequestItem}
-                    onUnrequestItem={handleUnrequestItem}
-                />
+                /* BAG HISTORY TAB */
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-border/30">
+                    <BagHistoryTab
+                        transfers={transfers}
+                        isLoading={transfersLoading}
+                        onSelectTransfer={setSelectedTransfer}
+                    />
+                </div>
             )}
 
             {/* Dev: View Mode Toggle (super tiny at bottom) */}
@@ -194,7 +287,7 @@ export default function TravelBagCheckPage() {
                             : "text-textSub/50 hover:text-textSub"
                             }`}
                     >
-                        {originCaregiver?.label || "P"}
+                        {originHome?.name || "Origin"}
                     </button>
                     <button
                         onClick={() => setViewMode("requester")}
@@ -203,10 +296,45 @@ export default function TravelBagCheckPage() {
                             : "text-textSub/50 hover:text-textSub"
                             }`}
                     >
-                        {destinationCaregiver?.label || "R"}
+                        {destinationHome?.name || "Dest"}
                     </button>
                 </div>
             </div>
+
+            {/* Transfer Detail Modal */}
+            <TransferDetailModal
+                transfer={selectedTransfer}
+                childName={child?.name || "Child"}
+                onClose={() => setSelectedTransfer(null)}
+            />
+
+            {/* Canceled Request Confirmation Modal */}
+            {canceledItemModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+                        <h3 className="font-dmSerif text-xl text-forest mb-2">
+                            Request canceled — remove from bag?
+                        </h3>
+                        <p className="text-sm text-textSub mb-6">
+                            {destinationHome?.name || "The other home"} no longer needs <strong>{canceledItemModal.name}</strong> packed. Would you like to remove it from {child?.name || "your child"}'s bag?
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleRemoveFromBag}
+                                className="flex-1 py-2.5 px-4 bg-cream border border-border text-forest rounded-xl font-medium hover:bg-border/30 transition-colors"
+                            >
+                                Remove from bag
+                            </button>
+                            <button
+                                onClick={handleKeepInBag}
+                                className="flex-1 py-2.5 px-4 bg-forest text-white rounded-xl font-medium hover:bg-teal transition-colors"
+                            >
+                                Keep packed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppShell>
     );
 }
@@ -216,36 +344,43 @@ export default function TravelBagCheckPage() {
 // ============================================
 function PackerView({
     child,
-    originCaregiver,
+    originHome,
+    destinationHome,
     itemsToPack,
     toPackUnpacked,
     toPackPacked,
     missingItems,
+    canceledButPackedItems,
     totalToPack,
     packedCount,
     progressPercent,
     onTogglePacked,
     onDismissMissing,
+    onShowCanceledModal,
+    childId,
 }: {
     child: ChildProfile | null;
-    originCaregiver: { label: string } | undefined;
-    destinationCaregiver: { label: string } | undefined;
+    originHome: { name: string } | undefined;
+    destinationHome: { name: string } | undefined;
     itemsToPack: Item[];
     toPackUnpacked: Item[];
     toPackPacked: Item[];
     missingItems: Item[];
+    canceledButPackedItems: Item[];
     totalToPack: number;
     packedCount: number;
     progressPercent: number;
     onTogglePacked: (id: string) => void;
     onDismissMissing: (id: string) => void;
+    onShowCanceledModal: (item: Item) => void;
+    childId: string | undefined;
 }) {
-    return (
-        <div className="space-y-6">
-            {/* Section Title */}
-            <h2 className="text-lg font-bold text-forest pl-2">What to pack</h2>
+    // State for showing/hiding missing items
+    const [showMissingItems, setShowMissingItems] = React.useState(false);
 
-            {/* Suitcase Card */}
+    return (
+        <div className="space-y-4">
+            {/* Suitcase Card - directly after header */}
             <div className="relative pt-6">
                 {/* Suitcase Handle (Behind Card) */}
                 <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 z-0">
@@ -274,7 +409,7 @@ function PackerView({
                                 </h3>
                                 <p className="text-sm text-textSub">
                                     {totalToPack > 0
-                                        ? `Pack ${totalToPack} item${totalToPack !== 1 ? "s" : ""} at ${originCaregiver?.label || "home"}'s Home`
+                                        ? `Pack ${totalToPack} item${totalToPack !== 1 ? "s" : ""} at ${originHome?.name || "home"}`
                                         : "No items requested"}
                                 </p>
                             </div>
@@ -312,7 +447,7 @@ function PackerView({
 
                     {/* Item List */}
                     {itemsToPack.length === 0 ? (
-                        <div className="text-center py-8">
+                        <div className="text-center py-6">
                             <div className="w-12 h-12 bg-softGreen rounded-full flex items-center justify-center text-xl mx-auto mb-3">
                                 ✓
                             </div>
@@ -343,20 +478,70 @@ function PackerView({
                             ))}
                         </div>
                     )}
+
+                    {/* Bag Essentials - Inline in bag card */}
+                    <div className="mt-4 pt-4 border-t border-dashed border-border">
+                        <BagEssentialsSection childId={childId} />
+                    </div>
                 </div>
             </div>
 
-            {/* Missing Items Section */}
+            {/* Missing Items - Aggregated Alert Card (soft terracotta/organic style) */}
             {missingItems.length > 0 && (
-                <div className="space-y-3">
-                    {missingItems.map((item) => (
-                        <MissingItemBox
-                            key={item.id}
-                            item={item}
-                            originLabel={originCaregiver?.label || "home"}
-                            onDismiss={() => onDismissMissing(item.id)}
-                        />
-                    ))}
+                <div className="bg-terracotta/10 border border-terracotta/20 rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-lg flex-shrink-0">⚠️</span>
+                            <div className="min-w-0">
+                                <p className="text-sm font-medium text-forest">
+                                    {missingItems.length} item{missingItems.length !== 1 ? "s" : ""} missing at {originHome?.name || "this home"}
+                                </p>
+                                <p className="text-xs text-textSub">
+                                    Not found where we expected.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowMissingItems(!showMissingItems)}
+                            className="flex-shrink-0 px-3 py-1.5 bg-white/60 hover:bg-white text-forest text-xs font-semibold rounded-lg transition-colors border border-border/50"
+                        >
+                            {showMissingItems ? "Hide" : "View missing items"}
+                        </button>
+                    </div>
+
+                    {/* Expandable missing items list */}
+                    {showMissingItems && (
+                        <div className="mt-4 pt-4 border-t border-terracotta/20 space-y-2">
+                            {missingItems.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-center gap-3 p-2 bg-white/60 rounded-xl"
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-cream flex items-center justify-center text-sm flex-shrink-0 overflow-hidden">
+                                        {item.photoUrl ? (
+                                            <ItemPhoto
+                                                photoPath={item.photoUrl}
+                                                itemName={item.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            getItemEmoji(item.category)
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-forest truncate">{item.name}</p>
+                                        <p className="text-xs text-textSub">{item.category}</p>
+                                    </div>
+                                    <Link
+                                        href={`/items/${item.id}`}
+                                        className="text-xs text-forest hover:text-teal font-medium"
+                                    >
+                                        View
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -368,7 +553,7 @@ function PackerView({
 // ============================================
 function RequesterView({
     child,
-    originCaregiver,
+    originHome,
     itemsToPack,
     toPackUnpacked,
     toPackPacked,
@@ -378,10 +563,10 @@ function RequesterView({
     progressPercent,
     onRequestItem,
     onUnrequestItem,
+    childId,
 }: {
     child: ChildProfile | null;
-    originCaregiver: { label: string } | undefined;
-    destinationCaregiver: { label: string } | undefined;
+    originHome: { name: string } | undefined;
     itemsToPack: Item[];
     toPackUnpacked: Item[];
     toPackPacked: Item[];
@@ -391,6 +576,7 @@ function RequesterView({
     progressPercent: number;
     onRequestItem: (item: Item) => void;
     onUnrequestItem: (item: Item) => void;
+    childId: string | undefined;
 }) {
     return (
         <div className="space-y-6">
@@ -427,7 +613,7 @@ function RequesterView({
                                 </h3>
                                 <p className="text-sm text-textSub">
                                     {totalToPack > 0
-                                        ? `${packedCount} of ${totalToPack} packed by ${originCaregiver?.label || "packer"}`
+                                        ? `${packedCount} of ${totalToPack} packed at ${originHome?.name || "origin"}`
                                         : "No items requested yet"}
                                 </p>
                             </div>
@@ -465,7 +651,7 @@ function RequesterView({
 
                     {/* Item List - Read Only */}
                     {itemsToPack.length === 0 ? (
-                        <div className="text-center py-8">
+                        <div className="text-center py-6">
                             <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center text-xl mx-auto mb-3">
                                 📦
                             </div>
@@ -495,6 +681,11 @@ function RequesterView({
                             ))}
                         </div>
                     )}
+
+                    {/* Bag Essentials - Inline in bag card */}
+                    <div className="mt-4 pt-4 border-t border-dashed border-border">
+                        <BagEssentialsSection childId={childId} />
+                    </div>
                 </div>
             </div>
 
@@ -502,7 +693,7 @@ function RequesterView({
             {availableAtOrigin.length > 0 && (
                 <div className="bg-white rounded-2xl shadow-sm border border-border/50 overflow-hidden">
                     <div className="p-4 border-b border-border/30 bg-cream/30">
-                        <h2 className="font-bold text-forest">Available at {originCaregiver?.label || "other home"}'s</h2>
+                        <h2 className="font-bold text-forest">Available at {originHome?.name || "other home"}</h2>
                         <p className="text-xs text-textSub mt-0.5">
                             Tap an item to request it for {child?.name || "your child"}'s bag
                         </p>
@@ -524,7 +715,7 @@ function RequesterView({
 
             {availableAtOrigin.length === 0 && itemsToPack.length > 0 && (
                 <div className="text-center py-4 text-sm text-textSub">
-                    All items at {originCaregiver?.label || "the other home"}'s have been requested
+                    All items at {originHome?.name || "the other home"} have been requested
                 </div>
             )}
         </div>
@@ -772,6 +963,51 @@ function MissingItemBox({
     );
 }
 
+// Canceled item box - yellow/warning style, triggers modal for packer
+function CanceledItemBox({
+    item,
+    destinationLabel,
+    onReview
+}: {
+    item: Item;
+    destinationLabel: string;
+    onReview: () => void;
+}) {
+    return (
+        <button
+            onClick={onReview}
+            className="w-full flex items-center gap-3 p-4 bg-yellow-50 rounded-xl border border-yellow-300 hover:bg-yellow-100 transition-colors text-left"
+        >
+            <div className="text-xl flex-shrink-0">
+                {item.photoUrl ? (
+                    <div className="w-10 h-10 rounded-lg overflow-hidden">
+                        <ItemPhoto
+                            photoPath={item.photoUrl}
+                            itemName={item.name}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                ) : (
+                    <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                        {getItemEmoji(item.category)}
+                    </div>
+                )}
+            </div>
+            <div className="flex-1 min-w-0">
+                <strong className="block text-yellow-800 text-sm font-bold">
+                    {item.name}
+                </strong>
+                <span className="text-xs text-yellow-700">
+                    {destinationLabel} canceled this request
+                </span>
+            </div>
+            <div className="flex-shrink-0 bg-yellow-200 text-yellow-800 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                Review
+            </div>
+        </button>
+    );
+}
+
 // Helper function to get emoji based on category
 function getItemEmoji(category: string): string {
     const emojiMap: Record<string, string> = {
@@ -919,3 +1155,4 @@ function BagHandle({ name, gender, part = "all" }: { name: string | undefined; g
         </div>
     );
 }
+

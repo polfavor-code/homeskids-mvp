@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CHI Ecosystem - Variant 7 (Soft Dark)</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #eee;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: #252525;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 20px 20px 60px #151515, -20px -20px 60px #2f2f2f;
+            /* Neumorphism dark */
+            width: 300px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .sub {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        p {
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 50px;
+            border: none;
+            background: #333;
+            color: #fff;
+            box-shadow: 5px 5px 10px #1a1a1a, -5px -5px 10px #3e3e3e;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn:active {
+            box-shadow: inset 5px 5px 10px #1a1a1a, inset -5px -5px 10px #3e3e3e;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid">
+        <div class="card">
+            <div class="sub">Visitor</div>
+            <h2>CHI App</h2>
+            <p>Payments & Ticketing</p>
+            <button class="btn">Open App</button>
+        </div>
+        <div class="card">
+            <div class="sub">Visitor</div>
+            <h2>CHI Tickets</h2>
+            <p>Event Management</p>
+            <button class="btn">Open Web</button>
+        </div>
+        <div class="card">
+            <div class="sub">Stakeholder</div>
+            <h2>CHI POS</h2>
+            <p>Point of Sale</p>
+            <button class="btn">Download</button>
+        </div>
+        <div class="card">
+            <div class="sub">Stakeholder</div>
+            <h2>Backstage</h2>
+            <p>Admin Dashboard</p>
+            <button class="btn">Login</button>
+        </div>
+    </div>
+</body>
+
+</html>

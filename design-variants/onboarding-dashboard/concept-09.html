@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Concept 9 - High Density / Dashboard View -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>homes.kids - Concept 9</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --terracotta: #D76F4B;
+            --soft-green: #E8EFE8;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background-color: var(--cream);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 40px;
+            padding-left: 12px;
+            color: var(--forest);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--forest);
+            margin-bottom: 4px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #2C3E2D 0%, #4CA1AF 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(44, 62, 45, 0.2);
+        }
+
+        .nav-item:not(.active):hover {
+            background-color: var(--soft-green);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            stroke-width: 2;
+        }
+
+        .user-profile {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background-color: var(--forest);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 40px 60px;
+            max-width: 1400px;
+        }
+
+        .dash-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin: 0;
+        }
+
+        .sub {
+            color: var(--text-sub);
+            font-size: 16px;
+        }
+
+        .quick-actions-bar {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .quick-action-btn {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            text-decoration: none;
+            color: var(--forest);
+            transition: all 0.2s;
+            height: 100%;
+        }
+
+        .quick-action-btn:hover {
+            border-color: var(--forest);
+            background-color: var(--soft-green);
+        }
+
+        .qa-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .qa-label {
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        .dash-panel {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            height: 100%;
+        }
+
+        .panel-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--text-sub);
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .module-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .module-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .m-icon {
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+
+        .m-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .m-desc {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="logo">homes.kids</div>
+        <a href="#" class="nav-item active"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                </path>
+            </svg>Homes</a>
+        <a href="#" class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>June's Items</a>
+        <a href="#" class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>Calendar</a>
+        <a href="#" class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                </path>
+            </svg>Contacts</a>
+        <a href="#" class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                </path>
+            </svg>Documents</a>
+        <a href="#" class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                </path>
+            </svg>Health</a>
+        <a href="#" class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                </path>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>Settings</a>
+        <div class="user-profile">
+            <div class="avatar">MA</div>
+            <span style="font-weight: 700; font-size: 14px;">Mommyanita's Ac...</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <div class="dash-top">
+            <div>
+                <h1>Hi Paulfinal, <span class="sub">let's organize for Junefinal.</span></h1>
+            </div>
+            <div style="font-style: italic; font-size: 13px; color: var(--text-sub);">homes.kids dashboard</div>
+        </div>
+
+        <div class="quick-actions-bar">
+            <a href="#" class="quick-action-btn">
+                <span class="qa-icon">📦</span>
+                <span class="qa-label">Add Item</span>
+            </a>
+            <a href="#" class="quick-action-btn">
+                <span class="qa-icon">👋</span>
+                <span class="qa-label">Invite Caregiver</span>
+            </a>
+            <a href="#" class="quick-action-btn">
+                <span class="qa-icon">📄</span>
+                <span class="qa-label">Upload Doc</span>
+            </a>
+            <a href="#" class="quick-action-btn">
+                <span class="qa-icon">📅</span>
+                <span class="qa-label">Setup Cal</span>
+            </a>
+            <a href="#" class="quick-action-btn">
+                <span class="qa-icon">👤</span>
+                <span class="qa-label">Add Contact</span>
+            </a>
+            <a href="#" class="quick-action-btn">
+                <span class="qa-icon">🏠</span>
+                <span class="qa-label">Home Details</span>
+            </a>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dash-panel">
+                <div class="panel-title">Recent Activity</div>
+                <div class="empty-state">
+                    <p>Nothing here yet.</p>
+                    <p>Start by adding an item or inviting a caregiver.</p>
+                </div>
+            </div>
+
+            <div class="dash-panel">
+                <div class="panel-title">Your Modules</div>
+                <div class="module-list-item">
+                    <div class="m-icon">📦</div>
+                    <div>
+                        <div class="m-name">Items</div>
+                        <div class="m-desc">0 items</div>
+                    </div>
+                </div>
+                <div class="module-list-item">
+                    <div class="m-icon">🎒</div>
+                    <div>
+                        <div class="m-name">Travel Bag</div>
+                        <div class="m-desc">Not set</div>
+                    </div>
+                </div>
+                <div class="module-list-item">
+                    <div class="m-icon">📅</div>
+                    <div>
+                        <div class="m-name">Calendar</div>
+                        <div class="m-desc">Empty</div>
+                    </div>
+                </div>
+                <div class="module-list-item">
+                    <div class="m-icon">👤</div>
+                    <div>
+                        <div class="m-name">Contacts</div>
+                        <div class="m-desc">0 contacts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</body>
+
+</html>

@@ -13,7 +13,7 @@ function ItemsPageContent() {
     useEnsureOnboarding();
 
     const { items } = useItems();
-    const { child, caregivers, homes } = useAppState();
+    const { child, caregivers, homes, activeHomes } = useAppState();
     const searchParams = useSearchParams();
     const [filter, setFilter] = useState<string>("All");
 
@@ -52,15 +52,47 @@ function ItemsPageContent() {
         return false;
     });
 
+    // Calculate counts for each filter
+    const getHomeItemCount = (homeId: string) => {
+        return items.filter((item) => {
+            if (item.isMissing) return false;
+            if (item.locationHomeId === homeId) return true;
+            const home = homes.find((h) => h.id === homeId);
+            if (home?.ownerCaregiverId && item.locationCaregiverId === home.ownerCaregiverId) {
+                return true;
+            }
+            return false;
+        }).length;
+    };
+    const missingCount = items.filter((item) => item.isMissing).length;
+
+    // Determine which homes to show in filter pills:
+    // - Active homes always show
+    // - Hidden homes only show if they have items
+    const homesToShowInFilter = homes.filter((home) => {
+        // Active homes always show
+        if (home.status === "active") return true;
+        // Hidden homes only show if they have items
+        return getHomeItemCount(home.id) > 0;
+    });
+
     return (
         <AppShell>
             {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-xl font-bold text-gray-900">{child?.name || "Child"}&apos;s Things</h1>
-                <p className="text-sm text-gray-500">All items across every home.</p>
-                <p className="text-xs text-gray-400 mt-1">
-                    Showing {filteredItems.length} items
-                </p>
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h1 className="text-xl font-bold text-gray-900">{child?.name || "Child"}&apos;s Things</h1>
+                    <p className="text-sm text-gray-500">All items across every home.</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                        Showing {filteredItems.length} items
+                    </p>
+                </div>
+                <Link
+                    href="/items/new"
+                    className="bg-forest text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-forest/90 transition-colors"
+                >
+                    + New item
+                </Link>
             </div>
 
             {/* Filter Pills */}
@@ -72,9 +104,9 @@ function ItemsPageContent() {
                         : "bg-white border border-gray-200 text-gray-600"
                         }`}
                 >
-                    All
+                    All ({items.length})
                 </button>
-                {homes.map((home) => (
+                {homesToShowInFilter.map((home) => (
                     <button
                         key={home.id}
                         onClick={() => setFilter(home.id)}
@@ -83,7 +115,7 @@ function ItemsPageContent() {
                             : "bg-white border border-gray-200 text-gray-600"
                             }`}
                     >
-                        {home.name}
+                        {home.name} ({getHomeItemCount(home.id)})
                     </button>
                 ))}
                 <button
@@ -93,7 +125,7 @@ function ItemsPageContent() {
                         : "bg-white border border-gray-200 text-gray-600"
                         }`}
                 >
-                    To be found
+                    To be found ({missingCount})
                 </button>
             </div>
 

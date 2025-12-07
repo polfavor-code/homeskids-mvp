@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CHI Ecosystem - Variant 6 (Neon)</title>
+    <style>
+        body {
+            background: #050510;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .card {
+            width: 300px;
+            padding: 30px;
+            background: linear-gradient(145deg, #0a0a15, #0f0f20);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            transition: 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
+            border-color: #4f46e5;
+        }
+
+        .glow {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: #4f46e5;
+            filter: blur(60px);
+            top: -20px;
+            left: -20px;
+            opacity: 0.5;
+        }
+
+        .card:nth-child(even) .glow {
+            background: #ec4899;
+            right: -20px;
+            left: auto;
+        }
+
+        h2 {
+            position: relative;
+            z-index: 1;
+            margin: 20px 0 10px 0;
+        }
+
+        p {
+            position: relative;
+            z-index: 1;
+            color: #aaa;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .icon {
+            font-size: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.8em;
+            transition: 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn:hover {
+            background: #fff;
+            color: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid">
+        <div class="card">
+            <div class="glow"></div>
+            <div class="icon">📱</div>
+            <h2>CHI App</h2>
+            <p>Payments & Ticketing</p>
+            <a href="#" class="btn">Download</a>
+        </div>
+        <div class="card">
+            <div class="glow"></div>
+            <div class="icon">🎫</div>
+            <h2>CHI Tickets</h2>
+            <p>Event Access</p>
+            <a href="#" class="btn">Launch</a>
+        </div>
+        <div class="card">
+            <div class="glow"></div>
+            <div class="icon">💳</div>
+            <h2>CHI POS</h2>
+            <p>Sales Terminal</p>
+            <a href="#" class="btn">Download</a>
+        </div>
+        <div class="card">
+            <div class="glow"></div>
+            <div class="icon">📈</div>
+            <h2>CHI Backstage</h2>
+            <p>Event Dashboard</p>
+            <a href="#" class="btn">Launch</a>
+        </div>
+    </div>
+</body>
+
+</html>

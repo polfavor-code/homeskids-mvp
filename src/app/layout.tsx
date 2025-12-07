@@ -5,6 +5,11 @@ import { AuthProvider } from "@/lib/AuthContext";
 import { ContactsProvider } from "@/lib/ContactsContext";
 import { HealthProvider } from "@/lib/HealthContext";
 import { DocumentsProvider } from "@/lib/DocumentsContext";
+import { TravelBagProvider } from "@/lib/TravelBagContext";
+import { ItemsAddedAlertProvider } from "@/lib/ItemsAddedAlertContext";
+import { ItemsAddedToastContainer } from "@/components/ItemsAddedToast";
+import { HomeSwitchAlertProvider } from "@/lib/HomeSwitchAlertContext";
+import { HomeSwitchToastContainer } from "@/components/HomeSwitchToast";
 import "../styles/globals.css";
 import Script from "next/script";
 
@@ -41,11 +46,21 @@ export default function RootLayout({
                 <AuthProvider>
                     <AppStateProvider>
                         <ItemsProvider>
-                            <ContactsProvider>
-                                <HealthProvider>
-                                    <DocumentsProvider>{children}</DocumentsProvider>
-                                </HealthProvider>
-                            </ContactsProvider>
+                            <ItemsAddedAlertProvider>
+                                <HomeSwitchAlertProvider>
+                                    <TravelBagProvider>
+                                        <ContactsProvider>
+                                            <HealthProvider>
+                                                <DocumentsProvider>
+                                                    {children}
+                                                    <ItemsAddedToastContainer />
+                                                    <HomeSwitchToastContainer />
+                                                </DocumentsProvider>
+                                            </HealthProvider>
+                                        </ContactsProvider>
+                                    </TravelBagProvider>
+                                </HomeSwitchAlertProvider>
+                            </ItemsAddedAlertProvider>
                         </ItemsProvider>
                     </AppStateProvider>
                 </AuthProvider>

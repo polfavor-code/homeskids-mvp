@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { navItems, accountNavItem, isRouteActive } from '@/lib/navigation';
 import { useAppState } from '@/lib/AppStateContext';
+import { useAuth } from '@/lib/AuthContext';
 import {
     HomeIcon,
     ItemsIcon,
@@ -35,11 +36,14 @@ const primaryNavItems = ['Homes', "June's Items", 'Calendar'];
 export default function MobileNav() {
     const pathname = usePathname();
     const { caregivers } = useAppState();
+    const { user } = useAuth();
     const [showMoreSheet, setShowMoreSheet] = useState(false);
 
     // Get current user from caregivers
     const currentUser = caregivers.find(c => c.isCurrentUser);
-    const userLabel = currentUser?.label || "Account";
+    // Use label (what child calls them), fallback to name, then email prefix, then "Account"
+    const emailPrefix = user?.email?.split('@')[0] || "";
+    const userLabel = currentUser?.label || currentUser?.name || emailPrefix || "Account";
 
     const renderIcon = (iconName: string) => {
         const IconComponent = iconMap[iconName as keyof typeof iconMap];

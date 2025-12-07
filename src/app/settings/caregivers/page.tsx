@@ -14,13 +14,14 @@ import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { getAccessLevelMessage } from "@/lib/caregiverPermissions";
 
+// Canonical role options - consistent across the app
 const ROLE_OPTIONS = [
-    { value: "parent", label: "Co-parent" },
-    { value: "grandparent", label: "Grandparent" },
+    { value: "parent", label: "Parent" },
+    { value: "step_parent", label: "Step-parent" },
+    { value: "family_member", label: "Family member" },
     { value: "nanny", label: "Nanny" },
     { value: "babysitter", label: "Babysitter" },
-    { value: "aunt_uncle", label: "Aunt/Uncle" },
-    { value: "family_friend", label: "Family Friend" },
+    { value: "family_friend", label: "Family friend" },
     { value: "other", label: "Other" },
 ];
 
@@ -393,8 +394,18 @@ export default function CaregiversPage() {
 
     const getRoleLabel = (value?: string) => {
         if (!value) return null;
+        // First check the canonical roles
         const option = ROLE_OPTIONS.find(o => o.value === value);
-        return option?.label || value;
+        if (option) return option.label;
+        // Map legacy roles to new labels
+        const legacyMap: Record<string, string> = {
+            'co_parent': 'Parent',
+            'grandparent': 'Family member',
+            'aunt_uncle': 'Family member',
+            'sibling': 'Family member',
+            'cousin': 'Family member',
+        };
+        return legacyMap[value] || value;
     };
 
     // Copy invite link to clipboard
@@ -737,7 +748,7 @@ export default function CaregiversPage() {
                 {/* Intro Card */}
                 <div className="card-organic p-5">
                     <p className="text-sm text-textSub mb-4">
-                        Add co-parents, babysitters, and helpers so they can see the information they need for {child?.name || "your child"}.
+                        Add parents, babysitters, and helpers so they can see the information they need for {child?.name || "your child"}.
                     </p>
                     {!showInviteForm && (
                         <button
@@ -917,7 +928,7 @@ export default function CaregiversPage() {
                         </div>
                         <h3 className="font-bold text-forest text-lg mb-2">No caregivers yet</h3>
                         <p className="text-sm text-textSub mb-4">
-                            Invite co-parents and helpers to share access to {child?.name || "your child"}'s information.
+                            Invite parents and helpers to share access to {child?.name || "your child"}'s information.
                         </p>
                     </div>
                 )}

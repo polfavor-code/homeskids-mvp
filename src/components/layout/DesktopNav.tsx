@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { navItems, accountNavItem, isRouteActive, hasActiveSubItem } from '@/lib/navigation';
 import { useAppState } from '@/lib/AppStateContext';
+import { useAuth } from '@/lib/AuthContext';
 import Avatar from '@/components/Avatar';
 import {
     HomeIcon,
@@ -18,6 +19,7 @@ import {
     ChevronDownIcon,
     ChevronRightIcon,
 } from '@/components/icons/DuotoneIcons';
+import SidebarOnboardingCard from './SidebarOnboardingCard';
 
 const iconMap = {
     HomeIcon,
@@ -33,13 +35,20 @@ const iconMap = {
 export default function DesktopNav() {
     const pathname = usePathname();
     const { caregivers } = useAppState();
+    const { user } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     // Get current user from caregivers (the one marked as current user)
     const currentUser = caregivers.find(c => c.isCurrentUser);
-    const userLabel = currentUser?.label || "Account";
-    const userInitials = currentUser?.avatarInitials || "U";
+
+    // Use label (what child calls them, e.g. "daddy"), fallback to name, then email prefix, then "Account"
+    // Note: Check for empty string as well as undefined/null
+    const emailPrefix = user?.email?.split('@')[0] || "";
+    const label = currentUser?.label?.trim();
+    const name = currentUser?.name?.trim();
+    const userLabel = (label && label.length > 0 ? label : null) || (name && name.length > 0 ? name : null) || (emailPrefix || "Account");
+    const userInitials = currentUser?.avatarInitials || (name ? name[0] : null) || (emailPrefix ? emailPrefix[0].toUpperCase() : "U");
     const userAvatarUrl = currentUser?.avatarUrl;
 
     const toggleSection = (label: string) => {
@@ -79,10 +88,10 @@ export default function DesktopNav() {
             }}
         >
             {/* Header */}
-            <div className={`flex items-center h-16 flex-shrink-0 transition-all ${isCollapsed ? 'justify-center' : 'px-4 gap-3'}`}>
+            <div className={`flex items-center flex-shrink-0 transition-all pt-6 pb-2 ${isCollapsed ? 'justify-center' : 'px-4 gap-3'}`}>
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors text-forest"
+                    className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors text-forest mt-2"
                     aria-label="Toggle navigation"
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
@@ -92,7 +101,7 @@ export default function DesktopNav() {
                     </svg>
                 </button>
                 {!isCollapsed && (
-                    <Link href="/" className="font-dmSerif text-xl text-forest whitespace-nowrap overflow-hidden">
+                    <Link href="/" className="font-dmSerif text-[21px] text-forest whitespace-nowrap overflow-hidden mt-1.5">
                         homes.kids
                     </Link>
                 )}
@@ -168,15 +177,21 @@ export default function DesktopNav() {
                         </div>
                     );
                 })}
+
+                {/* Onboarding Helper Card - After nav items, near Settings */}
+                <SidebarOnboardingCard isCollapsed={isCollapsed} />
             </div>
 
             {/* User Profile - Fixed at bottom */}
-            <div className="px-3 py-4 border-t border-border flex-shrink-0">
+            <div className={`flex-shrink-0 border-t border-border py-4 ${isCollapsed ? 'flex justify-center' : 'px-3'}`}>
                 <Link
                     href={accountNavItem.route}
-                    className={`flex items-center gap-3 px-2 py-2 rounded-full transition-colors ${isRouteActive(pathname, accountNavItem.route)
-                        ? 'bg-softGreen'
-                        : 'hover:bg-black/5'
+                    className={`flex items-center transition-colors rounded-full ${isCollapsed
+                        ? 'justify-center w-12 h-12 p-0'
+                        : 'gap-3 px-2 py-2'
+                        } ${isRouteActive(pathname, accountNavItem.route)
+                            ? 'bg-softGreen'
+                            : 'hover:bg-black/5'
                         }`}
                 >
                     <Avatar

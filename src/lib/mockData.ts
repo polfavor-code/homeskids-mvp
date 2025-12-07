@@ -15,6 +15,7 @@ export interface Item {
     isRequestedForNextVisit: boolean;
     isPacked: boolean;
     isMissing: boolean;
+    isRequestCanceled: boolean; // When requester cancels a packed item - packer must confirm removal
     photoUrl?: string; // Optional photo URL from Supabase Storage
     notes?: string; // Optional notes
 }
@@ -59,6 +60,7 @@ export const MOCK_ITEMS: Item[] = [
         isRequestedForNextVisit: false,
         isPacked: false,
         isMissing: false,
+        isRequestCanceled: false,
     },
     {
         id: "i2",
@@ -69,6 +71,7 @@ export const MOCK_ITEMS: Item[] = [
         isRequestedForNextVisit: true,
         isPacked: false, // Requested but not packed
         isMissing: false,
+        isRequestCanceled: false,
     },
     {
         id: "i3",
@@ -79,6 +82,7 @@ export const MOCK_ITEMS: Item[] = [
         isRequestedForNextVisit: false,
         isPacked: false,
         isMissing: false,
+        isRequestCanceled: false,
     },
     // Mommy's Home (b1)
     {
@@ -90,6 +94,7 @@ export const MOCK_ITEMS: Item[] = [
         isRequestedForNextVisit: false,
         isPacked: false,
         isMissing: false,
+        isRequestCanceled: false,
     },
     {
         id: "i5",
@@ -100,6 +105,7 @@ export const MOCK_ITEMS: Item[] = [
         isRequestedForNextVisit: true,
         isPacked: true, // Requested and packed
         isMissing: false,
+        isRequestCanceled: false,
     },
     {
         id: "i6",
@@ -110,6 +116,7 @@ export const MOCK_ITEMS: Item[] = [
         isRequestedForNextVisit: false,
         isPacked: false,
         isMissing: false,
+        isRequestCanceled: false,
     },
     // Missing Item
     {
@@ -121,5 +128,6 @@ export const MOCK_ITEMS: Item[] = [
         isRequestedForNextVisit: false,
         isPacked: false,
         isMissing: true,
+        isRequestCanceled: false,
     },
 ];

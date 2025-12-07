@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, FEATURES } from "@/lib/supabase";
 
 export type ContactCategory = "medical" | "school" | "family" | "friends" | "activities" | "other";
 
@@ -38,14 +38,20 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
         let isMounted = true;
 
         const fetchContacts = async () => {
-            console.log("[ContactsContext] fetchContacts called");
+            // Skip if contacts feature is disabled
+            if (!FEATURES.CONTACTS) {
+                if (isMounted) {
+                    setContacts([]);
+                    setIsLoaded(true);
+                }
+                return;
+            }
+
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 const user = session?.user;
-                console.log("[ContactsContext] user:", user?.id);
 
                 if (!user) {
-                    console.log("[ContactsContext] No user found");
                     if (isMounted) {
                         setContacts([]);
                         setIsLoaded(true);
@@ -60,54 +66,47 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                     .eq("user_id", user.id)
                     .maybeSingle();
 
-                if (familyError) {
-                    console.error("Error fetching family:", familyError);
-                }
-
-                if (familyMember) {
-                    const familyId = familyMember.family_id;
-                    console.log("[ContactsContext] familyId:", familyId);
-
-                    // Fetch contacts for this family
-                    const { data: contactsData, error } = await supabase
-                        .from("contacts")
-                        .select("*")
-                        .eq("family_id", familyId)
-                        .order("is_favorite", { ascending: false })
-                        .order("name", { ascending: true });
-
-                    console.log("[ContactsContext] contactsData:", contactsData?.length, "error:", error);
-
-                    if (error) {
-                        console.error("Error fetching contacts:", error);
-                        // Table might not exist yet, use empty array
-                        if (isMounted) {
-                            setContacts([]);
-                        }
-                    } else if (contactsData && isMounted) {
-                        const mappedContacts: Contact[] = contactsData.map((c: any) => ({
-                            id: c.id,
-                            name: c.name,
-                            role: c.role || "",
-                            category: c.category || "other",
-                            phone: c.phone,
-                            email: c.email,
-                            address: c.address,
-                            notes: c.notes,
-                            isFavorite: c.is_favorite || false,
-                            connectedWith: c.connected_with,
-                            createdAt: c.created_at,
-                        }));
-                        setContacts(mappedContacts);
-                    }
-                } else {
-                    console.log("No family member found for user");
+                // Silently ignore family fetch errors (RLS or table issues)
+                if (familyError || !familyMember) {
                     if (isMounted) {
                         setContacts([]);
                     }
+                    return;
+                }
+
+                const familyId = familyMember.family_id;
+
+                // Fetch contacts for this family
+                const { data: contactsData, error } = await supabase
+                    .from("contacts")
+                    .select("*")
+                    .eq("family_id", familyId)
+                    .order("is_favorite", { ascending: false })
+                    .order("name", { ascending: true });
+
+                // Silently handle errors - table might not exist yet
+                if (error) {
+                    if (isMounted) {
+                        setContacts([]);
+                    }
+                } else if (contactsData && isMounted) {
+                    const mappedContacts: Contact[] = contactsData.map((c: any) => ({
+                        id: c.id,
+                        name: c.name,
+                        role: c.role || "",
+                        category: c.category || "other",
+                        phone: c.phone,
+                        email: c.email,
+                        address: c.address,
+                        notes: c.notes,
+                        isFavorite: c.is_favorite || false,
+                        connectedWith: c.connected_with,
+                        createdAt: c.created_at,
+                    }));
+                    setContacts(mappedContacts);
                 }
             } catch (error) {
-                console.error("Failed to load contacts:", error);
+                // Silently handle errors
             } finally {
                 if (isMounted) {
                     setIsLoaded(true);

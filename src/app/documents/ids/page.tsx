@@ -364,7 +364,7 @@ export default function ImportantIDsPage() {
                         <div>
                             <p className="text-sm text-forest font-medium mb-1">Coming Soon</p>
                             <p className="text-xs text-textSub leading-relaxed">
-                                Expiry reminders and secure sharing with co-parents.
+                                Expiry reminders and secure sharing with caregivers.
                             </p>
                         </div>
                     </div>

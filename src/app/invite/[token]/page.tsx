@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAppState } from "@/lib/AppStateContext";
+import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
 
@@ -11,7 +12,7 @@ export default function InvitePage() {
     const params = useParams();
     const router = useRouter();
     const token = params.token as string;
-    const { setOnboardingCompleted } = useAppState();
+    const { setOnboardingCompleted, refreshData } = useAppState();
 
     const [invite, setInvite] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -24,14 +25,37 @@ export default function InvitePage() {
 
     useEffect(() => {
         const fetchInvite = async () => {
+            console.log("Fetching invite with token:", token);
             const { data, error } = await supabase
                 .from("invites")
                 .select("*, families(name)")
                 .eq("token", token)
                 .single();
 
+            console.log("Invite fetch result:", { data, error });
+
+            if (error) {
+                console.error("Error fetching invite:", error);
+            }
+
             if (data) {
-                setInvite(data);
+                // Fetch child name for display (e.g., "June's Family" instead of family name)
+                const { data: childData, error: childError } = await supabase
+                    .from("children")
+                    .select("name")
+                    .eq("family_id", data.family_id)
+                    .limit(1)
+                    .single();
+
+                console.log("Child data fetch:", { childData, childError, family_id: data.family_id });
+
+                // Add child name to invite data
+                const inviteWithChild = {
+                    ...data,
+                    child_name: childData?.name || null
+                };
+                console.log("Invite with child:", inviteWithChild);
+                setInvite(inviteWithChild);
             }
             setLoading(false);
         };
@@ -168,6 +192,29 @@ export default function InvitePage() {
                     .eq("id", invite.id);
 
                 setOnboardingCompleted(true);
+
+                // Force refresh app state to ensure fresh data is available
+                await refreshData();
+
+                // Check if this is a parent/step-parent role and if there are unclaimed homes
+                const isParentRole = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
+
+                if (isParentRole && invite.home_ids && invite.home_ids.length > 0) {
+                    // Check if any of the homes they have access to are unclaimed
+                    const { data: accessibleHomes } = await supabase
+                        .from("homes")
+                        .select("id, owner_caregiver_id")
+                        .in("id", invite.home_ids);
+
+                    const hasUnclaimedHomes = accessibleHomes?.some(h => !h.owner_caregiver_id);
+
+                    if (hasUnclaimedHomes) {
+                        // Redirect to confirm home flow
+                        router.push("/confirm-home");
+                        return;
+                    }
+                }
+
                 router.push("/");
             }
 
@@ -178,11 +225,19 @@ export default function InvitePage() {
         }
     };
 
+    // Get the family display name using child's name (e.g., "June's Family")
+    const getFamilyDisplayName = () => {
+        if (invite?.child_name) {
+            return `${invite.child_name}'s Family`;
+        }
+        return invite?.families?.name || "the family";
+    };
+
     // Get content for the left panel based on current view
     const getLeftPanelContent = () => {
         if (view === "landing") {
             return {
-                description: `You've been invited to join ${invite?.families?.name || "a family"} on homes.kids.`,
+                description: `You've been invited to join ${getFamilyDisplayName()} on homes.kids.`,
                 bullets: [
                     "One shared place for everything your child needs between homes.",
                     "Plan what moves in the bag between homes.",
@@ -195,7 +250,7 @@ export default function InvitePage() {
                 description: "Welcome back! Log in to join the family.",
                 bullets: [
                     "Access shared items and schedules.",
-                    "Stay in sync with your co-parent.",
+                    "Stay in sync with your family.",
                     "Keep track of what's where.",
                 ],
             };
@@ -295,7 +350,7 @@ export default function InvitePage() {
                                 You're invited!
                             </h2>
                             <p className="text-textSub text-sm">
-                                Join {invite?.families?.name || "the family"} on homes.kids
+                                Join {getFamilyDisplayName()} on homes.kids
                             </p>
                         </div>
 
@@ -364,7 +419,7 @@ export default function InvitePage() {
                             Welcome back
                         </h2>
                         <p className="text-textSub text-sm mb-6">
-                            Log in to join {invite?.families?.name || "the family"}
+                            Log in to join {getFamilyDisplayName()}
                         </p>
 
                         <form onSubmit={handleJoin} className="space-y-4">
@@ -458,7 +513,7 @@ export default function InvitePage() {
                         Create account
                     </h2>
                     <p className="text-textSub text-sm mb-6">
-                        Create an account to join {invite?.families?.name || "the family"}
+                        Create an account to join {getFamilyDisplayName()}
                     </p>
 
                     <form onSubmit={handleJoin} className="space-y-4">

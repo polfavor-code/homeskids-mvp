@@ -22,6 +22,9 @@ interface ItemsContextType {
     ) => void;
     updateItemRequested: (itemId: string, requested: boolean) => void;
     updateItemPacked: (itemId: string, packed: boolean) => void;
+    cancelItemRequest: (itemId: string) => void; // Requester cancels - keeps packed status, sets isRequestCanceled
+    confirmRemoveFromBag: (itemId: string) => void; // Packer confirms removal after cancel
+    keepInBag: (itemId: string) => void; // Packer keeps item in bag after cancel
     updateItemName: (itemId: string, newName: string) => Promise<void>;
     updateItemNotes: (itemId: string, notes: string) => Promise<void>;
     updateItemCategory: (itemId: string, category: string) => Promise<void>;
@@ -44,168 +47,173 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     const [missingMessages, setMissingMessages] = useState<MissingMessage[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Fetch items from Supabase and subscribe to auth changes
-    useEffect(() => {
-        let realtimeChannel: any = null;
-        let isMounted = true;
+    // Store family ID for realtime subscription
+    const [familyId, setFamilyId] = useState<string | null>(null);
 
-        const fetchItems = async () => {
-            try {
-                // Use getSession for more reliable auth state on initial load
-                const { data: { session } } = await supabase.auth.getSession();
-                const user = session?.user;
+    // Fetch items from Supabase
+    const fetchItems = useCallback(async () => {
+        try {
+            // Use getSession for more reliable auth state on initial load
+            const { data: { session } } = await supabase.auth.getSession();
+            const user = session?.user;
 
-                if (!user) {
-                    if (isMounted) {
-                        setItems([]);
-                        setIsLoaded(true);
-                    }
-                    return;
-                }
+            if (!user) {
+                setItems([]);
+                setFamilyId(null);
+                setIsLoaded(true);
+                return;
+            }
 
-                // Get user's family
-                const { data: familyMember } = await supabase
-                    .from("family_members")
-                    .select("family_id")
-                    .eq("user_id", user.id)
-                    .limit(1);
+            // Get user's family
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", user.id)
+                .limit(1);
 
-                if (familyMember && familyMember.length > 0) {
-                    const familyId = familyMember[0].family_id;
+            if (familyMember && familyMember.length > 0) {
+                const fId = familyMember[0].family_id;
+                setFamilyId(fId);
 
-                    // Fetch items for this family
-                    const { data: itemsData } = await supabase
-                        .from("items")
-                        .select("*")
-                        .eq("family_id", familyId);
+                // Fetch items for this family
+                const { data: itemsData } = await supabase
+                    .from("items")
+                    .select("*")
+                    .eq("family_id", fId);
 
-                    if (itemsData && isMounted) {
-                        const mappedItems: Item[] = itemsData.map((item: any) => ({
-                            id: item.id,
-                            name: item.name,
-                            category: item.category,
-                            locationCaregiverId: item.location_caregiver_id || (item.location_invite_id ? `pending-${item.location_invite_id}` : null),
-                            locationHomeId: item.location_home_id || null, // NEW: home-based location
-                            isRequestedForNextVisit: item.is_requested_for_next_visit,
-                            isPacked: item.is_packed,
-                            isMissing: item.is_missing,
-                            photoUrl: item.photo_url,
-                            notes: item.notes,
-                        }));
-                        setItems(mappedItems);
+                if (itemsData) {
+                    const mappedItems: Item[] = itemsData.map((item: any) => ({
+                        id: item.id,
+                        name: item.name,
+                        category: item.category,
+                        locationCaregiverId: item.location_caregiver_id || (item.location_invite_id ? `pending-${item.location_invite_id}` : null),
+                        locationHomeId: item.location_home_id || null,
+                        isRequestedForNextVisit: item.is_requested_for_next_visit,
+                        isPacked: item.is_packed,
+                        isMissing: item.is_missing,
+                        isRequestCanceled: item.is_request_canceled || false,
+                        photoUrl: item.photo_url,
+                        notes: item.notes,
+                    }));
+                    setItems(mappedItems);
 
-                        // Self-healing: Check for items assigned to my invite and claim them
-                        // This fixes "Unknown Location" if items were added while I was pending
-                        const itemsToClaim = mappedItems.filter(i => i.locationCaregiverId && i.locationCaregiverId.startsWith("pending-"));
-                        if (itemsToClaim.length > 0) {
-                            // We need to check if any of these pending invites belong to ME (by email)
-                            // This is a background task, don't block
-                            (async () => {
-                                try {
-                                    const { data: myProfile } = await supabase
-                                        .from("profiles")
-                                        .select("email")
-                                        .eq("id", user.id)
-                                        .single();
+                    // Self-healing: Check for items assigned to my invite and claim them
+                    const itemsToClaim = mappedItems.filter(i => i.locationCaregiverId && i.locationCaregiverId.startsWith("pending-"));
+                    if (itemsToClaim.length > 0) {
+                        (async () => {
+                            try {
+                                const { data: myProfile } = await supabase
+                                    .from("profiles")
+                                    .select("email")
+                                    .eq("id", user.id)
+                                    .single();
 
-                                    if (myProfile?.email) {
-                                        // Find invites for my email
-                                        const { data: myInvites } = await supabase
-                                            .from("invites")
-                                            .select("id")
-                                            .eq("email", myProfile.email);
+                                if (myProfile?.email) {
+                                    const { data: myInvites } = await supabase
+                                        .from("invites")
+                                        .select("id")
+                                        .eq("email", myProfile.email);
 
-                                        if (myInvites && myInvites.length > 0) {
-                                            const myInviteIds = myInvites.map((inv: any) => inv.id);
-                                            const itemsToUpdate = itemsToClaim.filter(item => {
-                                                const inviteId = item.locationCaregiverId?.replace("pending-", "");
-                                                return inviteId && myInviteIds.includes(inviteId);
-                                            });
+                                    if (myInvites && myInvites.length > 0) {
+                                        const myInviteIds = myInvites.map((inv: any) => inv.id);
+                                        const itemsToUpdate = itemsToClaim.filter(item => {
+                                            const inviteId = item.locationCaregiverId?.replace("pending-", "");
+                                            return inviteId && myInviteIds.includes(inviteId);
+                                        });
 
-                                            if (itemsToUpdate.length > 0) {
-                                                console.log("Found items to claim from invites:", itemsToUpdate.length);
-                                                // Update these items to point to me
-                                                const itemIds = itemsToUpdate.map(i => i.id);
-                                                await supabase
-                                                    .from("items")
-                                                    .update({
-                                                        location_caregiver_id: user.id,
-                                                        location_invite_id: null
-                                                    })
-                                                    .in("id", itemIds);
-
-                                                // Refresh items to reflect changes
-                                                fetchItems();
-                                            }
+                                        if (itemsToUpdate.length > 0) {
+                                            console.log("Found items to claim from invites:", itemsToUpdate.length);
+                                            const itemIds = itemsToUpdate.map(i => i.id);
+                                            await supabase
+                                                .from("items")
+                                                .update({
+                                                    location_caregiver_id: user.id,
+                                                    location_invite_id: null
+                                                })
+                                                .in("id", itemIds);
+                                            fetchItems();
                                         }
                                     }
-                                } catch (err) {
-                                    console.error("Error claiming items:", err);
                                 }
-                            })();
-                        }
+                            } catch (err) {
+                                console.error("Error claiming items:", err);
+                            }
+                        })();
                     }
-
-                    // Setup Realtime subscription for this family's items
-                    if (!realtimeChannel) {
-                        realtimeChannel = supabase
-                            .channel('items-changes')
-                            .on(
-                                'postgres_changes',
-                                {
-                                    event: '*',
-                                    schema: 'public',
-                                    table: 'items',
-                                    filter: `family_id=eq.${familyId}`
-                                },
-                                (payload) => {
-                                    console.log('Realtime change received:', payload);
-                                    // Simple strategy: Re-fetch all items to ensure consistency
-                                    // This handles INSERT, UPDATE, and DELETE correctly
-                                    fetchItems();
-                                }
-                            )
-                            .subscribe();
-                    }
-                } else if (isMounted) {
-                    setItems([]);
                 }
-            } catch (error) {
-                console.error("Failed to load items:", error);
-            } finally {
-                if (isMounted) {
-                    setIsLoaded(true);
-                }
+            } else {
+                setItems([]);
+                setFamilyId(null);
             }
-        };
+        } catch (error) {
+            console.error("Failed to load items:", error);
+        } finally {
+            setIsLoaded(true);
+        }
+    }, []);
 
-        // Fetch immediately on mount
+    // Initial fetch and auth state listener
+    useEffect(() => {
         fetchItems();
 
-        // Subscribe to auth state changes for updates
         const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
             console.log("Items: Auth state changed:", event);
-            // Reset loading state when auth changes
-            if (isMounted) {
-                // Clear existing realtime subscription on auth change
-                if (realtimeChannel) {
-                    supabase.removeChannel(realtimeChannel);
-                    realtimeChannel = null;
-                }
-                setIsLoaded(false);
-                fetchItems();
-            }
+            setIsLoaded(false);
+            fetchItems();
         });
 
-        // Cleanup function
         return () => {
-            isMounted = false;
             authSubscription.unsubscribe();
-            if (realtimeChannel) {
-                supabase.removeChannel(realtimeChannel);
-            }
         };
-    }, []);
+    }, [fetchItems]);
+
+    // Separate effect for Realtime subscription - depends on familyId
+    useEffect(() => {
+        if (!familyId) {
+            return;
+        }
+
+        console.log("Setting up realtime subscription for family:", familyId);
+
+        // Create a unique channel name to avoid conflicts
+        const channelName = `items-realtime-${familyId}-${Date.now()}`;
+
+        const channel = supabase
+            .channel(channelName)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'items',
+                    filter: `family_id=eq.${familyId}`
+                },
+                (payload) => {
+                    console.log('Realtime change received:', payload);
+                    // Re-fetch all items to ensure consistency
+                    fetchItems();
+                }
+            )
+            .subscribe((status) => {
+                console.log("Realtime subscription status:", status);
+                if (status === 'SUBSCRIBED') {
+                    console.log("Successfully subscribed to items realtime updates");
+                }
+                if (status === 'CHANNEL_ERROR') {
+                    console.error("Realtime subscription error - retrying...");
+                    // Retry after a delay
+                    setTimeout(() => {
+                        channel.subscribe();
+                    }, 5000);
+                }
+            });
+
+        // Cleanup: remove channel when familyId changes or component unmounts
+        return () => {
+            console.log("Removing realtime channel:", channelName);
+            supabase.removeChannel(channel);
+        };
+    }, [familyId, fetchItems]);
 
     const addItem = async (item: Omit<Item, "id">): Promise<{ success: boolean; error?: string; item?: Item }> => {
         try {
@@ -246,11 +254,12 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     category: item.category,
                     location_caregiver_id: locationCaregiverId,
                     location_invite_id: locationInviteId,
-                    location_home_id: item.locationHomeId || null, // NEW: home-based location
+                    location_home_id: item.locationHomeId || null,
                     notes: item.notes,
                     family_id: familyMember.family_id,
                     photo_url: item.photoUrl,
                     is_missing: item.isMissing,
+                    created_by: user.id, // Track who created this item for alerts
                 })
                 .select()
                 .single();
@@ -278,6 +287,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 isRequestedForNextVisit: false,
                 isPacked: false,
                 isMissing: item.isMissing,
+                isRequestCanceled: false,
             };
             // Immediately update local state for instant feedback
             setItems((prev) => [...prev, newItem]);
@@ -387,6 +397,109 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             if (error) throw error;
         } catch (error) {
             console.error("Failed to update item packed status:", error);
+        }
+    };
+
+    // Requester cancels request - if item is packed, set isRequestCanceled flag
+    // Packer will see modal to confirm removal
+    const cancelItemRequest = async (itemId: string) => {
+        const item = items.find((i) => i.id === itemId);
+        if (!item) return;
+
+        // If item is packed, set isRequestCanceled - packer must confirm removal
+        // If item is not packed, just unrequest normally
+        if (item.isPacked) {
+            // Optimistic update
+            setItems((prev) =>
+                prev.map((i) =>
+                    i.id === itemId
+                        ? { ...i, isRequestedForNextVisit: false, isRequestCanceled: true }
+                        : i
+                )
+            );
+
+            try {
+                const { error } = await supabase
+                    .from("items")
+                    .update({
+                        is_requested_for_next_visit: false,
+                        is_request_canceled: true,
+                    })
+                    .eq("id", itemId);
+
+                if (error) throw error;
+            } catch (error) {
+                console.error("Failed to cancel item request:", error);
+            }
+        } else {
+            // Not packed - just unrequest normally
+            setItems((prev) =>
+                prev.map((i) =>
+                    i.id === itemId
+                        ? { ...i, isRequestedForNextVisit: false }
+                        : i
+                )
+            );
+
+            try {
+                const { error } = await supabase
+                    .from("items")
+                    .update({ is_requested_for_next_visit: false })
+                    .eq("id", itemId);
+
+                if (error) throw error;
+            } catch (error) {
+                console.error("Failed to unrequest item:", error);
+            }
+        }
+    };
+
+    // Packer confirms removal from bag after requester canceled
+    const confirmRemoveFromBag = async (itemId: string) => {
+        // Optimistic update
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId
+                    ? { ...item, isPacked: false, isRequestCanceled: false }
+                    : item
+            )
+        );
+
+        try {
+            const { error } = await supabase
+                .from("items")
+                .update({
+                    is_packed: false,
+                    is_request_canceled: false,
+                })
+                .eq("id", itemId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error("Failed to remove item from bag:", error);
+        }
+    };
+
+    // Packer keeps item in bag after requester canceled (clears the canceled flag)
+    const keepInBag = async (itemId: string) => {
+        // Optimistic update - keep packed, clear canceled flag
+        setItems((prev) =>
+            prev.map((item) =>
+                item.id === itemId
+                    ? { ...item, isRequestCanceled: false }
+                    : item
+            )
+        );
+
+        try {
+            const { error } = await supabase
+                .from("items")
+                .update({ is_request_canceled: false })
+                .eq("id", itemId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error("Failed to keep item in bag:", error);
         }
     };
 
@@ -529,11 +642,15 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
         setItems((prev) => prev.filter((item) => item.id !== itemId));
 
         try {
-            // 1. Delete associated missing messages first (cleanup)
-            await supabase
-                .from("missing_messages")
-                .delete()
-                .eq("item_id", itemId);
+            // 1. Delete associated missing messages first (cleanup) - silently ignore if table doesn't exist
+            try {
+                await supabase
+                    .from("missing_messages")
+                    .delete()
+                    .eq("item_id", itemId);
+            } catch (e) {
+                // Table may not exist - that's OK
+            }
 
             // 2. Delete the item
             const { error, count } = await supabase
@@ -571,6 +688,9 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 updateItemLocation,
                 updateItemRequested,
                 updateItemPacked,
+                cancelItemRequest,
+                confirmRemoveFromBag,
+                keepInBag,
                 updateItemName,
                 updateItemNotes,
                 updateItemCategory,

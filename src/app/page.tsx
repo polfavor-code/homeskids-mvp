@@ -1,19 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MissingItemAlert from "@/components/home/MissingItemAlert";
 import HomeCardFullWidth from "@/components/home/HomeCardFullWidth";
 import TravelBagPreview from "@/components/home/TravelBagPreview";
-import ToBeFoundPreview from "@/components/home/ToBeFoundPreview";
+import { ToastContainer, ToastData } from "@/components/Toast";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import { useHomeSwitchAlert } from "@/lib/HomeSwitchAlertContext";
 
 export default function Home() {
     useEnsureOnboarding();
+    const router = useRouter();
 
     const { user, loading: authLoading } = useAuth();
     const { items, isLoaded: itemsLoaded } = useItems();
@@ -21,16 +24,68 @@ export default function Home() {
         child,
         caregivers,
         homes,
+        activeHomes, // Only active homes for dashboard display
         currentHomeId,
-        setCurrentHomeId,
+        switchChildHomeAndMovePackedItems,
         currentJuneCaregiverId, // Legacy fallback
-        setCurrentJuneCaregiverId, // Legacy fallback
         isLoaded: appStateLoaded
     } = useAppState();
 
-    // Get current home - prefer new homes model, fallback to legacy caregiver model
-    const currentHome = homes.length > 0
-        ? (homes.find((h) => h.id === currentHomeId) ?? homes[0])
+    // Toast state (for errors and info messages)
+    const [toasts, setToasts] = useState<ToastData[]>([]);
+    const [switchingHomeId, setSwitchingHomeId] = useState<string | null>(null);
+
+    // Home switch alert (shows to all caregivers in realtime)
+    const { showLocalAlert } = useHomeSwitchAlert();
+
+    const addToast = useCallback((toast: Omit<ToastData, "id">) => {
+        const id = Math.random().toString(36).substring(7);
+        setToasts(prev => [...prev, { ...toast, id }]);
+    }, []);
+
+    const removeToast = useCallback((id: string) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
+
+    // Handle switching homes
+    const handleSwitchHome = async (targetHomeId: string) => {
+        setSwitchingHomeId(targetHomeId);
+
+        const result = await switchChildHomeAndMovePackedItems(targetHomeId);
+
+        setSwitchingHomeId(null);
+
+        if (result.alreadyAtHome) {
+            addToast({
+                title: "Already here",
+                message: `${result.childName} is already set to this home.`,
+                type: "info",
+            });
+            return;
+        }
+
+        if (!result.success) {
+            addToast({
+                title: "Error",
+                message: result.error || "Failed to switch home. Please try again.",
+                type: "error",
+            });
+            return;
+        }
+
+        // Show alert using the new realtime alert system (visible to all caregivers)
+        showLocalAlert({
+            childName: result.childName,
+            fromHomeName: result.fromHomeName,
+            toHomeName: result.toHomeName,
+            toHomeId: targetHomeId,
+            movedCount: result.movedCount,
+        });
+    };
+
+    // Get current home - must be an ACTIVE home
+    const currentHome = activeHomes.length > 0
+        ? (activeHomes.find((h) => h.id === currentHomeId) ?? activeHomes[0])
         : undefined;
 
     // Legacy fallback for current caregiver (for travel bag, etc.)
@@ -41,9 +96,9 @@ export default function Home() {
     // Filter missing items
     const missingItems = items.filter((item) => item.isMissing);
 
-    // Separate active and other homes
+    // Separate current home and other active homes (only show active homes on dashboard)
     const activeHome = currentHome;
-    const otherHomes = homes.filter((h) => h.id !== currentHomeId);
+    const otherHomes = activeHomes.filter((h) => h.id !== currentHomeId);
 
     // Get items for a specific home (NEW: by home_id)
     // Falls back to caregiver-based location for items without home_id
@@ -66,6 +121,13 @@ export default function Home() {
         return caregivers.find(c => c.id === home.ownerCaregiverId);
     };
 
+    // Get valid caregiver count for a home (only count caregivers that exist)
+    const getValidCaregiverCount = (home: typeof homes[0]) => {
+        return (home.accessibleCaregiverIds || []).filter(id =>
+            caregivers.some(c => c.id === id)
+        ).length;
+    };
+
     // Show loading state while auth/data is loading to prevent flash of content
     if (authLoading || !appStateLoaded || !itemsLoaded) {
         return (
@@ -80,8 +142,8 @@ export default function Home() {
         return null;
     }
 
-    // If no homes configured yet, show a prompt to set up homes
-    if (homes.length === 0) {
+    // If no ACTIVE homes configured yet, show a prompt to set up homes
+    if (activeHomes.length === 0) {
         return (
             <AppShell>
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -119,23 +181,28 @@ export default function Home() {
                     <p className="text-textSub mb-8 max-w-xs mx-auto">
                         Start by adding one of {child?.name || "your child"}'s things so we can track where it is.
                     </p>
-                    <div className="p-4 bg-softGreen rounded-xl border border-border text-sm text-forest">
-                        <p>Use the <strong>+</strong> button below to add an item.</p>
-                    </div>
+                    <Link
+                        href="/items/new"
+                        className="bg-forest text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-forest/90 transition-colors"
+                    >
+                        + New item
+                    </Link>
                 </div>
             </AppShell>
         );
     }
 
-    const userFirstName = user?.user_metadata?.name?.split(' ')[0] || 'there';
+    // Get current user's name (e.g. "paul")
+    const currentUser = caregivers.find(c => c.isCurrentUser);
+    const userName = currentUser?.name || user?.user_metadata?.name?.split(' ')[0] || 'there';
 
     return (
         <AppShell>
             {/* Header Section - V6 Style */}
-            <div className="grid grid-cols-[1fr_auto] gap-5 mb-10 items-start">
+            <div className="grid grid-cols-[1fr_auto] gap-5 mb-3 items-start mt-3">
                 <div className="greeting-col">
                     <h1 className="font-dmSerif text-4xl text-forest leading-none mb-2">
-                        Hi {userFirstName},
+                        Hi {userName},
                     </h1>
                     <p className="text-sm text-forest/60 leading-relaxed">
                         Here’s everything organized for {child?.name || "your child"}.
@@ -154,12 +221,12 @@ export default function Home() {
             </div>
 
             {/* Action Buttons Row */}
-            <div className="flex gap-3 mb-10 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex gap-3 mb-6 overflow-x-auto pb-1 scrollbar-hide">
                 <Link
-                    href="/items/add"
+                    href="/items/new"
                     className="bg-forest text-white px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest/90 transition-colors border border-forest"
                 >
-                    + Add item
+                    + New item
                 </Link>
                 <Link
                     href="/items/travel-bag"
@@ -174,6 +241,13 @@ export default function Home() {
                     Invite caregiver
                 </Link>
             </div>
+
+            {/* Missing Item Alert - Inline */}
+            {missingItems.length > 0 && (
+                <div className="mb-6">
+                    <MissingItemAlert missingItems={missingItems} />
+                </div>
+            )}
 
             {/* Section Header with Decorative Line */}
             <div className="text-center mb-8 relative">
@@ -204,6 +278,7 @@ export default function Home() {
                             child={child}
                             items={getItemsForHome(activeHome.id)}
                             isActive={true}
+                            caregiverCount={getValidCaregiverCount(activeHome)}
                         />
                     </div>
                 )}
@@ -226,7 +301,9 @@ export default function Home() {
                                 child={child}
                                 items={getItemsForHome(home.id)}
                                 isActive={false}
-                                onSwitch={() => setCurrentHomeId(home.id)}
+                                onSwitch={() => handleSwitchHome(home.id)}
+                                caregiverCount={getValidCaregiverCount(home)}
+                                isSwitching={switchingHomeId === home.id}
                             />
                             {/* Spacing between other home cards */}
                             {index < otherHomes.length - 1 && (
@@ -237,16 +314,8 @@ export default function Home() {
                 </div>
             </div>
 
-
-
-            {/* Floating Missing Item Alert at bottom */}
-            {missingItems.length > 0 && (
-                <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center pointer-events-none">
-                    <div className="w-full max-w-xl px-4 pointer-events-auto">
-                        <MissingItemAlert missingItems={missingItems} />
-                    </div>
-                </div>
-            )}
+            {/* Toast notifications */}
+            <ToastContainer toasts={toasts} onDismiss={removeToast} />
         </AppShell>
     );
 }

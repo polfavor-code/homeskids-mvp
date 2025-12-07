@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState, HomeProfile, CaregiverProfile } from "@/lib/AppStateContext";
+import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 
@@ -49,7 +49,7 @@ export default function HomeSetupPage() {
     useEnsureOnboarding();
 
     const { user, loading: authLoading } = useAuth();
-    const { child, homes, caregivers, refreshData, isLoaded } = useAppState();
+    const { child, homes, activeHomes, hiddenHomes, caregivers, currentHomeId, refreshData, isLoaded } = useAppState();
 
     const [expandedHomeId, setExpandedHomeId] = useState<string | null>(null);
     const [editingHomeId, setEditingHomeId] = useState<string | null>(null);
@@ -58,6 +58,7 @@ export default function HomeSetupPage() {
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [formData, setFormData] = useState<HomeFormData>(defaultFormData);
+    const [showHideWarning, setShowHideWarning] = useState<string | null>(null);
 
     // Filter out pending caregivers for selection
     const activeCaregivers = caregivers.filter(c => !c.id.startsWith("pending-"));
@@ -138,13 +139,11 @@ export default function HomeSetupPage() {
                 if (updateError) throw updateError;
 
                 // Sync home_access table with legacy array
-                // First, remove all existing access entries for this home
                 await supabase
                     .from("home_access")
                     .delete()
                     .eq("home_id", homeId);
 
-                // Then add entries for all caregivers in the array
                 if (formData.accessibleCaregiverIds.length > 0) {
                     const accessEntries = formData.accessibleCaregiverIds.map(caregiverId => ({
                         home_id: homeId,
@@ -155,11 +154,12 @@ export default function HomeSetupPage() {
 
                 setSuccessMessage("Home updated!");
             } else {
-                // Create new home
+                // Create new home with status = "active"
                 const { data: newHome, error: insertError } = await supabase
                     .from("homes")
                     .insert({
                         family_id: familyMember.family_id,
+                        status: "active",
                         ...homeData,
                     })
                     .select()
@@ -167,7 +167,6 @@ export default function HomeSetupPage() {
 
                 if (insertError) throw insertError;
 
-                // Add home_access entries for the new home
                 if (newHome && formData.accessibleCaregiverIds.length > 0) {
                     const accessEntries = formData.accessibleCaregiverIds.map(caregiverId => ({
                         home_id: newHome.id,
@@ -190,19 +189,83 @@ export default function HomeSetupPage() {
         }
     };
 
+    const handleHideHome = async (homeId: string) => {
+        const home = homes.find(h => h.id === homeId);
+        if (!home) return;
+
+        // Check if this is the current home
+        if (homeId === currentHomeId) {
+            setShowHideWarning(homeId);
+            return;
+        }
+
+        // Check if this would leave no active homes
+        if (activeHomes.length <= 1) {
+            setError("You need at least one active home. Show another home first or add a new one.");
+            setTimeout(() => setError(""), 5000);
+            return;
+        }
+
+        try {
+            setSaving(true);
+            setError("");
+
+            const { error: updateError } = await supabase
+                .from("homes")
+                .update({ status: "hidden" })
+                .eq("id", homeId);
+
+            if (updateError) throw updateError;
+
+            await refreshData();
+            setSuccessMessage(`"${home.name}" is now hidden`);
+            setExpandedHomeId(null);
+            setTimeout(() => setSuccessMessage(""), 3000);
+        } catch (err: any) {
+            console.error("Error hiding home:", err);
+            setError(err.message || "Failed to hide home");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleShowHome = async (homeId: string) => {
+        const home = homes.find(h => h.id === homeId);
+        if (!home) return;
+
+        try {
+            setSaving(true);
+            setError("");
+
+            const { error: updateError } = await supabase
+                .from("homes")
+                .update({ status: "active" })
+                .eq("id", homeId);
+
+            if (updateError) throw updateError;
+
+            await refreshData();
+            setSuccessMessage(`"${home.name}" is now active`);
+            setTimeout(() => setSuccessMessage(""), 3000);
+        } catch (err: any) {
+            console.error("Error showing home:", err);
+            setError(err.message || "Failed to show home");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleDeleteHome = async (homeId: string, homeName: string) => {
-        if (!confirm(`Remove "${homeName}"? This action cannot be undone.`)) return;
+        if (!confirm(`Permanently remove "${homeName}"? This action cannot be undone. Items in this home will need to be reassigned.`)) return;
 
         try {
             setSaving(true);
 
-            // First delete all home_access entries for this home
             await supabase
                 .from("home_access")
                 .delete()
                 .eq("home_id", homeId);
 
-            // Then delete the home itself
             const { error: deleteError } = await supabase
                 .from("homes")
                 .delete()
@@ -229,7 +292,6 @@ export default function HomeSetupPage() {
         if (currentIds.includes(caregiverId)) return;
 
         try {
-            // Update legacy array for backwards compatibility
             const { error: legacyError } = await supabase
                 .from("homes")
                 .update({ accessible_caregiver_ids: [...currentIds, caregiverId] })
@@ -237,8 +299,6 @@ export default function HomeSetupPage() {
 
             if (legacyError) throw legacyError;
 
-            // Also insert into home_access table (new system)
-            // Use upsert to avoid duplicates
             await supabase
                 .from("home_access")
                 .upsert(
@@ -261,7 +321,6 @@ export default function HomeSetupPage() {
         const newIds = currentIds.filter(id => id !== caregiverId);
 
         try {
-            // Update legacy array for backwards compatibility
             const { error: legacyError } = await supabase
                 .from("homes")
                 .update({ accessible_caregiver_ids: newIds })
@@ -269,7 +328,6 @@ export default function HomeSetupPage() {
 
             if (legacyError) throw legacyError;
 
-            // Also delete from home_access table (new system)
             await supabase
                 .from("home_access")
                 .delete()
@@ -285,6 +343,11 @@ export default function HomeSetupPage() {
 
     const getCaregiverById = (id: string): CaregiverProfile | undefined => {
         return caregivers.find(c => c.id === id);
+    };
+
+    // Get the count of valid caregivers (ones that actually exist)
+    const getValidCaregiverCount = (home: HomeProfile): number => {
+        return (home.accessibleCaregiverIds || []).filter(id => getCaregiverById(id)).length;
     };
 
     const getAvailableCaregivers = (home: HomeProfile): CaregiverProfile[] => {
@@ -307,6 +370,271 @@ export default function HomeSetupPage() {
         return null;
     }
 
+    // Render a home card
+    const renderHomeCard = (home: HomeProfile, isHidden: boolean = false) => (
+        <div key={home.id} className={`card-organic overflow-hidden ${isHidden ? 'opacity-70' : ''}`}>
+            {/* Home Header - Always visible */}
+            <div
+                className="p-4 cursor-pointer hover:bg-cream/30 transition-colors"
+                onClick={() => setExpandedHomeId(expandedHomeId === home.id ? null : home.id)}
+            >
+                <div className="flex items-center gap-4">
+                    {/* Home Icon */}
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${isHidden ? 'bg-gray-100 text-gray-400' : 'bg-cream text-forest'}`}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                        </svg>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-bold text-forest text-base">{home.name}</h3>
+                            {home.isPrimary && (
+                                <span className="text-xs bg-softGreen text-forest px-2 py-0.5 rounded-full font-medium">
+                                    Primary
+                                </span>
+                            )}
+                            {isHidden && (
+                                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                                    Hidden
+                                </span>
+                            )}
+                        </div>
+                        {home.address && (
+                            <p className="text-sm text-textSub truncate">{home.address}</p>
+                        )}
+                        <p className="text-xs text-textSub mt-0.5">
+                            {getValidCaregiverCount(home)} caregiver(s) connected
+                        </p>
+                    </div>
+
+                    {/* Expand Icon */}
+                    <div className="text-textSub">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className={`transition-transform ${expandedHomeId === home.id ? 'rotate-180' : ''}`}
+                        >
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {/* Expanded Content */}
+            {expandedHomeId === home.id && (
+                <div className="border-t border-border/30">
+                    {editingHomeId === home.id ? (
+                        <div className="p-4">
+                            <HomeForm
+                                formData={formData}
+                                setFormData={setFormData}
+                                onSave={() => handleSaveHome(home.id)}
+                                onCancel={resetForm}
+                                saving={saving}
+                                isNew={false}
+                                caregivers={activeCaregivers}
+                            />
+                        </div>
+                    ) : (
+                        <div className="p-4 space-y-5">
+                            {/* Location Section */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-forest mb-2">Location</h4>
+                                <div className="space-y-2">
+                                    {home.address ? (
+                                        <>
+                                            <p className="text-sm text-textSub">{home.address}</p>
+                                            <a
+                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(home.address)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-teal hover:underline inline-flex items-center gap-1"
+                                            >
+                                                View on Google Maps
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                                    <polyline points="15 3 21 3 21 9" />
+                                                    <line x1="10" y1="14" x2="21" y2="3" />
+                                                </svg>
+                                            </a>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-textSub/60 italic">No address set</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Time Zone */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-forest mb-2">Time Zone</h4>
+                                <p className="text-sm text-textSub">
+                                    {TIME_ZONE_OPTIONS.find(tz => tz.value === home.timeZone)?.label || "Auto-detect"}
+                                </p>
+                            </div>
+
+                            {/* Contact Info */}
+                            {(home.homePhone || home.emergencyContact) && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-forest mb-2">Contact Info</h4>
+                                    <div className="space-y-1">
+                                        {home.homePhone && (
+                                            <p className="text-sm text-textSub">
+                                                <span className="text-forest/70">Phone:</span> {home.homePhone}
+                                            </p>
+                                        )}
+                                        {home.emergencyContact && (
+                                            <p className="text-sm text-textSub">
+                                                <span className="text-forest/70">Emergency:</span> {home.emergencyContact}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* WiFi */}
+                            {(home.wifiName || home.wifiPassword) && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-forest mb-2">WiFi</h4>
+                                    <div className="space-y-1">
+                                        {home.wifiName && (
+                                            <p className="text-sm text-textSub">
+                                                <span className="text-forest/70">Network:</span> {home.wifiName}
+                                            </p>
+                                        )}
+                                        {home.wifiPassword && (
+                                            <p className="text-sm text-textSub">
+                                                <span className="text-forest/70">Password:</span> {home.wifiPassword}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Notes */}
+                            {home.notes && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-forest mb-2">House Notes</h4>
+                                    <p className="text-sm text-textSub whitespace-pre-wrap">{home.notes}</p>
+                                </div>
+                            )}
+
+                            {/* People in this home */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-forest mb-3">People in this home</h4>
+                                <div className="space-y-2">
+                                    {(home.accessibleCaregiverIds || []).map((caregiverId) => {
+                                        const caregiver = getCaregiverById(caregiverId);
+                                        if (!caregiver) return null;
+                                        return (
+                                            <div
+                                                key={caregiverId}
+                                                className="flex items-center gap-3 p-2 rounded-lg bg-cream/50"
+                                            >
+                                                <Avatar
+                                                    src={caregiver.avatarUrl}
+                                                    initial={caregiver.avatarInitials}
+                                                    size={32}
+                                                    bgColor={caregiver.avatarColor.startsWith("bg-") ? "#6B7280" : caregiver.avatarColor}
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-forest">{caregiver.label}</p>
+                                                    {caregiver.relationship && (
+                                                        <p className="text-xs text-textSub capitalize">{caregiver.relationship.replace('_', ' ')}</p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRemoveCaregiver(home.id, caregiverId);
+                                                    }}
+                                                    className="p-1 text-textSub hover:text-red-500 transition-colors"
+                                                    title="Remove from this home"
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {(home.accessibleCaregiverIds?.length || 0) === 0 && (
+                                        <p className="text-sm text-textSub/60 italic">No caregivers assigned yet</p>
+                                    )}
+
+                                    {/* Add Caregiver Dropdown */}
+                                    {getAvailableCaregivers(home).length > 0 && (
+                                        <div className="pt-2">
+                                            <select
+                                                className="w-full px-3 py-2 rounded-lg border border-border bg-white text-sm text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                                value=""
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        handleAddCaregiver(home.id, e.target.value);
+                                                    }
+                                                }}
+                                            >
+                                                <option value="">+ Add caregiver to this home</option>
+                                                {getAvailableCaregivers(home).map((c) => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.label} ({c.name})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center justify-between pt-3 border-t border-border/30 gap-2 flex-wrap">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleEditHome(home)}
+                                        className="btn-secondary text-sm px-4 py-2"
+                                    >
+                                        Edit
+                                    </button>
+                                    {isHidden ? (
+                                        <button
+                                            onClick={() => handleShowHome(home.id)}
+                                            disabled={saving}
+                                            className="text-sm px-4 py-2 bg-softGreen text-forest rounded-xl font-medium hover:bg-softGreen/80 transition-colors disabled:opacity-50"
+                                        >
+                                            Show home
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleHideHome(home.id)}
+                                            disabled={saving}
+                                            className="text-sm px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                        >
+                                            Hide home
+                                        </button>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => handleDeleteHome(home.id, home.name)}
+                                    className="text-sm text-textSub hover:text-red-500 transition-colors"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <AppShell>
             <div className="space-y-6">
@@ -314,7 +642,7 @@ export default function HomeSetupPage() {
                 <div>
                     <h1 className="text-2xl font-dmSerif text-forest">Home Setup</h1>
                     <p className="text-sm text-textSub">
-                        Edit the places where {child?.name || "your child"} lives and stays.
+                        Manage the places where {child?.name || "your child"} lives and stays.
                     </p>
                 </div>
 
@@ -332,6 +660,36 @@ export default function HomeSetupPage() {
                     </div>
                 )}
 
+                {/* Hide Warning Dialog */}
+                {showHideWarning && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowHideWarning(null)} />
+                        <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+                            <div className="text-center">
+                                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                    </svg>
+                                </div>
+                                <h2 className="text-xl font-dmSerif text-forest">
+                                    Can't hide {child?.name || "your child"}'s current home
+                                </h2>
+                            </div>
+                            <p className="text-sm text-textSub text-center">
+                                Please set another home as {child?.name || "your child"}'s current home before hiding this one.
+                            </p>
+                            <button
+                                onClick={() => setShowHideWarning(null)}
+                                className="w-full btn-primary"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Add Home Form */}
                 {showAddForm && (
                     <HomeForm
@@ -345,249 +703,16 @@ export default function HomeSetupPage() {
                     />
                 )}
 
-                {/* Homes List */}
+                {/* ACTIVE HOMES SECTION */}
                 <div className="space-y-4">
-                    {homes.map((home) => (
-                        <div key={home.id} className="card-organic overflow-hidden">
-                            {/* Home Header - Always visible */}
-                            <div
-                                className="p-4 cursor-pointer hover:bg-cream/30 transition-colors"
-                                onClick={() => setExpandedHomeId(expandedHomeId === home.id ? null : home.id)}
-                            >
-                                <div className="flex items-center gap-4">
-                                    {/* Home Icon */}
-                                    <div className="w-12 h-12 rounded-xl bg-cream flex items-center justify-center text-forest flex-shrink-0">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                                            <polyline points="9 22 9 12 15 12 15 22" />
-                                        </svg>
-                                    </div>
+                    <h2 className="text-lg font-semibold text-forest flex items-center gap-2">
+                        Active homes
+                        <span className="text-sm font-normal text-textSub">({activeHomes.length})</span>
+                    </h2>
 
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-forest text-base">{home.name}</h3>
-                                            {home.isPrimary && (
-                                                <span className="text-xs bg-softGreen text-forest px-2 py-0.5 rounded-full font-medium">
-                                                    Primary
-                                                </span>
-                                            )}
-                                        </div>
-                                        {home.address && (
-                                            <p className="text-sm text-textSub truncate">{home.address}</p>
-                                        )}
-                                        <p className="text-xs text-textSub mt-0.5">
-                                            {(home.accessibleCaregiverIds?.length || 0)} caregiver(s) connected
-                                        </p>
-                                    </div>
+                    {activeHomes.map((home) => renderHomeCard(home, false))}
 
-                                    {/* Expand Icon */}
-                                    <div className="text-textSub">
-                                        <svg
-                                            width="20"
-                                            height="20"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            className={`transition-transform ${expandedHomeId === home.id ? 'rotate-180' : ''}`}
-                                        >
-                                            <polyline points="6 9 12 15 18 9" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Expanded Content */}
-                            {expandedHomeId === home.id && (
-                                <div className="border-t border-border/30">
-                                    {editingHomeId === home.id ? (
-                                        <div className="p-4">
-                                            <HomeForm
-                                                formData={formData}
-                                                setFormData={setFormData}
-                                                onSave={() => handleSaveHome(home.id)}
-                                                onCancel={resetForm}
-                                                saving={saving}
-                                                isNew={false}
-                                                caregivers={activeCaregivers}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="p-4 space-y-5">
-                                            {/* Location Section */}
-                                            <div>
-                                                <h4 className="text-sm font-semibold text-forest mb-2">Location</h4>
-                                                <div className="space-y-2">
-                                                    {home.address ? (
-                                                        <>
-                                                            <p className="text-sm text-textSub">{home.address}</p>
-                                                            <a
-                                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(home.address)}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-xs text-teal hover:underline inline-flex items-center gap-1"
-                                                            >
-                                                                View on Google Maps
-                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                                                    <polyline points="15 3 21 3 21 9" />
-                                                                    <line x1="10" y1="14" x2="21" y2="3" />
-                                                                </svg>
-                                                            </a>
-                                                        </>
-                                                    ) : (
-                                                        <p className="text-sm text-textSub/60 italic">No address set</p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Time Zone */}
-                                            <div>
-                                                <h4 className="text-sm font-semibold text-forest mb-2">Time Zone</h4>
-                                                <p className="text-sm text-textSub">
-                                                    {TIME_ZONE_OPTIONS.find(tz => tz.value === home.timeZone)?.label || "Auto-detect"}
-                                                </p>
-                                            </div>
-
-                                            {/* Contact Info */}
-                                            {(home.homePhone || home.emergencyContact) && (
-                                                <div>
-                                                    <h4 className="text-sm font-semibold text-forest mb-2">Contact Info</h4>
-                                                    <div className="space-y-1">
-                                                        {home.homePhone && (
-                                                            <p className="text-sm text-textSub">
-                                                                <span className="text-forest/70">Phone:</span> {home.homePhone}
-                                                            </p>
-                                                        )}
-                                                        {home.emergencyContact && (
-                                                            <p className="text-sm text-textSub">
-                                                                <span className="text-forest/70">Emergency:</span> {home.emergencyContact}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* WiFi */}
-                                            {(home.wifiName || home.wifiPassword) && (
-                                                <div>
-                                                    <h4 className="text-sm font-semibold text-forest mb-2">WiFi</h4>
-                                                    <div className="space-y-1">
-                                                        {home.wifiName && (
-                                                            <p className="text-sm text-textSub">
-                                                                <span className="text-forest/70">Network:</span> {home.wifiName}
-                                                            </p>
-                                                        )}
-                                                        {home.wifiPassword && (
-                                                            <p className="text-sm text-textSub">
-                                                                <span className="text-forest/70">Password:</span> {home.wifiPassword}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Notes */}
-                                            {home.notes && (
-                                                <div>
-                                                    <h4 className="text-sm font-semibold text-forest mb-2">House Notes</h4>
-                                                    <p className="text-sm text-textSub whitespace-pre-wrap">{home.notes}</p>
-                                                </div>
-                                            )}
-
-                                            {/* People in this home */}
-                                            <div>
-                                                <h4 className="text-sm font-semibold text-forest mb-3">People in this home</h4>
-                                                <div className="space-y-2">
-                                                    {(home.accessibleCaregiverIds || []).map((caregiverId) => {
-                                                        const caregiver = getCaregiverById(caregiverId);
-                                                        if (!caregiver) return null;
-                                                        return (
-                                                            <div
-                                                                key={caregiverId}
-                                                                className="flex items-center gap-3 p-2 rounded-lg bg-cream/50"
-                                                            >
-                                                                <Avatar
-                                                                    src={caregiver.avatarUrl}
-                                                                    initial={caregiver.avatarInitials}
-                                                                    size={32}
-                                                                    bgColor={caregiver.avatarColor.startsWith("bg-") ? "#6B7280" : caregiver.avatarColor}
-                                                                />
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-sm font-medium text-forest">{caregiver.label}</p>
-                                                                    {caregiver.relationship && (
-                                                                        <p className="text-xs text-textSub capitalize">{caregiver.relationship.replace('_', ' ')}</p>
-                                                                    )}
-                                                                </div>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleRemoveCaregiver(home.id, caregiverId);
-                                                                    }}
-                                                                    className="p-1 text-textSub hover:text-red-500 transition-colors"
-                                                                    title="Remove from this home"
-                                                                >
-                                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                        <line x1="18" y1="6" x2="6" y2="18" />
-                                                                        <line x1="6" y1="6" x2="18" y2="18" />
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    })}
-
-                                                    {(home.accessibleCaregiverIds?.length || 0) === 0 && (
-                                                        <p className="text-sm text-textSub/60 italic">No caregivers assigned yet</p>
-                                                    )}
-
-                                                    {/* Add Caregiver Dropdown */}
-                                                    {getAvailableCaregivers(home).length > 0 && (
-                                                        <div className="pt-2">
-                                                            <select
-                                                                className="w-full px-3 py-2 rounded-lg border border-border bg-white text-sm text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                                                                value=""
-                                                                onChange={(e) => {
-                                                                    if (e.target.value) {
-                                                                        handleAddCaregiver(home.id, e.target.value);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <option value="">+ Add caregiver to this home</option>
-                                                                {getAvailableCaregivers(home).map((c) => (
-                                                                    <option key={c.id} value={c.id}>
-                                                                        {c.label} ({c.name})
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="flex items-center justify-between pt-3 border-t border-border/30">
-                                                <button
-                                                    onClick={() => handleEditHome(home)}
-                                                    className="btn-secondary text-sm px-4 py-2"
-                                                >
-                                                    Edit Home
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteHome(home.id, home.name)}
-                                                    className="text-sm text-textSub hover:text-red-500 transition-colors"
-                                                >
-                                                    Remove home
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-
-                    {homes.length === 0 && !showAddForm && (
+                    {activeHomes.length === 0 && !showAddForm && (
                         <div className="card-organic p-8 text-center">
                             <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center mx-auto mb-4">
                                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-forest">
@@ -595,9 +720,11 @@ export default function HomeSetupPage() {
                                     <polyline points="9 22 9 12 15 12 15 22" />
                                 </svg>
                             </div>
-                            <h3 className="font-bold text-forest text-lg mb-2">No homes yet</h3>
+                            <h3 className="font-bold text-forest text-lg mb-2">No active homes</h3>
                             <p className="text-sm text-textSub mb-4">
-                                Add the physical locations where {child?.name || "your child"} stays.
+                                {hiddenHomes.length > 0
+                                    ? "All your homes are hidden. Show a home or add a new one."
+                                    : `Add the physical locations where ${child?.name || "your child"} stays.`}
                             </p>
                         </div>
                     )}
@@ -620,6 +747,21 @@ export default function HomeSetupPage() {
                     </button>
                 )}
 
+                {/* HIDDEN HOMES SECTION */}
+                {hiddenHomes.length > 0 && (
+                    <div className="space-y-4 pt-4">
+                        <h2 className="text-lg font-semibold text-gray-500 flex items-center gap-2">
+                            Hidden homes
+                            <span className="text-sm font-normal">({hiddenHomes.length})</span>
+                        </h2>
+                        <p className="text-xs text-textSub -mt-2">
+                            Hidden homes are not shown on the dashboard or travel bag. You can show them again anytime.
+                        </p>
+
+                        {hiddenHomes.map((home) => renderHomeCard(home, true))}
+                    </div>
+                )}
+
                 {/* Info Section */}
                 <div className="card-organic p-4 bg-softGreen/50">
                     <div className="flex items-start gap-3">
@@ -634,8 +776,8 @@ export default function HomeSetupPage() {
                             <p className="text-sm text-forest font-medium mb-1">About Homes</p>
                             <p className="text-xs text-textSub leading-relaxed">
                                 Homes are physical locations where {child?.name || "your child"} stays.
-                                Add caregivers to each home so they can access relevant information.
-                                Mark one home as "Primary" for default settings.
+                                Hide homes you don't actively use (like Grandma's house or summer homes) to keep your dashboard clean.
+                                Hidden homes can be shown again anytime. Caregivers with access only to hidden homes will appear as "Inactive".
                             </p>
                         </div>
                     </div>
@@ -713,7 +855,7 @@ function HomeForm({
                         placeholder="123 Main St, City, State"
                     />
                     <p className="text-xs text-textSub mt-1">
-                        Add a rough location so co-parents and helpers know where this home is.
+                        Add a rough location so parents and helpers know where this home is.
                     </p>
                 </div>
             </div>

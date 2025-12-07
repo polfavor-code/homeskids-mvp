@@ -11,7 +11,7 @@ import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 const CATEGORIES: { value: ContactCategory; label: string; description: string }[] = [
     { value: "medical", label: "Medical", description: "Doctors, dentists, therapists" },
     { value: "school", label: "School", description: "Teachers, staff, tutors" },
-    { value: "family", label: "Family", description: "Relatives, grandparents" },
+    { value: "family", label: "Family", description: "Relatives, family members" },
     { value: "friends", label: "Friends", description: "Playmates, parents of friends" },
     { value: "activities", label: "Activities", description: "Coaches, instructors" },
     { value: "other", label: "Other", description: "Babysitters, neighbors" },
@@ -100,7 +100,7 @@ export default function NewContactPage() {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g., Dr. Sarah Johnson"
+                        placeholder="e.g., Dr. Ellis Johnson"
                         className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
                         required
                     />
@@ -131,11 +131,10 @@ export default function NewContactPage() {
                                 key={cat.value}
                                 type="button"
                                 onClick={() => setCategory(cat.value)}
-                                className={`p-3 rounded-lg text-left transition-colors ${
-                                    category === cat.value
+                                className={`p-3 rounded-lg text-left transition-colors ${category === cat.value
                                         ? "bg-forest text-white"
                                         : "bg-cream hover:bg-cream/70 text-forest"
-                                }`}
+                                    }`}
                             >
                                 <div className="font-medium text-sm">{cat.label}</div>
                                 <div className={`text-xs ${category === cat.value ? "text-white/80" : "text-textSub"}`}>
