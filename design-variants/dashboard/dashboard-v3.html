@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard V3 - Data Forward</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --bg-cream: #FAF9F6;
+            --forest: #1A2F1B;
+            --forest-light: #4A5D4B;
+            --accent: #D4C5A9;
+            --white: #FFFFFF;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Inter', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 0;
+            background: #F2F0EB;
+            min-height: 100vh;
+        }
+
+        /* Dark Header */
+        .header-section {
+            background: var(--forest);
+            color: var(--white);
+            padding: 32px 24px 48px;
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+            margin-bottom: -24px;
+            /* Overlap effect */
+            position: relative;
+            z-index: 1;
+        }
+
+        .greeting {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            margin: 0 0 8px 0;
+        }
+
+        .sub-greeting {
+            font-size: 14px;
+            opacity: 0.8;
+            margin: 0 0 24px 0;
+            font-weight: 300;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-col {
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 18px;
+            font-weight: 600;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            opacity: 0.7;
+            letter-spacing: 0.5px;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Main Content Area */
+        .content-area {
+            padding: 0 20px 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-top: 10px;
+        }
+
+        .section-header h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0;
+            color: var(--forest);
+        }
+
+        .section-header p {
+            font-size: 12px;
+            color: var(--forest-light);
+            margin-top: 4px;
+        }
+
+        /* Flow */
+        .flow-container {
+            position: relative;
+        }
+
+        .flow-line {
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 50%;
+            width: 2px;
+            background: #D4C5A9;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            position: relative;
+            z-index: 10;
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #F0F0F0;
+        }
+
+        .home-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+        }
+
+        .time-badge {
+            font-size: 11px;
+            background: #F5F5F5;
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: var(--forest-light);
+        }
+
+        .data-row {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .data-point {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .icon-circle {
+            width: 28px;
+            height: 28px;
+            background: #F2F0EB;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        /* Bag Card */
+        .bag-card {
+            text-align: center;
+            max-width: 260px;
+            margin: 0 auto 24px;
+            border: 2px solid var(--forest);
+            /* Distinct style */
+            background: #FDFDFD;
+        }
+
+        /* Stacked Items */
+        .stack-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            height: 60px;
+        }
+
+        .stack-item {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-left: -16px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            background-color: #F5F5F5;
+        }
+
+        .stack-item:nth-child(1) {
+            margin-left: 0;
+            z-index: 4;
+            background-color: #FFE4E1;
+        }
+
+        .stack-item:nth-child(2) {
+            z-index: 3;
+            background-color: #F0F8FF;
+        }
+
+        .stack-item:nth-child(3) {
+            z-index: 2;
+            background-color: #F0FFF0;
+        }
+
+        .stack-item:nth-child(4) {
+            z-index: 1;
+            background-color: #E8E8E8;
+            color: #4A5D4B;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .bag-btn {
+            background: var(--forest);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            margin-top: 16px;
+            cursor: pointer;
+        }
+
+        .switch-btn {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--forest);
+            background: transparent;
+            color: var(--forest);
+            border-radius: 12px;
+            font-weight: 600;
+            margin-top: 16px;
+            cursor: pointer;
+        }
+
+        .switch-btn:hover {
+            background: var(--forest);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header-section">
+            <h1 class="greeting">Hi Paul,</h1>
+            <p class="sub-greeting">Here’s what you need for June today.</p>
+
+            <div class="stats-row">
+                <div class="stat-col">
+                    <span class="stat-num">2</span>
+                    <span class="stat-label">Homes</span>
+                </div>
+                <div class="stat-col">
+                    <span class="stat-num">11</span>
+                    <span class="stat-label">Items</span>
+                </div>
+                <div class="stat-col">
+                    <span class="stat-num">2</span>
+                    <span class="stat-label">Pack</span>
+                </div>
+                <div class="stat-col" style="color: #FFBDBD;">
+                    <span class="stat-num">1</span>
+                    <span class="stat-label">Missing</span>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="action-btn">+ Add item</button>
+                <button class="action-btn">Request packing</button>
+                <button class="action-btn">Invite</button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="section-header">
+                <h2>June’s home right now</h2>
+                <p>Tap a home to view details or switch location.</p>
+            </div>
+
+            <div class="flow-container">
+                <div class="flow-line"></div>
+
+                <!-- Active Home -->
+                <div class="card">
+                    <div class="card-top">
+                        <div>
+                            <div class="home-title">Ellishouse</div>
+                            <div style="font-size:12px; color:#4A5D4B; margin-top:2px;">Current Location</div>
+                        </div>
+                        <div class="time-badge">02:07</div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-point">
+                            <div class="icon-circle">📍</div> Map
+                        </div>
+                        <div class="data-point">
+                            <div class="icon-circle">👥</div> 2 People
+                        </div>
+                        <div class="data-point">
+                            <div class="icon-circle">📦</div> 3 Items
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bag -->
+                <div class="card bag-card">
+                    <div class="home-title" style="font-size:18px;">June's Travel Bag</div>
+                    <div class="stack-container">
+                        <div class="stack-item">📱</div>
+                        <div class="stack-item"><img
+                                src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=64&h=64"
+                                style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Dog"></div>
+                        <div class="stack-item">🧸</div>
+                        <div class="stack-item">+2</div>
+                    </div>
+                    <div style="font-size:13px; font-weight:600; margin-bottom:4px;">2 items to pack</div>
+                    <button class="bag-btn">Open bag</button>
+                </div>
+
+                <!-- Other Home -->
+                <div class="card">
+                    <div class="card-top">
+                        <div class="home-title">Daddieshouse</div>
+                        <div class="time-badge">02:07</div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-point">
+                            <div class="icon-circle">📍</div> Map
+                        </div>
+                        <div class="data-point">
+                            <div class="icon-circle">👤</div> 1 Person
+                        </div>
+                        <div class="data-point">
+                            <div class="icon-circle">📦</div> 8 Items
+                        </div>
+                    </div>
+                    <button class="switch-btn">Switch</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

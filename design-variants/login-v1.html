@@ -1,0 +1,58 @@
+<!-- Variant 1: Clean Centered - Minimal with subtle gradient background -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login | homes.kids</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root { --forest: #2C3E2D; --teal: #4CA1AF; --bg: #FAFAF8; --card: #fff; --border: #E8E5DE; --text: #2C3E2D; --muted: #7A8A7B; }
+body { font-family: 'Inter', sans-serif; background: linear-gradient(180deg, #F0F5F1 0%, var(--bg) 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.container { width: 100%; max-width: 420px; }
+.brand { text-align: center; margin-bottom: 32px; }
+.logo-wrap { display: inline-block; margin-bottom: 16px; }
+.logo-wrap svg { width: 80px; height: 67px; }
+.duotone-path { stroke: url(#fg1); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: url(#fg1); fill-opacity: 0.15; }
+.duotone-stroke-only { stroke: url(#fg1); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.brand-name { font-family: 'DM Serif Display', serif; font-size: 32px; background: linear-gradient(135deg, var(--forest), var(--teal)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.tagline { color: var(--muted); font-size: 14px; margin-top: 8px; }
+.bullets { list-style: none; margin: 24px 0; padding: 0 16px; }
+.bullets li { font-size: 13px; color: var(--muted); padding: 6px 0; padding-left: 20px; position: relative; }
+.bullets li::before { content: '•'; position: absolute; left: 0; color: var(--teal); }
+.card { background: var(--card); border-radius: 16px; padding: 32px; box-shadow: 0 4px 24px rgba(44,62,45,0.06); border: 1px solid var(--border); }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.field input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; outline: none; transition: border 0.2s; }
+.field input:focus { border-color: var(--teal); }
+.btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--forest), var(--teal)); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.links { text-align: center; margin-top: 20px; font-size: 13px; }
+.links a { color: var(--teal); text-decoration: none; }
+.links a:hover { text-decoration: underline; }
+.links span { color: var(--muted); margin: 0 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="brand">
+    <div class="logo-wrap">
+      <svg viewBox="0 0 120 100"><defs><linearGradient id="fg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#2C3E2D"/><stop offset="100%" stop-color="#4CA1AF"/></linearGradient></defs><path d="M15 45V75H45V45L30 30Z" class="duotone-path" style="opacity:0.6"/><path d="M75 45V75H105V45L90 30Z" class="duotone-path" style="opacity:0.6"/><path d="M35 85V50L60 25L85 50V85H35Z" class="duotone-path"/><path d="M10 85H110" class="duotone-stroke-only"/></svg>
+    </div>
+    <div class="brand-name">homes.kids</div>
+    <p class="tagline">Co-parenting central hub.</p>
+    <ul class="bullets">
+      <li>One shared place for everything your child needs between homes.</li>
+      <li>Plan what moves in the bag between homes.</li>
+      <li>Important contacts and home details, all in one hub.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="field"><label>Email</label><input type="email" placeholder="you@example.com"></div>
+    <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+    <button class="btn">Log in</button>
+    <div class="links"><a href="#">Create an account</a><span>·</span><a href="#">Forgot your password?</a></div>
+  </div>
+</div>
+</body>
+</html>

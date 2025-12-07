@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handle Concept 15 - Neon Tag</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+
+            /* Pink Theme */
+            --pink-handle: #F8BBD0;
+            --pink-neon: rgba(255, 20, 147, 0.8);
+            --pink-glow: 0 0 10px rgba(255, 20, 147, 0.6);
+
+            /* Blue Theme */
+            --blue-handle: #BBDEFB;
+            --blue-neon: rgba(0, 191, 255, 0.8);
+            --blue-glow: 0 0 10px rgba(0, 191, 255, 0.6);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        .variant-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .handle-area {
+            height: 40px;
+            width: 140px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .handle {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px 20px 0 0;
+            border: 10px solid;
+            border-bottom: none;
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            z-index: 0;
+        }
+
+        /* Neon Tag */
+        .wire-loop {
+            position: absolute;
+            top: -5px;
+            right: 30px;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #CCC;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .neon-plastic {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            width: 40px;
+            height: 70px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(5deg);
+            color: white;
+            backdrop-filter: blur(4px);
+        }
+
+        .child-name-v {
+            font-family: 'Caveat', cursive;
+            font-size: 22px;
+            font-weight: 700;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .bag-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 40px 24px 24px;
+            box-shadow: 0 12px 32px rgba(44, 62, 45, 0.08);
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-content {
+            opacity: 0.6;
+            filter: grayscale(0.2);
+        }
+
+        /* Themes */
+        .pink-theme .handle {
+            border-color: var(--pink-handle);
+        }
+
+        .pink-theme .neon-plastic {
+            background: var(--pink-neon);
+            box-shadow: var(--pink-glow);
+        }
+
+        .blue-theme .handle {
+            border-color: var(--blue-handle);
+        }
+
+        .blue-theme .neon-plastic {
+            background: var(--blue-neon);
+            box-shadow: var(--blue-glow);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container pink-theme">
+        <div class="variant-label">Girl Version</div>
+        <div class="handle-area">
+            <div class="handle"></div>
+            <div class="wire-loop"></div>
+            <div class="neon-plastic">
+                <span class="child-name-v">June</span>
+            </div>
+        </div>
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container blue-theme">
+        <div class="variant-label">Boy Version</div>
+        <div class="handle-area">
+            <div class="handle"></div>
+            <div class="wire-loop"></div>
+            <div class="neon-plastic">
+                <span class="child-name-v">Noah</span>
+            </div>
+        </div>
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

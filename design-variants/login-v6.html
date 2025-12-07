@@ -1,0 +1,211 @@
+<!-- Variant 6: Dark Forest - Dark mode with forest theme -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | homes.kids</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --forest: #2C3E2D;
+            --teal: #4CA1AF;
+            --bg: #1A2A1B;
+            --card: #243425;
+            --border: #3A4A3B;
+            --text: #E8EDE8;
+            --muted: #9AA89A;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-wrap svg {
+            width: 90px;
+            height: 75px;
+        }
+
+        .duotone-path {
+            stroke: url(#fg6);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: url(#fg6);
+            fill-opacity: 0.2;
+        }
+
+        .duotone-stroke-only {
+            stroke: url(#fg6);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .brand-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 32px;
+            background: linear-gradient(135deg, #6EC177, var(--teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 12px;
+        }
+
+        .tagline {
+            color: var(--muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 28px;
+            border: 1px solid var(--border);
+        }
+
+        .bullets {
+            list-style: none;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        .bullets li {
+            font-size: 13px;
+            color: var(--muted);
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .bullets li::before {
+            content: '◆';
+            position: absolute;
+            left: 0;
+            color: var(--teal);
+            font-size: 8px;
+            top: 10px;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+        }
+
+        .field input:focus {
+            border-color: var(--teal);
+        }
+
+        .field input::placeholder {
+            color: #5A6A5B;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4CA1AF, #6EC177);
+            color: #1A2A1B;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .links a {
+            color: var(--teal);
+            text-decoration: none;
+        }
+
+        .links span {
+            color: var(--border);
+            margin: 0 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="brand">
+            <div class="logo-wrap">
+                <svg viewBox="0 0 120 100">
+                    <defs>
+                        <linearGradient id="fg6" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#6EC177" />
+                            <stop offset="100%" stop-color="#4CA1AF" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M15 45V75H45V45L30 30Z" class="duotone-path" style="opacity:0.6" />
+                    <path d="M75 45V75H105V45L90 30Z" class="duotone-path" style="opacity:0.6" />
+                    <path d="M35 85V50L60 25L85 50V85H35Z" class="duotone-path" />
+                    <path d="M10 85H110" class="duotone-stroke-only" />
+                </svg>
+            </div>
+            <div class="brand-name">homes.kids</div>
+            <p class="tagline">Co-parenting central hub.</p>
+        </div>
+        <div class="card">
+            <ul class="bullets">
+                <li>One shared place for everything your child needs between homes.</li>
+                <li>Plan what moves in the bag between homes.</li>
+                <li>Important contacts and home details, all in one hub.</li>
+            </ul>
+            <div class="field"><label>Email</label><input type="email" placeholder="you@example.com"></div>
+            <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+            <button class="btn">Log in</button>
+            <div class="links"><a href="#">Create an account</a><span>·</span><a href="#">Forgot password?</a></div>
+        </div>
+    </div>
+</body>
+
+</html>

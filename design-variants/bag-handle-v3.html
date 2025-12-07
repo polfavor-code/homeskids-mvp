@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handle Concept 3 - Ball Chain</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=DM+Serif+Display&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+
+            /* Pink Theme */
+            --pink-handle: #F8BBD0;
+            --pink-tag-bg: #F06292;
+            --pink-text: #FFFFFF;
+
+            /* Blue Theme */
+            --blue-handle: #BBDEFB;
+            --blue-tag-bg: #42A5F5;
+            --blue-text: #FFFFFF;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .variant-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* --- CONCEPT 3: BALL CHAIN --- */
+
+        .handle-area {
+            height: 40px;
+            width: 140px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .handle {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px 20px 0 0;
+            border: 10px solid;
+            border-bottom: none;
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            z-index: 0;
+        }
+
+        .chain-group {
+            position: absolute;
+            top: 0;
+            right: 20px;
+            /* Right side hang */
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chain-loop {
+            width: 2px;
+            height: 20px;
+            background: repeating-linear-gradient(to bottom, #999 0px, #999 2px, transparent 2px, transparent 4px);
+            margin-bottom: -2px;
+        }
+
+        .tag-luggage {
+            width: 50px;
+            height: 80px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transform: rotate(-8deg);
+            border: 2px solid white;
+            position: relative;
+        }
+
+        /* Metal eyelet */
+        .tag-luggage::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: #333;
+            border-radius: 50%;
+            border: 2px solid #CCC;
+        }
+
+        .child-name-v {
+            font-family: 'Caveat', cursive;
+            font-size: 26px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            margin-top: 10px;
+        }
+
+        /* Card */
+        .bag-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 40px 24px 24px;
+            box-shadow: 0 12px 32px rgba(44, 62, 45, 0.08);
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-content {
+            opacity: 0.6;
+            filter: grayscale(0.2);
+        }
+
+        /* --- PINK VARIANT --- */
+        .pink-theme .handle {
+            border-color: var(--pink-handle);
+        }
+
+        .pink-theme .tag-luggage {
+            background: var(--pink-tag-bg);
+            color: var(--pink-text);
+        }
+
+        /* --- BLUE VARIANT --- */
+        .blue-theme .handle {
+            border-color: var(--blue-handle);
+        }
+
+        .blue-theme .tag-luggage {
+            background: var(--blue-tag-bg);
+            color: var(--blue-text);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- PINK VERSION -->
+    <div class="container pink-theme">
+        <div class="variant-label">Girl Version (Pink)</div>
+
+        <div class="handle-area">
+            <div class="handle"></div>
+
+            <div class="chain-group">
+                <div class="chain-loop"></div>
+                <div class="tag-luggage">
+                    <div class="child-name-v">June</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0 0 10px 0; font-family:serif; color:#2C3E2D;">Packing List</h3>
+                <div style="background:#F5F5F5; padding:12px; border-radius:12px; margin-bottom:8px;">Flashlight</div>
+                <div style="background:#F5F5F5; padding:12px; border-radius:12px;">Teddy Bear</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLUE VERSION -->
+    <div class="container blue-theme">
+        <div class="variant-label">Boy Version (Blue)</div>
+
+        <div class="handle-area">
+            <div class="handle"></div>
+
+            <div class="chain-group">
+                <div class="chain-loop"></div>
+                <div class="tag-luggage">
+                    <div class="child-name-v">Noah</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0 0 10px 0; font-family:serif; color:#2C3E2D;">Packing List</h3>
+                <div style="background:#F5F5F5; padding:12px; border-radius:12px; margin-bottom:8px;">Flashlight</div>
+                <div style="background:#F5F5F5; padding:12px; border-radius:12px;">Teddy Bear</div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

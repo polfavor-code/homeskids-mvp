@@ -1,13 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import Avatar from "@/components/Avatar";
 import ItemPhoto from "@/components/ItemPhoto";
+import { supabase } from "@/lib/supabase";
+
+const CATEGORIES = [
+    "Clothing",
+    "Toys",
+    "School stuff",
+    "Sports",
+    "Musical instruments",
+    "Medicine",
+    "Electronics",
+    "Other",
+];
 
 export default function ItemDetailPage({
     params,
@@ -20,15 +33,19 @@ export default function ItemDetailPage({
         items,
         updateItemLocation,
         updateItemRequested,
+        updateItemName,
+        updateItemNotes,
+        updateItemCategory,
+        updateItemPhoto,
         getMissingMessagesForItem,
         addMissingMessage,
         markItemFound,
         deleteItem,
-        updateItemName,
     } = useItems();
     const router = useRouter();
-    const { caregivers, currentJuneCaregiverId } = useAppState();
+    const { caregivers, homes, currentJuneCaregiverId, currentHomeId } = useAppState();
     const item = items.find((i) => i.id === params.itemId);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Local UI state for toggles (initialized from item data)
     const [isRequested, setIsRequested] = useState(
@@ -44,12 +61,22 @@ export default function ItemDetailPage({
     >([]);
 
     // State for missing conversation
-    // State for missing conversation
     const [messageInput, setMessageInput] = useState("");
 
     // State for name editing
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState(item?.name || "");
+
+    // State for notes editing
+    const [isEditingNotes, setIsEditingNotes] = useState(false);
+    const [editedNotes, setEditedNotes] = useState(item?.notes || "");
+
+    // State for category editing
+    const [isEditingCategory, setIsEditingCategory] = useState(false);
+    const [editedCategory, setEditedCategory] = useState(item?.category || "");
+
+    // State for photo upload
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
     const handleSaveName = async () => {
         if (!item || !editedName.trim()) return;
@@ -58,6 +85,86 @@ export default function ItemDetailPage({
             setIsEditingName(false);
         } catch (error) {
             alert("Failed to update name");
+        }
+    };
+
+    const handleSaveNotes = async () => {
+        if (!item) return;
+        try {
+            await updateItemNotes(item.id, editedNotes.trim());
+            setIsEditingNotes(false);
+        } catch (error) {
+            alert("Failed to update notes");
+        }
+    };
+
+    const handleSaveCategory = async () => {
+        if (!item || !editedCategory) return;
+        try {
+            await updateItemCategory(item.id, editedCategory);
+            setIsEditingCategory(false);
+        } catch (error) {
+            alert("Failed to update category");
+        }
+    };
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !item) return;
+
+        setUploadingPhoto(true);
+        try {
+            // Get user's family ID for family-folder structure
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) {
+                throw new Error("Please log in to upload photos.");
+            }
+
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", session.user.id)
+                .single();
+
+            if (!familyMember) {
+                throw new Error("No family found. Please complete onboarding.");
+            }
+
+            const fileExt = file.name.split(".").pop();
+            // Use family-folder structure: {family_id}/{item_id}-{timestamp}.{ext}
+            const fileName = `${familyMember.family_id}/${item.id}-${Date.now()}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from("item-photos")
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            await updateItemPhoto(item.id, fileName);
+        } catch (error) {
+            console.error("Error uploading photo:", error);
+            alert("Failed to upload photo");
+        } finally {
+            setUploadingPhoto(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
+
+    const handleRemovePhoto = async () => {
+        if (!item || !item.photoUrl) return;
+
+        if (!window.confirm("Remove this photo?")) return;
+
+        try {
+            // Delete from storage
+            await supabase.storage.from("item-photos").remove([item.photoUrl]);
+            // Update item
+            await updateItemPhoto(item.id, null);
+        } catch (error) {
+            console.error("Error removing photo:", error);
+            alert("Failed to remove photo");
         }
     };
 
@@ -79,17 +186,20 @@ export default function ItemDetailPage({
         );
     }
 
-    // Derived data
+    // Derived data - prefer home-based location, fallback to caregiver
+    const itemHome = homes.find((h) => h.id === item.locationHomeId);
     const caregiver = caregivers.find(
         (c) => c.id === item.locationCaregiverId
     );
     const locationLabel = item.isMissing
         ? "To be found"
-        : caregiver
-            ? `${caregiver.label}’s Home`
-            : "Unknown Location";
+        : itemHome
+            ? itemHome.name
+            : caregiver
+                ? `${caregiver.label}'s Home`
+                : "Unknown Location";
 
-    // Determine status pill
+    // Determine status pill - only show one
     let statusPill = null;
     if (item.isMissing) {
         statusPill = (
@@ -105,7 +215,7 @@ export default function ItemDetailPage({
         );
     }
 
-    // Handler for location change
+    // Handler for location change - now uses homes instead of caregivers
     const handleLocationChange = (value: string) => {
         if (value === "TO_BE_FOUND") {
             updateItemLocation(item.id, { toBeFound: true });
@@ -115,15 +225,15 @@ export default function ItemDetailPage({
                 ...prev,
             ]);
         } else {
-            const selectedCaregiver = caregivers.find((c) => c.id === value);
-            if (selectedCaregiver) {
-                updateItemLocation(item.id, { caregiverId: value });
+            const selectedHome = homes.find((h) => h.id === value);
+            if (selectedHome) {
+                updateItemLocation(item.id, { homeId: value });
                 setUpdateMessage(
-                    `Location updated to ${selectedCaregiver.label}'s Home.`
+                    `Location updated to ${selectedHome.name}.`
                 );
                 setExtraHistoryEntries((prev) => [
                     {
-                        text: `Location changed to ${selectedCaregiver.label}'s Home`,
+                        text: `Location changed to ${selectedHome.name}`,
                         time: "Just now",
                     },
                     ...prev,
@@ -159,21 +269,55 @@ export default function ItemDetailPage({
                 </Link>
             </div>
 
-            {/* Header & Hero */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">
-                <div className="text-center mb-6">
-                    <div className="mx-auto mb-4 flex justify-center">
+            {/* Header & Hero with Full-Width Image */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 mb-4 overflow-hidden">
+                {/* Full-width Image/Placeholder */}
+                <div className="relative w-full aspect-[4/3] bg-gray-100">
+                    {item.photoUrl ? (
                         <ItemPhoto
                             photoPath={item.photoUrl}
                             itemName={item.name}
-                            className="w-24 h-24"
+                            className="w-full h-full object-cover"
                         />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-8xl font-bold text-gray-300">
+                            {item.name.charAt(0)}
+                        </div>
+                    )}
+
+                    {/* Photo actions overlay */}
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingPhoto}
+                            className="px-3 py-1.5 bg-white/90 backdrop-blur-sm text-forest text-sm font-medium rounded-lg shadow-sm hover:bg-white transition-colors disabled:opacity-50"
+                        >
+                            {uploadingPhoto ? "Uploading..." : item.photoUrl ? "Change photo" : "Add photo"}
+                        </button>
+                        {item.photoUrl && (
+                            <button
+                                onClick={handleRemovePhoto}
+                                className="px-3 py-1.5 bg-white/90 backdrop-blur-sm text-red-600 text-sm font-medium rounded-lg shadow-sm hover:bg-white transition-colors"
+                            >
+                                Remove
+                            </button>
+                        )}
                     </div>
-                    {statusPill && <div className="mb-3">{statusPill}</div>}
+                </div>
+
+                {/* Item Info */}
+                <div className="p-6 text-center">
                     {statusPill && <div className="mb-3">{statusPill}</div>}
 
                     {isEditingName ? (
-                        <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="flex items-center justify-center gap-2 mb-2">
                             <input
                                 type="text"
                                 value={editedName}
@@ -205,7 +349,7 @@ export default function ItemDetailPage({
                             </button>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="flex items-center justify-center gap-2 mb-2">
                             <h1 className="text-2xl font-bold text-gray-900">{item.name}</h1>
                             <button
                                 onClick={() => {
@@ -222,9 +366,51 @@ export default function ItemDetailPage({
                             </button>
                         </div>
                     )}
-                    <p className="text-gray-500 font-medium">
-                        {item.category} · {locationLabel}
-                    </p>
+
+                    {/* Editable Category */}
+                    {isEditingCategory ? (
+                        <div className="flex items-center justify-center gap-2">
+                            <select
+                                value={editedCategory}
+                                onChange={(e) => setEditedCategory(e.target.value)}
+                                className="px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                autoFocus
+                            >
+                                {CATEGORIES.map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={handleSaveCategory}
+                                className="p-1 text-green-600 hover:text-green-700 bg-green-50 rounded-full w-6 h-6 flex items-center justify-center text-sm"
+                            >
+                                ✓
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsEditingCategory(false);
+                                    setEditedCategory(item.category);
+                                }}
+                                className="p-1 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full w-6 h-6 flex items-center justify-center text-sm"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ) : (
+                        <p
+                            className="text-gray-500 font-medium cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-1"
+                            onClick={() => {
+                                setEditedCategory(item.category);
+                                setIsEditingCategory(true);
+                            }}
+                        >
+                            {item.category} · {locationLabel}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -232,13 +418,13 @@ export default function ItemDetailPage({
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
                 <h3 className="font-bold text-gray-900 mb-3">Current home</h3>
                 <select
-                    value={item.isMissing ? "TO_BE_FOUND" : item.locationCaregiverId ?? undefined}
+                    value={item.isMissing ? "TO_BE_FOUND" : (item.locationHomeId ?? item.locationCaregiverId ?? undefined)}
                     onChange={(e) => handleLocationChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white"
                 >
-                    {caregivers.map((caregiver) => (
-                        <option key={caregiver.id} value={caregiver.id}>
-                            {caregiver.label}&apos;s Home
+                    {homes.map((home) => (
+                        <option key={home.id} value={home.id}>
+                            {home.name}
                         </option>
                     ))}
                     <option value="TO_BE_FOUND">To be found</option>
@@ -248,13 +434,57 @@ export default function ItemDetailPage({
                 )}
             </div>
 
-            {/* Notes Section */}
-            {item.notes && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
-                    <h3 className="font-bold text-gray-900 mb-2">Notes</h3>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.notes}</p>
+            {/* Notes Section - Always show, editable */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-gray-900">Notes</h3>
+                    {!isEditingNotes && (
+                        <button
+                            onClick={() => {
+                                setEditedNotes(item.notes || "");
+                                setIsEditingNotes(true);
+                            }}
+                            className="text-sm text-primary hover:text-teal transition-colors"
+                        >
+                            {item.notes ? "Edit" : "Add notes"}
+                        </button>
+                    )}
                 </div>
-            )}
+
+                {isEditingNotes ? (
+                    <div className="space-y-2">
+                        <textarea
+                            value={editedNotes}
+                            onChange={(e) => setEditedNotes(e.target.value)}
+                            placeholder="Add notes about this item..."
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                            rows={3}
+                            autoFocus
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleSaveNotes}
+                                className="px-4 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                            >
+                                Save
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsEditingNotes(false);
+                                    setEditedNotes(item.notes || "");
+                                }}
+                                className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {item.notes || <span className="text-gray-400 italic">No notes added</span>}
+                    </p>
+                )}
+            </div>
 
             {/* Actions Card */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">
@@ -328,17 +558,13 @@ export default function ItemDetailPage({
                                         className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
                                     >
                                         {/* Avatar */}
-                                        {authorProfile ? (
-                                            <div
-                                                className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0 ${authorProfile.avatarColor}`}
-                                            >
-                                                {authorProfile.avatarInitials}
-                                            </div>
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                                                ?
-                                            </div>
-                                        )}
+                                        <Avatar
+                                            src={authorProfile?.avatarUrl}
+                                            initial={authorProfile?.avatarInitials}
+                                            emoji="👤"
+                                            size={32}
+                                            bgColor={authorProfile ? "#2C3E2D" : "#9CA3AF"}
+                                        />
 
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-baseline justify-between mb-1">

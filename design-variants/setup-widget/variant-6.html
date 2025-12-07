@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Widget - Variant 6 (Minimalist Bottom Bar)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Shared Styles */
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --soft-green: #E8EFE8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--cream);
+            border-right: 1px solid var(--border);
+            height: 100vh;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 40px;
+            padding-left: 12px;
+            color: var(--forest);
+            text-decoration: none;
+            display: block;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--forest);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .nav-item.active {
+            background-color: var(--forest);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        /* VARIANT 6: Bottom Sticky Bar */
+        /* Extremely minimal. Just a bar at the bottom text. */
+        .widget-bar {
+            margin-top: auto;
+            background: var(--soft-green);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .bar-title {
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .bar-sub {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+        }
+
+        .bar-dots {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .bar-dot {
+            width: 24px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(44, 62, 45, 0.2);
+        }
+
+        .bar-dot.active {
+            background: var(--forest);
+        }
+
+        .bar-btn {
+            display: block;
+            border: 1px solid var(--forest);
+            color: var(--forest);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .bar-btn:hover {
+            background: var(--forest);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <a href="#" class="logo">homes.kids</a>
+
+        <a href="#" class="nav-item active">
+            <div class="nav-icon"></div>Homes
+        </a>
+        <a href="#" class="nav-item">
+            <div class="nav-icon"></div>June's Items
+        </a>
+
+        <!-- WIDGET VARIANT 6 -->
+        <div class="widget-bar">
+            <div class="bar-title">Add contacts</div>
+            <div class="bar-sub">Step 2 of 4</div>
+
+            <div class="bar-dots">
+                <div class="bar-dot"></div>
+                <div class="bar-dot active"></div>
+                <div class="bar-dot"></div>
+                <div class="bar-dot"></div>
+            </div>
+
+            <a href="#" class="bar-btn">Action</a>
+        </div>
+
+    </nav>
+
+    <main style="flex:1; padding: 40px;">
+        <h1 style="font-family: 'DM Serif Display';">Dashboard Preview</h1>
+    </main>
+
+</body>
+
+</html>

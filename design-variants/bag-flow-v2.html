@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+            --teal: #4CA1AF;
+            --orange: #D76F4B;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 60px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Flow Line with Curve */
+        .flow-line-top {
+            position: absolute;
+            top: -60px;
+            height: 80px;
+            left: 24px;
+            width: 2px;
+            background: #E0E0E0;
+            z-index: 0;
+        }
+
+        .flow-line-bottom {
+            position: absolute;
+            bottom: -60px;
+            height: 80px;
+            left: 24px;
+            width: 2px;
+            background: #E0E0E0;
+            z-index: 0;
+        }
+
+        .flow-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px 24px 24px 24px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 8px 32px rgba(44, 62, 45, 0.08);
+            margin-left: 24px;
+            /* Offset for the line visual */
+        }
+
+        /* Connector Curve */
+        .connector {
+            position: absolute;
+            left: -26px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 26px;
+            height: 2px;
+            background: #E0E0E0;
+        }
+
+        .connector-dot {
+            position: absolute;
+            left: -4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--forest);
+            border-radius: 50%;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bag-icon {
+            font-size: 20px;
+        }
+
+        .title {
+            font-weight: 700;
+            color: var(--forest);
+            font-size: 16px;
+            font-family: serif;
+        }
+
+        .item-stack {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            padding: 10px 0;
+        }
+
+        .item-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 3px solid white;
+            background: #EEE;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-left: -16px;
+            transition: transform 0.2s;
+        }
+
+        .item-avatar:hover {
+            transform: translateY(-4px);
+            z-index: 10 !important;
+        }
+
+        .item-avatar:first-child {
+            margin-left: 0;
+            z-index: 4;
+        }
+
+        .item-avatar:nth-child(2) {
+            z-index: 3;
+        }
+
+        .item-avatar:nth-child(3) {
+            z-index: 2;
+        }
+
+        .item-avatar:nth-child(4) {
+            z-index: 1;
+            background: var(--forest);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #F5F5F5;
+            color: var(--forest);
+            text-align: center;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #E0E0E0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div class="flow-line-top"></div>
+        <div class="flow-line-bottom"></div>
+
+        <div style="margin-bottom:12px; padding-left:50px;">
+            <h3 style="margin:0; font-size:15px; color:#2C3E2D; font-family:serif;">What to pack</h3>
+        </div>
+
+        <div class="flow-card">
+            <div class="connector">
+                <div class="connector-dot"></div>
+            </div>
+
+            <div class="header">
+                <div class="title-group">
+                    <span class="bag-icon">🎒</span>
+                    <span class="title">June's Bag</span>
+                </div>
+                <span style="font-size:11px; font-weight:700; color:#D76F4B; text-transform:uppercase;">To Pack</span>
+            </div>
+
+            <div class="item-stack">
+                <div class="item-avatar" style="background:#FFE0E0;">🔦</div>
+                <div class="item-avatar" style="background:#E0F0FF;">🧸</div>
+                <div class="item-avatar" style="background:#F0FFE0;">👕</div>
+                <div class="item-avatar">+2</div>
+            </div>
+
+            <a href="#" class="action-btn">Open bag & pack items</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

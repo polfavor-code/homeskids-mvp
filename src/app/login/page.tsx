@@ -4,12 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -18,6 +20,7 @@ export default function LoginPage() {
             return;
         }
         setError("");
+        setLoading(true);
 
         try {
             const { error } = await supabase.auth.signInWithPassword({
@@ -27,6 +30,7 @@ export default function LoginPage() {
 
             if (error) {
                 setError(error.message);
+                setLoading(false);
                 return;
             }
 
@@ -34,39 +38,52 @@ export default function LoginPage() {
         } catch (err) {
             setError("An unexpected error occurred.");
             console.error(err);
+            setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center px-4">
-            <div className="max-w-md w-full">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                        homes.kids
-                    </h1>
-                    <p className="text-gray-500 font-medium mb-4">
-                        Co-parenting central hub.
-                    </p>
-                    <ul className="text-sm text-gray-500 space-y-1 inline-block text-left">
-                        <li className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                            All info and schedules in one place.
-                        </li>
-                        <li className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                            Track what moves between homes.
-                        </li>
-                        <li className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                            Share important contacts.
-                        </li>
-                    </ul>
-                </div>
+        <div className="min-h-screen flex">
+            {/* Brand Side - Gradient */}
+            <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
+                <Logo size="lg" variant="light" />
 
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50">
+                <p className="text-lg opacity-90 mt-4 mb-8">
+                    Co-parenting central hub.
+                </p>
+
+                <ul className="max-w-sm space-y-4">
+                    <li className="flex items-start gap-3 text-white/85 text-sm border-b border-white/10 pb-4">
+                        <span className="opacity-60 mt-0.5">→</span>
+                        <span>One shared place for everything your child needs between homes.</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-white/85 text-sm border-b border-white/10 pb-4">
+                        <span className="opacity-60 mt-0.5">→</span>
+                        <span>Plan what moves in the bag between homes.</span>
+                    </li>
+                    <li className="flex items-start gap-3 text-white/85 text-sm pb-4">
+                        <span className="opacity-60 mt-0.5">→</span>
+                        <span>Important contacts and home details, all in one hub.</span>
+                    </li>
+                </ul>
+            </div>
+
+            {/* Form Side */}
+            <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
+                <div className="w-full max-w-sm">
+                    {/* Mobile Logo */}
+                    <div className="lg:hidden text-center mb-8">
+                        <Logo size="md" variant="dark" />
+                        <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
+                    </div>
+
+                    <h2 className="font-dmSerif text-2xl text-forest mb-6">
+                        Welcome back
+                    </h2>
+
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-forest mb-1.5">
                                 Email
                             </label>
                             <input
@@ -74,12 +91,12 @@ export default function LoginPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="you@example.com"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-forest mb-1.5">
                                 Password
                             </label>
                             <input
@@ -87,32 +104,35 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
                             />
                         </div>
 
                         {error && (
-                            <p className="text-sm text-red-600">{error}</p>
+                            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                                {error}
+                            </p>
                         )}
 
                         <button
                             type="submit"
-                            className="w-full px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                            disabled={loading}
+                            className="w-full py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
                         >
-                            Log in
+                            {loading ? "Logging in..." : "Log in"}
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center space-y-2">
+                    <div className="mt-6 space-y-3">
                         <Link
                             href="/register"
-                            className="block text-sm text-primary hover:underline"
+                            className="block text-center text-sm font-medium text-forest hover:text-teal transition-colors"
                         >
-                            Create an account
+                            Create an account →
                         </Link>
                         <Link
                             href="/forgot-password"
-                            className="block text-sm text-gray-500 hover:text-gray-900"
+                            className="block text-center text-sm text-textSub hover:text-forest transition-colors"
                         >
                             Forgot your password?
                         </Link>

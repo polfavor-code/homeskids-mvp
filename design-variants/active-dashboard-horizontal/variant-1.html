@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Variant 1 (Baseline)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --soft-green: #E8EFE8;
+            --terracotta: #D76F4B;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Mockup */
+        .sidebar {
+            width: 260px;
+            background-color: var(--cream);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: 'DM Serif Display';
+            font-size: 24px;
+            margin-bottom: 40px;
+        }
+
+        .nav-item {
+            padding: 12px 0;
+            font-weight: 600;
+            color: var(--forest);
+            opacity: 0.7;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-family: 'DM Serif Display';
+            font-size: 42px;
+            margin: 0 0 8px 0;
+            font-weight: 400;
+        }
+
+        .subtitle {
+            color: var(--text-sub);
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .stats-card {
+            background: white;
+            padding: 16px 24px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(44, 62, 45, 0.05);
+        }
+
+        .stat-num {
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-sub);
+            letter-spacing: 0.05em;
+        }
+
+        /* Actions */
+        .actions-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 60px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--forest);
+            color: white;
+            border: 1px solid var(--forest);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--forest);
+            border: 1px solid var(--forest);
+        }
+
+        /* Dashboard Flow */
+        .dashboard-flow {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 80px;
+            gap: 20px;
+        }
+
+        /* Connecting Line */
+        .flow-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #E0DCD5;
+            z-index: 0;
+            transform: translateY(-50%);
+        }
+
+        /* Cards */
+        .flow-card {
+            position: relative;
+            z-index: 10;
+            background: white;
+            border-radius: 24px;
+            width: 300px;
+            min-height: 220px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 0 var(--border);
+            transition: transform 0.2s;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-family: 'DM Serif Display';
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .badge {
+            background: var(--forest);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .meta {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .items-area {
+            margin-top: auto;
+            background: var(--cream);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-count {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .item-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-left: auto;
+            margin-right: 8px;
+        }
+
+        /* Travel Bag (Center) */
+        .travel-bag {
+            background: var(--forest);
+            /* Dark Green like mockup */
+            color: white;
+            border: none;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.25);
+            transform: scale(1.1);
+            /* Slightly larger */
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .travel-bag .card-title {
+            font-size: 22px;
+            margin-bottom: 16px;
+            color: white;
+        }
+
+        .check-circle {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--forest);
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .bag-btn {
+            background: white;
+            color: var(--forest);
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            margin-top: 16px;
+            font-size: 13px;
+        }
+
+        /* Stacked Card Effect (Right) */
+        .stacked-wrapper {
+            position: relative;
+        }
+
+        .stack-back {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 300px;
+            height: 220px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            z-index: 5;
+            opacity: 0.6;
+        }
+
+        .switch-btn {
+            background: white;
+            border: 1px solid var(--border);
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            color: var(--forest);
+            cursor: pointer;
+            margin-top: 12px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        /* Bottom Widget */
+        .bottom-advisor {
+            margin-top: auto;
+            border-top: 1px solid #EBE6DC;
+            padding-top: 24px;
+        }
+
+        .advisor-step {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-info {
+            flex: 1;
+        }
+
+        .step-overline {
+            font-size: 10px;
+            color: var(--text-sub);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: #EBE6DC;
+            border-radius: 2px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 12px;
+        }
+
+        .progress-fill {
+            width: 50%;
+            height: 100%;
+            background: var(--forest);
+            border-radius: 2px;
+        }
+
+        .step-heading {
+            font-family: 'DM Serif Display';
+            font-size: 22px;
+            margin: 0 0 4px 0;
+        }
+
+        .step-desc {
+            font-size: 14px;
+            color: var(--text-sub);
+        }
+
+        .step-action {
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            color: var(--forest);
+            margin-right: 24px;
+        }
+
+        .step-skip {
+            color: var(--text-sub);
+            font-size: 13px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">homes.kids</div>
+        <div class="nav-item active">Homes</div>
+        <div class="nav-item">June's Items</div>
+        <div class="nav-item">Calendar</div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <h1>Hi nata,</h1>
+                <p class="subtitle">Here’s everything organized for june.</p>
+            </div>
+            <div class="stats-card">
+                <span class="stat-num">1</span>
+                <span class="stat-label">ITEMS TOTAL</span>
+            </div>
+        </div>
+
+        <div class="actions-row">
+            <a href="#" class="btn btn-primary">+ New item</a>
+            <a href="#" class="btn btn-outline">Request packing</a>
+            <a href="#" class="btn btn-outline">Invite caregiver</a>
+        </div>
+
+        <!-- SECTION TITLE -->
+        <div style="text-align: center; margin-bottom: 24px; position: relative; z-index: 2;">
+            <h2
+                style="font-family: 'DM Serif Display'; font-size: 20px; display: inline-block; background: var(--cream); padding: 0 16px;">
+                june's home right now
+            </h2>
+        </div>
+
+        <!-- HORIZONTAL FLOW -->
+        <div class="dashboard-flow">
+            <div class="flow-line"></div>
+
+            <!-- Left: Active Home -->
+            <div class="flow-card">
+                <div class="card-header">
+                    <h3 class="card-title">Daddys home</h3>
+                    <div class="badge">Here</div>
+                </div>
+                <div class="meta" style="margin-bottom: auto;">Local time 17:12</div>
+
+                <div class="items-area">
+                    <span class="item-label">VIEW ITEMS</span>
+                    <span class="item-count">1</span>
+                </div>
+            </div>
+
+            <!-- Center: Travel Bag -->
+            <div class="flow-card travel-bag">
+                <h3 class="card-title">june's Travel Bag</h3>
+                <div class="check-circle">✓</div>
+                <div style="font-size: 13px; margin-bottom: 8px;">No items to pack</div>
+                <a href="#" class="bag-btn">Open bag →</a>
+            </div>
+
+            <!-- Right: Other Home (Stacked) -->
+            <div class="stacked-wrapper">
+                <div class="stack-back"></div>
+                <div class="flow-card">
+                    <div class="card-header">
+                        <h3 class="card-title">mommys home</h3>
+                        <div class="badge" style="background:#444;">Here</div>
+                    </div>
+                    <div class="meta" style="margin-bottom: auto;">Local time 17:12</div>
+
+                    <div class="items-area">
+                        <span class="item-label">VIEW ITEMS</span>
+                        <span class="item-count">1</span>
+                    </div>
+
+                    <div class="switch-btn">Switch to this home</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM ADVISOR WIDGET -->
+        <div class="bottom-advisor">
+            <div class="step-overline">
+                STEP 2 OF 4
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="advisor-step">
+                <div class="step-info">
+                    <h3 class="step-heading">Add important contacts</h3>
+                    <p class="step-desc">Save school, doctor and emergency contacts.</p>
+                </div>
+                <div class="step-actions">
+                    <a href="#" class="step-action">Add contacts →</a>
+                    <span class="step-skip">Skip</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

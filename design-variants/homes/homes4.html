@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept 4 - Left Aligned Modern</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Lato:wght@400;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #1A2E1C;
+            --accent: #D4A373;
+            --white: #FFFFFF;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Lato', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .dashboard-container {
+            max-width: 420px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Line */
+        .line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 1px;
+            background: #CCC;
+            z-index: 0;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 40px;
+            border-left: 4px solid transparent;
+        }
+
+        .card.active {
+            border-left-color: var(--forest);
+        }
+
+        /* Connection Nodes */
+        .card::before,
+        .card::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--white);
+            border: 2px solid #CCC;
+            border-radius: 50%;
+            z-index: 20;
+        }
+
+        .card::before {
+            top: -5px;
+        }
+
+        .card::after {
+            bottom: -5px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            margin: 0 0 4px 0;
+        }
+
+        .status-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .avatar-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .av {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .stats-text-row {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            color: #666;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #EEE;
+        }
+
+        .stat-bit {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bag-card {
+            text-align: center;
+            padding: 24px;
+            max-width: 260px;
+            margin: 0 auto 40px auto;
+            border-radius: 24px;
+        }
+
+        .bag-btn {
+            background: transparent;
+            border: 1px solid var(--forest);
+            padding: 8px 20px;
+            border-radius: 4px;
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+
+        .top-label {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 24px;
+            background: var(--bg-cream);
+            position: relative;
+            z-index: 10;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <div class="line"></div>
+
+        <div class="top-label">June's Location</div>
+
+        <!-- Active Home -->
+        <div class="card active">
+            <div class="header-row">
+                <div>
+                    <h2>Daddy's Home</h2>
+                    <div class="status-text">June is here</div>
+                </div>
+                <div class="avatar-row">
+                    <img src="https://api.dicebear.com/7.x/initials/svg?seed=DH" class="av" alt="Home">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=June" class="av" alt="June">
+                </div>
+            </div>
+
+            <div class="stats-text-row">
+                <div class="stat-bit">📍 Map</div>
+                <div class="stat-bit">👤 1 Person</div>
+                <div class="stat-bit">📦 5 Items</div>
+            </div>
+            <div style="text-align:right; font-size:12px; font-weight:bold; margin-top:12px;">View all →</div>
+        </div>
+
+        <!-- Bag -->
+        <div class="card bag-card">
+            <h3 style="margin:0; font-family:'Playfair Display';">Travel Bag</h3>
+            <p style="margin:4px 0 0 0; font-size:13px;">1 item to pack</p>
+            <button class="bag-btn">Open</button>
+        </div>
+
+        <!-- Other Home -->
+        <div class="card">
+            <div class="header-row">
+                <div>
+                    <h2>Mommy's Home</h2>
+                    <div style="font-size:12px; color:#999;">Tap to switch</div>
+                </div>
+                <div class="avatar-row">
+                    <img src="https://api.dicebear.com/7.x/initials/svg?seed=MH" class="av" alt="Home">
+                </div>
+            </div>
+
+            <div class="stats-text-row">
+                <div class="stat-bit">📍 Map</div>
+                <div class="stat-bit">👤 1 Person</div>
+                <div class="stat-bit">📦 3 Items</div>
+            </div>
+            <div style="text-align:right; font-size:12px; font-weight:bold; margin-top:12px;">View all →</div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

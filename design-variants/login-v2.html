@@ -1,0 +1,225 @@
+<!-- Variant 2: Split Layout - Brand left, form right -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | homes.kids</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --forest: #2C3E2D;
+            --teal: #4CA1AF;
+            --bg: #F9F6F0;
+            --card: #fff;
+            --border: #E8E5DE;
+            --text: #2C3E2D;
+            --muted: #7A8A7B;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .brand-side {
+            flex: 1;
+            background: linear-gradient(135deg, #2C3E2D 0%, #3D5A40 50%, #4CA1AF 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            color: #fff;
+        }
+
+        .form-side {
+            flex: 1;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+        }
+
+        .logo-wrap svg {
+            width: 120px;
+            height: 100px;
+        }
+
+        .duotone-path {
+            stroke: #fff;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: #fff;
+            fill-opacity: 0.2;
+        }
+
+        .duotone-stroke-only {
+            stroke: #fff;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .brand-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 42px;
+            margin-top: 20px;
+        }
+
+        .tagline {
+            opacity: 0.9;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+
+        .bullets {
+            list-style: none;
+            margin-top: 32px;
+            max-width: 320px;
+        }
+
+        .bullets li {
+            font-size: 14px;
+            opacity: 0.85;
+            padding: 10px 0;
+            padding-left: 24px;
+            position: relative;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .bullets li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            opacity: 0.6;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .card h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            color: var(--forest);
+            margin-bottom: 24px;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            background: #fff;
+            outline: none;
+        }
+
+        .field input:focus {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 3px rgba(76, 161, 175, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--forest);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--teal);
+        }
+
+        .links {
+            margin-top: 24px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .links a {
+            color: var(--teal);
+            text-decoration: none;
+            display: block;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .brand-side {
+                padding: 32px;
+            }
+
+            .bullets {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="brand-side">
+        <div class="logo-wrap">
+            <svg viewBox="0 0 120 100">
+                <path d="M15 45V75H45V45L30 30Z" class="duotone-path" style="opacity:0.6" />
+                <path d="M75 45V75H105V45L90 30Z" class="duotone-path" style="opacity:0.6" />
+                <path d="M35 85V50L60 25L85 50V85H35Z" class="duotone-path" />
+                <path d="M10 85H110" class="duotone-stroke-only" />
+            </svg>
+        </div>
+        <div class="brand-name">homes.kids</div>
+        <p class="tagline">Co-parenting central hub.</p>
+        <ul class="bullets">
+            <li>One shared place for everything your child needs between homes.</li>
+            <li>Plan what moves in the bag between homes.</li>
+            <li>Important contacts and home details, all in one hub.</li>
+        </ul>
+    </div>
+    <div class="form-side">
+        <div class="card">
+            <h2>Welcome back</h2>
+            <div class="field"><label>Email</label><input type="email" placeholder="you@example.com"></div>
+            <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+            <button class="btn">Log in</button>
+            <div class="links"><a href="#">Create an account →</a><a href="#">Forgot your password?</a></div>
+        </div>
+    </div>
+</body>
+
+</html>

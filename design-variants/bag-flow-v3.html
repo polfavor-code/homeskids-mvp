@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+            --teal: #4CA1AF;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 60px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Central Flow Line */
+        .flow-line {
+            position: absolute;
+            top: -60px;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            background: #E0E0E0;
+            z-index: 0;
+        }
+
+        .center-card {
+            background: white;
+            border-radius: 24px;
+            padding: 32px 24px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.06);
+            text-align: center;
+            border: 1px solid #F0F0F0;
+        }
+
+        /* Top and Bottom Nodes */
+        .node-top {
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 12px;
+            background: white;
+            border: 2px solid #E0E0E0;
+            border-radius: 50%;
+        }
+
+        .node-bottom {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 12px;
+            background: white;
+            border: 2px solid #E0E0E0;
+            border-radius: 50%;
+        }
+
+        .eyebrow {
+            font-size: 11px;
+            font-weight: 700;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-family: serif;
+            font-size: 20px;
+            color: var(--forest);
+            margin: 0 0 20px 0;
+        }
+
+        .item-stack-center {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .item-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 4px solid white;
+            background: #EEE;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            margin-left: -20px;
+        }
+
+        .item-avatar:first-child {
+            margin-left: 0;
+            z-index: 4;
+        }
+
+        .item-avatar:nth-child(2) {
+            z-index: 3;
+        }
+
+        .item-avatar:nth-child(3) {
+            z-index: 2;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 24px;
+            border: 1px solid var(--forest);
+            border-radius: 30px;
+            color: var(--forest);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--forest);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div class="flow-line"></div>
+
+        <div style="text-align:center; margin-bottom:16px; position:relative; z-index:1;">
+            <h3
+                style="margin:0; font-size:15px; color:#2C3E2D; font-family:serif; background:var(--bg); display:inline-block; padding:0 10px;">
+                What to pack</h3>
+        </div>
+
+        <div class="center-card">
+            <div class="node-top"></div>
+            <div class="node-bottom"></div>
+
+            <div class="eyebrow">June's Bag</div>
+            <h2 class="title">3 items to pack</h2>
+
+            <div class="item-stack-center">
+                <div class="item-avatar" style="background:#FFE0E0;">🔦</div>
+                <div class="item-avatar" style="background:#E0F0FF;">🧸</div>
+                <div class="item-avatar" style="background:#F0FFE0;">👕</div>
+            </div>
+
+            <a href="#" class="btn">Open travel bag</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

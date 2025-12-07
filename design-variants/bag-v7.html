@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+            --tan: #E6DCCA;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 360px;
+            width: 100%;
+        }
+
+        .backpack-card {
+            background: white;
+            border-radius: 24px 24px 16px 16px;
+            box-shadow: 0 4px 20px rgba(44, 62, 45, 0.06);
+            overflow: hidden;
+            border: 1px solid #F0F0F0;
+        }
+
+        .top-section {
+            padding: 24px;
+            text-align: center;
+        }
+
+        .avatar-stack {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #EEE;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .title {
+            font-family: serif;
+            font-size: 18px;
+            color: var(--forest);
+            margin-bottom: 4px;
+        }
+
+        .status {
+            font-size: 12px;
+            color: #D76F4B;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* The "Pocket" */
+        .pocket {
+            background: #F8F6F2;
+            padding: 16px 24px;
+            border-top: 1px solid #EEE;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .item-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .item-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--forest);
+            border-radius: 50%;
+        }
+
+        .open-btn {
+            color: var(--forest);
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div style="text-align:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:16px; color:#2C3E2D; font-family:serif;">Request packing</h3>
+        </div>
+
+        <div class="backpack-card">
+            <div class="top-section">
+                <div class="avatar-stack">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=June" class="avatar">
+                </div>
+                <div class="title">June's Backpack</div>
+                <div class="status">1 Item Requested</div>
+            </div>
+
+            <div class="pocket">
+                <div class="item-preview">
+                    <div class="item-dot"></div>
+                    <span>Flashlight</span>
+                </div>
+                <a href="#" class="open-btn">Open →</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

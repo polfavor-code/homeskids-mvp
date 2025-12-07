@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Refined 2 (Connected Path)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --bag-gradient: linear-gradient(170deg, #3D5A42 0%, #203022 100%);
+            /* Slightly richer gradient */
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        /* Connected Layout - Dashed line running through top */
+        .timeline-track {
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+            margin-top: 40px;
+            gap: 20px;
+        }
+
+        .track-line {
+            position: absolute;
+            top: 15px;
+            left: 50px;
+            right: 50px;
+            height: 2px;
+            border-top: 2px dashed #D0CCC5;
+            z-index: 0;
+        }
+
+        .column {
+            flex: 1;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Labels as "Stops" on the line */
+        .stop-indicator {
+            align-self: flex-start;
+            /* Left align for homes */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            background: var(--cream);
+            padding-right: 12px;
+        }
+
+        .stop-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--forest);
+            border: 2px solid var(--cream);
+            box-shadow: 0 0 0 2px var(--forest);
+        }
+
+        .stop-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+        }
+
+        .center-col .stop-indicator {
+            align-self: center;
+            /* Center for bag */
+            padding: 0 12px;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 20px;
+            /* Tighter padding */
+            box-shadow: 0 2px 8px rgba(44, 62, 45, 0.03);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+
+        .card-title {
+            font-family: 'DM Serif Display';
+            font-size: 19px;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .badge-here {
+            background: var(--forest);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .time-label {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-bottom: 20px;
+        }
+
+        /* Stats Grid - Single Row look */
+        .stats-row {
+            background: #F4F3F0;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: auto;
+        }
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-item:last-child {
+            border: none;
+        }
+
+        .stat-val {
+            font-weight: 700;
+            font-size: 13px;
+            display: block;
+        }
+
+        .stat-lbl {
+            font-size: 9px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .switch-btn {
+            margin-top: 12px;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: white;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--forest);
+        }
+
+        .switch-btn:hover {
+            background: #f9f9f9;
+        }
+
+        /* Travel Bag Card - Gradient */
+        .travel-card {
+            background: var(--bag-gradient);
+            color: white;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(44, 62, 45, 0.15);
+            /* Pop */
+            transform: translateY(-10px);
+            /* Slightly raised */
+        }
+
+        .bag-title {
+            font-family: 'DM Serif Display';
+            font-size: 21px;
+            margin-bottom: 20px;
+        }
+
+        .check-circle {
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-bottom: 16px;
+        }
+
+        .bag-btn {
+            background: white;
+            color: var(--forest);
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            width: 100%;
+            display: inline-block;
+        }
+
+        .bottom-border {
+            border-top: 1px solid #EBE6DC;
+            padding-top: 24px;
+            margin-top: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width:260px; border-right:1px solid #EBE6DC;"></div>
+
+    <div class="main-content">
+        <h1 style="font-family:'DM Serif Display'; font-size:40px; margin-bottom:20px;">Hi nata,</h1>
+
+        <div class="timeline-track">
+            <div class="track-line"></div>
+
+            <!-- COLUMN 1: Where June Is -->
+            <div class="column">
+                <div class="stop-indicator">
+                    <div class="stop-dot"></div>
+                    <span class="stop-label">Where June Is</span>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Daddys home</h3>
+                        <div class="badge-here">Here</div>
+                    </div>
+                    <div class="time-label">Local time 17:34</div>
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <span class="stat-val">Map</span> <span class="stat-lbl">VIEW</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">4</span> <span class="stat-lbl">PEOPLE</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">1</span> <span class="stat-lbl">ITEMS</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMN 2: In Transit -->
+            <div class="column center-col">
+                <div class="stop-indicator">
+                    <div class="stop-dot" style="background:white; border-color:var(--forest);"></div>
+                    <span class="stop-label">In Transit</span>
+                </div>
+                <div class="card travel-card">
+                    <h3 class="bag-title">june's Travel Bag</h3>
+                    <div class="check-circle">✓</div>
+                    <div style="font-size:13px; margin-bottom:20px; opacity:0.9;">No items to pack</div>
+                    <a href="#" class="bag-btn">Open bag &rarr;</a>
+                </div>
+            </div>
+
+            <!-- COLUMN 3: Other Homes -->
+            <div class="column">
+                <div class="stop-indicator">
+                    <div class="stop-dot" style="background:#ccc; border-color:#ccc; box-shadow:none;"></div>
+                    <span class="stop-label" style="color:var(--text-sub);">Other Homes</span>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Mommys home</h3>
+                    </div>
+                    <div class="time-label">Local time 17:34</div>
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <span class="stat-val">Map</span> <span class="stat-lbl">VIEW</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">1</span> <span class="stat-lbl">PEOPLE</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">1</span> <span class="stat-lbl">ITEMS</span>
+                        </div>
+                    </div>
+                    <button class="switch-btn">Switch to this home</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="bottom-border">
+            <h4>Step 2: Add Contacts</h4>
+        </div>
+    </div>
+</body>
+
+</html>

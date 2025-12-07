@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bag Label - Concept 4</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --pink: #FF6B9D;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        .handle {
+            width: 100px;
+            height: 30px;
+            background: #444;
+            border-radius: 10px 10px 0 0;
+            margin: 0 auto;
+            position: relative;
+            top: 4px;
+            z-index: 0;
+        }
+
+        /* Ribbon Label */
+        .ribbon-container {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .knot {
+            width: 16px;
+            height: 16px;
+            background: var(--pink);
+            border-radius: 4px;
+            transform: rotate(45deg);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .ribbon-body {
+            background: var(--pink);
+            color: white;
+            padding: 6px 16px;
+            font-weight: 700;
+            font-size: 13px;
+            position: relative;
+            top: -4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Ribbon ends */
+        .ribbon-body::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: var(--pink);
+            clip-path: polygon(0 0, 50% 100%, 100% 0);
+        }
+
+        .card {
+            background: white;
+            border-radius: 4px;
+            padding: 40px 24px 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            position: relative;
+            z-index: 1;
+            border-top: 4px solid #444;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .box {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #DDD;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="handle"></div>
+
+        <div class="ribbon-container">
+            <div class="knot"></div>
+            <div class="ribbon-body">JUNE</div>
+        </div>
+
+        <div class="card">
+            <h3 style="text-align:center; margin:0 0 20px 0; color:#444;">Travel Bag</h3>
+
+            <div class="item">
+                <div class="box"></div> <span>Flashlight</span>
+            </div>
+            <div class="item">
+                <div class="box"></div> <span>Teddy Bear</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard V1 - Clean & Minimal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg-cream: #FDFBF7;
+            --forest: #2C3E2D;
+            --forest-light: #8BA18D;
+            --white: #FFFFFF;
+            --text-main: #2C3E2D;
+            --text-sub: #8BA18D;
+            --border-subtle: #EAEAEA;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+            position: relative;
+        }
+
+        /* Header Section */
+        .header-section {
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(44, 62, 45, 0.05);
+        }
+
+        .greeting {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            margin: 0 0 8px 0;
+            color: var(--forest);
+        }
+
+        .sub-greeting {
+            font-size: 15px;
+            color: var(--text-sub);
+            margin: 0 0 24px 0;
+            font-weight: 300;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .stat-pill {
+            background: var(--white);
+            border: 1px solid var(--border-subtle);
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--forest);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-pill.alert {
+            background: #FFF5F5;
+            border-color: #FFE0E0;
+            color: #D32F2F;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+            /* Firefox */
+        }
+
+        .action-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Chrome/Safari */
+
+        .action-btn {
+            background: transparent;
+            border: 1px solid var(--forest);
+            color: var(--forest);
+            padding: 10px 20px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--forest);
+            color: var(--white);
+        }
+
+        /* Dashboard Title */
+        .dashboard-title {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .dashboard-title h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0 0 4px 0;
+            font-weight: 400;
+        }
+
+        .dashboard-title p {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin: 0;
+        }
+
+        /* Vertical Flow */
+        .flow-container {
+            position: relative;
+        }
+
+        .flow-line {
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 50%;
+            width: 1px;
+            background: #E0DCD5;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+            border: 1px solid var(--border-subtle);
+            margin-bottom: 32px;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .home-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0 0 4px 0;
+        }
+
+        .local-time {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .status-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge.here {
+            background: var(--forest);
+            color: var(--white);
+        }
+
+        .status-badge.switch {
+            background: #F0F0F0;
+            color: var(--text-sub);
+        }
+
+        .card-stats {
+            display: flex;
+            gap: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #F5F5F5;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .stat-val {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .stat-lbl {
+            font-size: 10px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Bag Card */
+        .bag-card {
+            text-align: center;
+            max-width: 280px;
+            margin: 0 auto 32px;
+            border-radius: 32px;
+            padding: 32px 24px;
+        }
+
+        .bag-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0 0 20px 0;
+        }
+
+        /* Stacked Items (Exact Match) */
+        .stack-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            height: 60px;
+        }
+
+        .stack-item {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 4px solid var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-left: -18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            background-color: #F5F5F5;
+        }
+
+        .stack-item:nth-child(1) {
+            margin-left: 0;
+            z-index: 4;
+            background-color: #FFE4E1;
+        }
+
+        .stack-item:nth-child(2) {
+            z-index: 3;
+            background-color: #F0F8FF;
+        }
+
+        .stack-item:nth-child(3) {
+            z-index: 2;
+            background-color: #F0FFF0;
+        }
+
+        .stack-item:nth-child(4) {
+            z-index: 1;
+            background-color: #E8E8E8;
+            color: #4A5D4B;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stack-item:hover {
+            transform: scale(1.1) translateY(-2px);
+            z-index: 10;
+        }
+
+        .bag-status {
+            font-size: 14px;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: var(--forest);
+            color: var(--white);
+            border: none;
+            padding: 12px 32px;
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1e2b1f;
+        }
+
+        .switch-btn {
+            width: 100%;
+            margin-top: 16px;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--forest);
+            cursor: pointer;
+        }
+
+        .switch-btn:hover {
+            background: #F9F9F9;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header-section">
+            <h1 class="greeting">Hi Paul,</h1>
+            <p class="sub-greeting">Here’s what you need for June today.</p>
+
+            <div class="stats-row">
+                <div class="stat-pill">🏠 2 homes</div>
+                <div class="stat-pill">📦 11 items</div>
+                <div class="stat-pill">🎒 2 to pack</div>
+                <div class="stat-pill alert">⚠️ 1 missing</div>
+            </div>
+
+            <div class="action-row">
+                <button class="action-btn">+ Add item</button>
+                <button class="action-btn">Request packing</button>
+                <button class="action-btn">Invite caregiver</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Title -->
+        <div class="dashboard-title">
+            <h2>June’s home right now</h2>
+            <p>Tap a home to view details or switch location.</p>
+        </div>
+
+        <!-- Vertical Flow -->
+        <div class="flow-container">
+            <div class="flow-line"></div>
+
+            <!-- Active Home -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="home-name">Ellishouse</h3>
+                        <div class="local-time">Local time 02:07</div>
+                    </div>
+                    <div class="status-badge here">Here</div>
+                </div>
+                <div class="card-stats">
+                    <div class="stat-item"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                    <div class="stat-item"><span class="stat-val">2</span><span class="stat-lbl">People</span></div>
+                    <div class="stat-item"><span class="stat-val">3</span><span class="stat-lbl">Items</span></div>
+                </div>
+            </div>
+
+            <!-- Bag Card -->
+            <div class="card bag-card">
+                <h3 class="bag-title">June's Travel Bag</h3>
+                <div class="stack-container">
+                    <div class="stack-item">📱</div>
+                    <div class="stack-item"><img
+                            src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=64&h=64"
+                            style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Dog"></div>
+                    <div class="stack-item">🧸</div>
+                    <div class="stack-item">+2</div>
+                </div>
+                <div class="bag-status">2 items to pack</div>
+                <button class="btn-primary">Open bag</button>
+            </div>
+
+            <!-- Other Home -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="home-name">Daddieshouse</h3>
+                        <div class="local-time">Local time 02:07</div>
+                    </div>
+                </div>
+                <div class="card-stats">
+                    <div class="stat-item"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                    <div class="stat-item"><span class="stat-val">1</span><span class="stat-lbl">Person</span></div>
+                    <div class="stat-item"><span class="stat-val">8</span><span class="stat-lbl">Items</span></div>
+                </div>
+                <button class="switch-btn">Switch to this home</button>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -21,7 +21,7 @@ const CATEGORIES = [
 export default function AddItemPage() {
     const router = useRouter();
     const { addItem } = useItems();
-    const { caregivers } = useAppState();
+    const { caregivers, activeHomes, homes } = useAppState();
 
     const [name, setName] = useState("");
     const [category, setCategory] = useState("");
@@ -43,13 +43,35 @@ export default function AddItemPage() {
         setError("");
 
         try {
+            const { supabase } = await import("@/lib/supabase");
+
+            // Get user's family ID for family-folder structure
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) {
+                setError("Please log in to add items.");
+                setUploading(false);
+                return;
+            }
+
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", session.user.id)
+                .single();
+
+            if (!familyMember) {
+                setError("No family found. Please complete onboarding.");
+                setUploading(false);
+                return;
+            }
+
             let photoUrl = "";
 
             // Upload photo if selected
             if (photoFile) {
-                const { supabase } = await import("@/lib/supabase");
                 const fileExt = photoFile.name.split(".").pop();
-                const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                // Use family-folder structure: {family_id}/{timestamp}-{random}.{ext}
+                const fileName = `${familyMember.family_id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
                 const { data: uploadData, error: uploadError } = await supabase.storage
                     .from("item-photos")
@@ -65,21 +87,29 @@ export default function AddItemPage() {
                     return;
                 }
 
-                // Store the file path (not the full URL, we'll generate signed URLs when displaying)
+                // Store the file path with family folder
                 photoUrl = fileName;
             }
 
             const isMissing = location === "To be found";
-            const locationCaregiverId = isMissing ? (caregivers[0]?.id || "") : location;
+            // Use home-based location - find the selected home from ALL homes (in case item is at hidden home)
+            const selectedHome = homes.find((h) => h.id === location);
+            const locationHomeId = isMissing ? null : (selectedHome?.id || null);
+            // Keep legacy caregiver ID for backwards compatibility
+            const locationCaregiverId = isMissing
+                ? (caregivers[0]?.id || "")
+                : (selectedHome?.ownerCaregiverId || caregivers[0]?.id || "");
 
             const newItem = {
                 id: `item-${Date.now()}`,
                 name,
                 category,
                 locationCaregiverId,
+                locationHomeId,
                 isRequestedForNextVisit: false,
                 isPacked: false,
                 isMissing,
+                isRequestCanceled: false,
                 photoUrl: photoUrl || undefined,
                 notes: notes || undefined,
             };
@@ -211,10 +241,10 @@ export default function AddItemPage() {
                             Where is this item now? <span className="text-red-500">*</span>
                         </label>
                         <div className="space-y-2">
-                            {caregivers.map((caregiver) => (
+                            {activeHomes.map((home) => (
                                 <label
-                                    key={caregiver.id}
-                                    className={`flex items-center p-3 border rounded-xl cursor-pointer transition-colors ${location === caregiver.id
+                                    key={home.id}
+                                    className={`flex items-center p-3 border rounded-xl cursor-pointer transition-colors ${location === home.id
                                         ? "border-primary bg-blue-50"
                                         : "border-gray-200 hover:bg-gray-50"
                                         }`}
@@ -222,18 +252,18 @@ export default function AddItemPage() {
                                     <input
                                         type="radio"
                                         name="location"
-                                        value={caregiver.id}
-                                        checked={location === caregiver.id}
+                                        value={home.id}
+                                        checked={location === home.id}
                                         onChange={(e) => setLocation(e.target.value)}
                                         className="sr-only"
                                     />
                                     <span
-                                        className={`font-medium ${location === caregiver.id
+                                        className={`font-medium ${location === home.id
                                             ? "text-primary"
                                             : "text-gray-700"
                                             }`}
                                     >
-                                        {caregiver.label}’s Home
+                                        {home.name}
                                     </span>
                                 </label>
                             ))}

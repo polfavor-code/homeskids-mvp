@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CHI Ecosystem - Variant 9 (Compact)</title>
+    <style>
+        body {
+            background: #0c0c0c;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 280px);
+            grid-template-rows: repeat(2, 280px);
+            gap: 10px;
+        }
+
+        .card {
+            background: #151515;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .card:hover {
+            background: #1a1a1a;
+            border-color: #333;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .icon {
+            font-size: 24px;
+            padding: 10px;
+            background: #222;
+            border-radius: 50%;
+        }
+
+        .tag {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #666;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        p {
+            color: #555;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+
+        .links {
+            gap: 10px;
+            display: flex;
+            margin-top: 20px;
+        }
+
+        a {
+            color: #fff;
+            font-size: 12px;
+            text-decoration: none;
+            border: 1px solid #333;
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
+
+        a:hover {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid">
+        <div class="card">
+            <div class="top">
+                <div class="icon">📱</div>
+                <div class="tag">Visitor</div>
+            </div>
+            <div>
+                <h2>CHI App</h2>
+                <p>Payments & Ticketing</p>
+                <div class="links"><a href="#">iOS</a><a href="#">Android</a></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="top">
+                <div class="icon">🎟️</div>
+                <div class="tag">Visitor</div>
+            </div>
+            <div>
+                <h2>CHI Tickets</h2>
+                <p>Event Access Manager</p>
+                <div class="links"><a href="#">Web</a></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="top">
+                <div class="icon">💻</div>
+                <div class="tag">Admin</div>
+            </div>
+            <div>
+                <h2>CHI POS</h2>
+                <p>Point of Sale System</p>
+                <div class="links"><a href="#">iOS</a><a href="#">Android</a></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="top">
+                <div class="icon">⚙️</div>
+                <div class="tag">Admin</div>
+            </div>
+            <div>
+                <h2>Backstage</h2>
+                <p>Analytics & Mgmt</p>
+                <div class="links"><a href="#">Web</a></div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

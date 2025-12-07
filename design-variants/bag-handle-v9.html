@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handle Concept 9 - Scarf Tie</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+
+            /* Pink Theme */
+            --pink-handle: #F8BBD0;
+            --pink-scarf: #F06292;
+
+            /* Blue Theme */
+            --blue-handle: #BBDEFB;
+            --blue-scarf: #42A5F5;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--cream);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+        }
+
+        .variant-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .handle-area {
+            height: 40px;
+            width: 140px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .handle {
+            width: 100%;
+            height: 100%;
+            border-radius: 20px 20px 0 0;
+            border: 10px solid;
+            border-bottom: none;
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            z-index: 0;
+        }
+
+        /* Scarf */
+        .scarf-knot {
+            position: absolute;
+            top: -5px;
+            left: 20px;
+            width: 20px;
+            height: 16px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+
+        .scarf-tail {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            width: 30px;
+            height: 60px;
+            border-radius: 0 0 10px 10px;
+            transform: rotate(10deg);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+            box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .child-name-v {
+            font-family: 'Caveat', cursive;
+            font-size: 20px;
+            color: white;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+        }
+
+        .bag-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 40px 24px 24px;
+            box-shadow: 0 12px 32px rgba(44, 62, 45, 0.08);
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-content {
+            opacity: 0.6;
+            filter: grayscale(0.2);
+        }
+
+        /* Themes */
+        .pink-theme .handle {
+            border-color: var(--pink-handle);
+        }
+
+        .pink-theme .scarf-knot,
+        .pink-theme .scarf-tail {
+            background: var(--pink-scarf);
+        }
+
+        .blue-theme .handle {
+            border-color: var(--blue-handle);
+        }
+
+        .blue-theme .scarf-knot,
+        .blue-theme .scarf-tail {
+            background: var(--blue-scarf);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container pink-theme">
+        <div class="variant-label">Girl Version</div>
+        <div class="handle-area">
+            <div class="handle"></div>
+            <div class="scarf-knot"></div>
+            <div class="scarf-tail">
+                <span class="child-name-v">June</span>
+            </div>
+        </div>
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container blue-theme">
+        <div class="variant-label">Boy Version</div>
+        <div class="handle-area">
+            <div class="handle"></div>
+            <div class="scarf-knot"></div>
+            <div class="scarf-tail">
+                <span class="child-name-v">Noah</span>
+            </div>
+        </div>
+        <div class="bag-card">
+            <div class="card-content">
+                <h3 style="margin:0; color:#2C3E2D;">Packing List</h3>
+                <p>3 items to pack</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

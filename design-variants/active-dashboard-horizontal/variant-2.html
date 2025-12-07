@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Variant 2 (Minimal Float)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Base styles same as v1 */
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            padding: 24px;
+            border-right: 1px solid var(--border);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        h1 {
+            font-family: 'DM Serif Display';
+            font-size: 42px;
+            margin: 0;
+        }
+
+        /* Layout Changes V2 */
+        /* Cleaner lines, Travel bag fits in more naturally, Soft shadows */
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            /* Center slightly larger */
+            gap: 24px;
+            align-items: center;
+            margin-bottom: 60px;
+        }
+
+        .home-card {
+            background: white;
+            border-radius: 20px;
+            /* Softer radius */
+            padding: 24px;
+            border: 1px solid transparent;
+            box-shadow: 0 10px 40px rgba(44, 62, 45, 0.06);
+            transition: all 0.2s;
+            height: 240px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .home-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 50px rgba(44, 62, 45, 0.1);
+        }
+
+        .active-ring {
+            border: 2px solid var(--forest);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-family: 'DM Serif Display';
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .stat-row {
+            display: flex;
+            gap: 16px;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat {
+            text-align: left;
+        }
+
+        .stat-val {
+            font-weight: 700;
+            font-size: 16px;
+            display: block;
+        }
+
+        .stat-lbl {
+            font-size: 11px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Travel Bag V2 - Lighter style */
+        .travel-card {
+            background: var(--forest);
+            border-radius: 20px;
+            padding: 30px;
+            color: white;
+            height: 260px;
+            /* Taller */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(44, 62, 45, 0.2);
+            position: relative;
+        }
+
+        .bag-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bag-title {
+            font-family: 'DM Serif Display';
+            font-size: 24px;
+            margin: 0 0 8px 0;
+        }
+
+        .bag-status {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 24px;
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--forest);
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        /* Stacked visual */
+        .stack-indicator {
+            position: absolute;
+            top: -6px;
+            right: 20px;
+            background: #EBE6DC;
+            height: 6px;
+            left: 20px;
+            border-radius: 6px 6px 0 0;
+        }
+
+        /* Bottom Widget V2 - Floating Card */
+        .bottom-widget {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+        }
+
+        .bw-left {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .bw-icon {
+            width: 40px;
+            height: 40px;
+            background: #E8EFE8;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bw-text h4 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+        }
+
+        .bw-text p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar"></div>
+
+    <div class="main-content">
+        <h1 style="margin-bottom: 10px;">Hi nata,</h1>
+        <p style="color:var(--text-sub); margin-bottom: 40px;">Here’s everything organized for june.</p>
+
+        <div class="cards-container">
+            <!-- Active Home -->
+            <div class="home-card active-ring">
+                <div class="card-header">
+                    <h3 class="card-title">Daddys home</h3>
+                    <span style="font-size:12px; font-weight:700; color:var(--forest);">ACTIVE</span>
+                </div>
+                <div style="font-size:32px;">🏠</div>
+                <div class="stat-row">
+                    <div class="stat">
+                        <span class="stat-val">1</span>
+                        <span class="stat-lbl">Item</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Travel Bag -->
+            <div class="travel-card">
+                <div class="bag-icon">🎒</div>
+                <h3 class="bag-title">Travel Bag</h3>
+                <div class="bag-status">No items to pack</div>
+                <a href="#" class="btn-white">Manage Bag</a>
+            </div>
+
+            <!-- Other Home (Stacked) -->
+            <div style="position:relative;">
+                <div class="stack-indicator"></div>
+                <div class="home-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Mommys home</h3>
+                    </div>
+                    <div style="font-size:32px; filter: grayscale(1); opacity:0.5;">🏠</div>
+
+                    <a href="#"
+                        style="margin-top:auto; text-align:center; font-weight:700; color:var(--forest); text-decoration:none; font-size:13px; border:1px solid var(--border); padding:8px; border-radius:8px;">Switch
+                        to this home</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-widget">
+            <div class="bw-left">
+                <div class="bw-icon">📞</div>
+                <div class="bw-text">
+                    <h4>Add important contacts</h4>
+                    <p>Step 2 of 4: School & Emergency numbers</p>
+                </div>
+            </div>
+            <a href="#" style="font-weight:700; color:var(--forest);">Add contacts →</a>
+        </div>
+    </div>
+</body>
+
+</html>

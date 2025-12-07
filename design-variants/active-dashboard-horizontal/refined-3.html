@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Dashboard - Refined 3 (Super Compact)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --cream: #F9F6F0;
+            --white: #FFFFFF;
+            --border: #EBE6DC;
+            --text-sub: #888899;
+            --bag-gradient: linear-gradient(135deg, #2A3F2D 0%, #1A281C 100%);
+            /* Deep rich gradient */
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+        }
+
+        /* Layout */
+        .zones-wrapper {
+            margin-top: 30px;
+            display: flex;
+            gap: 16px;
+            align-items: stretch;
+        }
+
+        .zone-block {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .zone-header {
+            background: white;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            padding: 8px 16px;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--text-sub);
+            text-align: center;
+        }
+
+        .zone-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 0 0 12px 12px;
+            /* Bottom rounded only */
+            padding: 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Active highlight */
+        .active-block .zone-header {
+            background: var(--forest);
+            color: white;
+            border-color: var(--forest);
+        }
+
+        .active-block .zone-card {
+            border-color: var(--forest);
+            border-width: 2px;
+        }
+
+        /* Typography */
+        .card-title {
+            font-family: 'DM Serif Display';
+            font-size: 20px;
+            margin: 0 0 4px 0;
+        }
+
+        .time-label {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-bottom: 20px;
+        }
+
+        /* Minimal Stats Row */
+        .min-stats {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 16px;
+            margin-top: auto;
+        }
+
+        .ms-item {
+            text-align: left;
+        }
+
+        .ms-lbl {
+            font-size: 9px;
+            color: var(--text-sub);
+            display: block;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .ms-val {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Travel Bag Special */
+        .special-bag {
+            background: var(--bag-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            /* Fully rounded */
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            margin-top: 0;
+            /* Override header attach */
+            height: 100%;
+        }
+
+        .middle-block {
+            margin-top: 29px;
+            /* Offset for missing header height roughly */
+        }
+
+        .middle-block .zone-header {
+            display: none;
+        }
+
+        /* Hide header for bag, just label inside maybe? Or distinct pill */
+
+        .bag-mid-label {
+            position: absolute;
+            top: -10px;
+            background: white;
+            color: var(--forest);
+            padding: 4px 12px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .bag-check-icon {
+            font-size: 24px;
+            margin: 16px 0;
+            background: rgba(255, 255, 255, 0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bag-btn-sm {
+            background: white;
+            color: var(--forest);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .switch-link {
+            text-align: center;
+            display: block;
+            margin-top: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--forest);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .bot-area {
+            margin-top: auto;
+            border-top: 1px solid #EBE6DC;
+            padding-top: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width:260px; border-right:1px solid #EBE6DC;"></div>
+
+    <div class="main-content">
+        <h1 style="font-family:'DM Serif Display'; font-size:40px;">Hi nata,</h1>
+
+        <div class="zones-wrapper">
+
+            <!-- Left Block -->
+            <div class="zone-block active-block">
+                <div class="zone-header">Where June Is</div>
+                <div class="zone-card">
+                    <h3 class="card-title">Daddys home</h3>
+                    <div class="time-label">Local time 17:34</div>
+
+                    <div class="min-stats">
+                        <div class="ms-item">
+                            <span class="ms-lbl">MAP</span>
+                            <span class="ms-val">View</span>
+                        </div>
+                        <div class="ms-item">
+                            <span class="ms-lbl">PEOPLE</span>
+                            <span class="ms-val">4</span>
+                        </div>
+                        <div class="ms-item">
+                            <span class="ms-lbl">ITEMS</span>
+                            <span class="ms-val">1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Block (Bag) -->
+            <div class="zone-block middle-block">
+                <div class="zone-card special-bag">
+                    <div class="bag-mid-label">IN TRANSIT</div>
+                    <h3 class="card-title" style="margin-top:12px;">june's Travel Bag</h3>
+
+                    <div class="bag-check-icon">✓</div>
+                    <div style="font-size:12px; opacity:0.9;">No items to pack</div>
+
+                    <a href="#" class="bag-btn-sm">Open bag &rarr;</a>
+                </div>
+            </div>
+
+            <!-- Right Block -->
+            <div class="zone-block">
+                <div class="zone-header">Other Homes</div>
+                <div class="zone-card">
+                    <h3 class="card-title">Mommys home</h3>
+                    <div class="time-label">Local time 17:34</div>
+
+                    <div class="min-stats">
+                        <div class="ms-item">
+                            <span class="ms-lbl">MAP</span>
+                            <span class="ms-val">View</span>
+                        </div>
+                        <div class="ms-item">
+                            <span class="ms-lbl">PEOPLE</span>
+                            <span class="ms-val">1</span>
+                        </div>
+                        <div class="ms-item">
+                            <span class="ms-lbl">ITEMS</span>
+                            <span class="ms-val">1</span>
+                        </div>
+                    </div>
+
+                    <a class="switch-link">Switch to this home</a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="bot-area">
+            <h4>Step 2: Add Contacts</h4>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .section {
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* The flow line */
+        .flow-line {
+            position: absolute;
+            top: -20px;
+            bottom: -20px;
+            left: 24px;
+            width: 2px;
+            background: #E0E0E0;
+            z-index: 0;
+        }
+
+        .flow-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 20px 20px 48px;
+            /* Left padding for line */
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Node on the line */
+        .node {
+            position: absolute;
+            left: 19px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: var(--forest);
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-weight: 700;
+            color: var(--forest);
+            font-size: 15px;
+        }
+
+        .status {
+            font-size: 11px;
+            color: #D76F4B;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .desc {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #F5F5F5;
+            color: var(--forest);
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="section">
+        <div class="flow-line"></div>
+
+        <div style="margin-bottom:16px; padding-left:48px;">
+            <h3 style="margin:0; font-size:16px; color:#2C3E2D; font-family:serif;">Request packing</h3>
+        </div>
+
+        <div class="flow-card">
+            <div class="node"></div>
+
+            <div class="header">
+                <span class="title">June's Bag</span>
+                <span class="status">Requested</span>
+            </div>
+
+            <p class="desc">1 item requested from Mommy's</p>
+
+            <a href="#" class="btn">Open bag →</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

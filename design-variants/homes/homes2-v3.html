@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept 3 - Forest Focus</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #1A3320;
+            --forest-light: #5C7A62;
+            --accent: #D4A373;
+            --white: #FFFFFF;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Karla', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .dashboard-container {
+            max-width: 420px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .flow-line {
+            position: absolute;
+            top: 40px;
+            bottom: 40px;
+            left: 50%;
+            width: 2px;
+            background: #D8D8D8;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+            margin-bottom: 40px;
+            border: 1px solid #EEE;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .home-identity {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .avatar-stack {
+            position: relative;
+            width: 52px;
+            height: 52px;
+        }
+
+        .av-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--white);
+            position: absolute;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .av-img.home {
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .av-img.child {
+            bottom: 0;
+            right: 0;
+            z-index: 2;
+            width: 30px;
+            height: 30px;
+        }
+
+        .home-info h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            margin: 0;
+            color: var(--forest);
+        }
+
+        .time-display {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--forest-light);
+            margin-top: 4px;
+        }
+
+        .active .time-display {
+            color: var(--forest);
+        }
+
+        .status-badge {
+            background: #F0F0F0;
+            color: #666;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge.active {
+            background: var(--forest);
+            color: var(--white);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 16px 0;
+            border-top: 1px solid #F5F5F5;
+            border-bottom: 1px solid #F5F5F5;
+        }
+
+        .stat-col {
+            text-align: center;
+        }
+
+        .stat-val {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stat-lbl {
+            font-size: 10px;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        .view-link {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--forest);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: block;
+        }
+
+        /* Bag Card */
+        .bag-card {
+            text-align: center;
+            padding: 32px 24px;
+            max-width: 280px;
+            margin: 0 auto 40px auto;
+            border-radius: 24px;
+            cursor: default;
+        }
+
+        .bag-card:hover {
+            transform: none;
+        }
+
+        .item-stack {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+            height: 50px;
+            align-items: center;
+        }
+
+        .stack-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 3px solid var(--white);
+            background: #F0F0F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-left: -16px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .stack-circle:first-child {
+            margin-left: 0;
+            z-index: 4;
+        }
+
+        .stack-circle:nth-child(2) {
+            z-index: 3;
+            background: #E0F2F1;
+        }
+
+        .stack-circle:nth-child(3) {
+            z-index: 2;
+            background: #FFF8E1;
+        }
+
+        .stack-circle:nth-child(4) {
+            z-index: 1;
+            background: var(--forest);
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .stack-circle:hover {
+            transform: scale(1.1) translateY(-2px);
+            z-index: 10;
+        }
+
+        .btn-primary {
+            background: var(--forest);
+            color: var(--white);
+            padding: 12px 0;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+            display: block;
+            width: 100%;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .section-header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .section-header span {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .invite-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            margin-top: 40px;
+            border: 1px dashed #CCC;
+        }
+
+        .invite-title {
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .invite-sub {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .btn-invite {
+            display: inline-block;
+            border: 1px solid var(--forest);
+            color: var(--forest);
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <div class="flow-line"></div>
+
+        <div class="section-header">
+            <h1>June's home right now</h1>
+            <span>Tap a home to view details or switch location.</span>
+        </div>
+
+        <!-- Active Home -->
+        <a href="#" class="card active">
+            <div class="card-top">
+                <div class="home-identity">
+                    <div class="avatar-stack">
+                        <img src="https://api.dicebear.com/7.x/initials/svg?seed=DH" class="av-img home" alt="Home">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=June" class="av-img child" alt="June">
+                    </div>
+                    <div class="home-info">
+                        <h2>Daddy's Home</h2>
+                        <div class="time-display">17:22 Local Time</div>
+                    </div>
+                </div>
+                <div class="status-badge active">Here</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-col"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                <div class="stat-col"><span class="stat-val">1</span><span class="stat-lbl">Person</span></div>
+                <div class="stat-col"><span class="stat-val">5</span><span class="stat-lbl">Items</span></div>
+                <div class="stat-col"><span class="stat-val">--</span><span class="stat-lbl">Mins</span></div>
+            </div>
+
+            <span class="view-link">View all items →</span>
+        </a>
+
+        <!-- Bag -->
+        <div class="card bag-card">
+            <div class="item-stack">
+                <div class="stack-circle">📱</div>
+                <div class="stack-circle"><img
+                        src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=64&h=64"
+                        style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Dog"></div>
+                <div class="stack-circle">🧸</div>
+                <div class="stack-circle">+2</div>
+            </div>
+
+            <h3 style="margin:0 0 4px 0; font-family:'DM Serif Display'; font-size:20px;">Bag is ready</h3>
+            <p style="margin:0 0 20px 0; font-size:13px; opacity:0.6;">5 items packed</p>
+            <a href="#" class="btn-primary">Open bag</a>
+        </div>
+
+        <!-- Other Home -->
+        <a href="#" class="card">
+            <div class="card-top">
+                <div class="home-identity">
+                    <div class="avatar-stack">
+                        <img src="https://api.dicebear.com/7.x/initials/svg?seed=MH" class="av-img home" alt="Home">
+                    </div>
+                    <div class="home-info">
+                        <h2>Mommy's Home</h2>
+                        <div class="time-display">17:22 Local Time</div>
+                    </div>
+                </div>
+                <div class="status-badge">Switch</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-col"><span class="stat-val">Map</span><span class="stat-lbl">View</span></div>
+                <div class="stat-col"><span class="stat-val">1</span><span class="stat-lbl">Person</span></div>
+                <div class="stat-col"><span class="stat-val">3</span><span class="stat-lbl">Items</span></div>
+                <div class="stat-col"><span class="stat-val"></span><span class="stat-lbl"></span></div>
+            </div>
+
+            <span class="view-link">View all items →</span>
+        </a>
+
+        <!-- Invite CTA -->
+        <div class="invite-card">
+            <div class="invite-title">Need to share with a co-parent?</div>
+            <div class="invite-sub">Invite others to help manage items and schedules.</div>
+            <a href="#" class="btn-invite">Invite a caregiver</a>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

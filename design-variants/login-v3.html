@@ -1,0 +1,214 @@
+<!-- Variant 3: Card on Cream - Large centered card with soft shadows -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | homes.kids</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --forest: #2C3E2D;
+            --teal: #4CA1AF;
+            --bg: #F5F2EB;
+            --card: #fff;
+            --border: #E8E5DE;
+            --text: #2C3E2D;
+            --muted: #7A8A7B;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 48px;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 8px 40px rgba(44, 62, 45, 0.08), 0 1px 3px rgba(44, 62, 45, 0.04);
+        }
+
+        .logo-wrap {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .logo-wrap svg {
+            width: 72px;
+            height: 60px;
+        }
+
+        .duotone-path {
+            stroke: url(#fg3);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: url(#fg3);
+            fill-opacity: 0.15;
+        }
+
+        .duotone-stroke-only {
+            stroke: url(#fg3);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .brand-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            text-align: center;
+            background: linear-gradient(135deg, var(--forest), var(--teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tagline {
+            text-align: center;
+            color: var(--muted);
+            font-size: 14px;
+            margin: 8px 0 20px;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 20px 0;
+        }
+
+        .bullets {
+            list-style: none;
+            background: #F9F7F3;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+        }
+
+        .bullets li {
+            font-size: 12px;
+            color: var(--muted);
+            padding: 6px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .bullets li::before {
+            content: '✓';
+            color: var(--teal);
+            font-weight: 600;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .field input:focus {
+            border-color: var(--teal);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--forest), var(--teal));
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .links a {
+            color: var(--forest);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .links a:hover {
+            color: var(--teal);
+        }
+
+        .links .sep {
+            color: var(--border);
+            margin: 0 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="logo-wrap">
+            <svg viewBox="0 0 120 100">
+                <defs>
+                    <linearGradient id="fg3" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#2C3E2D" />
+                        <stop offset="100%" stop-color="#4CA1AF" />
+                    </linearGradient>
+                </defs>
+                <path d="M15 45V75H45V45L30 30Z" class="duotone-path" style="opacity:0.6" />
+                <path d="M75 45V75H105V45L90 30Z" class="duotone-path" style="opacity:0.6" />
+                <path d="M35 85V50L60 25L85 50V85H35Z" class="duotone-path" />
+                <path d="M10 85H110" class="duotone-stroke-only" />
+            </svg>
+        </div>
+        <div class="brand-name">homes.kids</div>
+        <p class="tagline">Co-parenting central hub.</p>
+        <ul class="bullets">
+            <li>One shared place for everything your child needs between homes.</li>
+            <li>Plan what moves in the bag between homes.</li>
+            <li>Important contacts and home details, all in one hub.</li>
+        </ul>
+        <div class="field"><label>Email</label><input type="email" placeholder="you@example.com"></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+        <button class="btn">Log in</button>
+        <div class="links"><a href="#">Create an account</a><span class="sep">|</span><a href="#">Forgot password?</a>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,231 @@
+<!-- Variant 4: Floating Glass - Glassmorphism effect -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | homes.kids</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --forest: #2C3E2D;
+            --teal: #4CA1AF;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #E8F0E9 0%, #D4E5E8 50%, #F5F2EB 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(76, 161, 175, 0.15) 0%, transparent 70%);
+            top: -100px;
+            right: -100px;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(44, 62, 45, 0.1) 0%, transparent 70%);
+            bottom: -50px;
+            left: -50px;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .logo-wrap svg {
+            width: 80px;
+            height: 67px;
+            filter: drop-shadow(0 4px 8px rgba(44, 62, 45, 0.1));
+        }
+
+        .duotone-path {
+            stroke: url(#fg4);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: url(#fg4);
+            fill-opacity: 0.15;
+        }
+
+        .duotone-stroke-only {
+            stroke: url(#fg4);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .brand-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 32px;
+            background: linear-gradient(135deg, var(--forest), var(--teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 12px;
+        }
+
+        .tagline {
+            color: #5A6A5B;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(44, 62, 45, 0.08);
+        }
+
+        .bullets {
+            list-style: none;
+            margin-bottom: 24px;
+        }
+
+        .bullets li {
+            font-size: 13px;
+            color: #5A6A5B;
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .bullets li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 6px;
+            height: 6px;
+            background: linear-gradient(135deg, var(--forest), var(--teal));
+            border-radius: 50%;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid rgba(44, 62, 45, 0.15);
+            border-radius: 12px;
+            font-size: 15px;
+            background: rgba(255, 255, 255, 0.8);
+            outline: none;
+        }
+
+        .field input:focus {
+            border-color: var(--teal);
+            background: #fff;
+        }
+
+        .field input::placeholder {
+            color: #A0A9A0;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--forest), var(--teal));
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 4px 12px rgba(44, 62, 45, 0.2);
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .links a {
+            color: var(--forest);
+            text-decoration: none;
+        }
+
+        .links a:hover {
+            color: var(--teal);
+        }
+
+        .links span {
+            color: #B0B8B0;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="brand">
+            <div class="logo-wrap">
+                <svg viewBox="0 0 120 100">
+                    <defs>
+                        <linearGradient id="fg4" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#2C3E2D" />
+                            <stop offset="100%" stop-color="#4CA1AF" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M15 45V75H45V45L30 30Z" class="duotone-path" style="opacity:0.6" />
+                    <path d="M75 45V75H105V45L90 30Z" class="duotone-path" style="opacity:0.6" />
+                    <path d="M35 85V50L60 25L85 50V85H35Z" class="duotone-path" />
+                    <path d="M10 85H110" class="duotone-stroke-only" />
+                </svg>
+            </div>
+            <div class="brand-name">homes.kids</div>
+            <p class="tagline">Co-parenting central hub.</p>
+        </div>
+        <div class="card">
+            <ul class="bullets">
+                <li>One shared place for everything your child needs between homes.</li>
+                <li>Plan what moves in the bag between homes.</li>
+                <li>Important contacts and home details, all in one hub.</li>
+            </ul>
+            <div class="field"><input type="email" placeholder="Email"></div>
+            <div class="field"><input type="password" placeholder="Password"></div>
+            <button class="btn">Log in</button>
+            <div class="links"><a href="#">Create an account</a><span>·</span><a href="#">Forgot password?</a></div>
+        </div>
+    </div>
+</body>
+
+</html>

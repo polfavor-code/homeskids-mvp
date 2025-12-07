@@ -1,0 +1,190 @@
+<!-- Variant 5: Compact Stack - Ultra minimal stacked layout -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | homes.kids</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --forest: #2C3E2D;
+            --teal: #4CA1AF;
+            --bg: #FFFFFF;
+            --border: #E8E5DE;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 360px;
+            width: 100%;
+        }
+
+        .logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .logo-wrap svg {
+            width: 48px;
+            height: 40px;
+        }
+
+        .duotone-path {
+            stroke: url(#fg5);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: url(#fg5);
+            fill-opacity: 0.15;
+        }
+
+        .duotone-stroke-only {
+            stroke: url(#fg5);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .brand-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            color: var(--forest);
+        }
+
+        h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 36px;
+            color: var(--forest);
+            line-height: 1.2;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            color: #6B7A6B;
+            font-size: 15px;
+            margin-bottom: 32px;
+        }
+
+        .bullets {
+            list-style: none;
+            border-left: 2px solid var(--teal);
+            padding-left: 16px;
+            margin-bottom: 32px;
+        }
+
+        .bullets li {
+            font-size: 13px;
+            color: #6B7A6B;
+            padding: 6px 0;
+        }
+
+        .field {
+            margin-bottom: 12px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .field input:focus {
+            border-color: var(--forest);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--forest);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .btn:hover {
+            background: var(--teal);
+        }
+
+        .links {
+            margin-top: 24px;
+        }
+
+        .links a {
+            display: block;
+            color: var(--forest);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .links a:last-child {
+            border: none;
+        }
+
+        .links a:hover {
+            color: var(--teal);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo-wrap">
+            <svg viewBox="0 0 120 100">
+                <defs>
+                    <linearGradient id="fg5" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#2C3E2D" />
+                        <stop offset="100%" stop-color="#4CA1AF" />
+                    </linearGradient>
+                </defs>
+                <path d="M15 45V75H45V45L30 30Z" class="duotone-path" style="opacity:0.6" />
+                <path d="M75 45V75H105V45L90 30Z" class="duotone-path" style="opacity:0.6" />
+                <path d="M35 85V50L60 25L85 50V85H35Z" class="duotone-path" />
+                <path d="M10 85H110" class="duotone-stroke-only" />
+            </svg>
+            <div class="brand-name">homes.kids</div>
+        </div>
+        <h1>Welcome back</h1>
+        <p class="tagline">Co-parenting central hub.</p>
+        <ul class="bullets">
+            <li>One shared place for everything your child needs between homes.</li>
+            <li>Plan what moves in the bag between homes.</li>
+            <li>Important contacts and home details, all in one hub.</li>
+        </ul>
+        <div class="field"><input type="email" placeholder="Email"></div>
+        <div class="field"><input type="password" placeholder="Password"></div>
+        <button class="btn">Log in</button>
+        <div class="links"><a href="#">Create an account</a><a href="#">Forgot your password?</a></div>
+    </div>
+</body>
+
+</html>

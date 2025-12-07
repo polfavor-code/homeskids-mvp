@@ -1,15 +1,119 @@
+/* Organic/Forest Design System - Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 246, 247, 248;
-  --background-end-rgb: 246, 247, 248;
+  /* Organic DS Color Tokens */
+  --bg: #F9F6F0;
+  /* Cream/Off-white Background */
+  --card: #FFFFFF;
+  /* Pure White for Cards */
+  --dark: #2C3E2D;
+  /* Forest Green (Primary Text/Headers) */
+  --accent: #D76F4B;
+  /* Terracotta (Buttons/Alerts/Highlights) */
+  --soft-green: #E8EFE8;
+  /* Light Green for secondary backgrounds */
+  --border: #EBE6DC;
+  /* Soft Beige for borders and hard shadows */
+  --text-sub: #888899;
+  /* Secondary Text */
+
+  /* Gradients */
+  --gradient-ai: linear-gradient(90deg, #FF9A9E 0%, #FECFEF 99%);
+  /* Pink Gradient */
+  --gradient-forest: linear-gradient(135deg, #2C3E2D 0%, #4CA1AF 100%);
+  /* Forest to Teal */
+
+  /* Typography */
+  --font-head: 'DM Serif Display', serif;
+  --font-body: 'Karla', sans-serif;
+
+  /* Spacing & Radius */
+  --radius-card: 24px;
+  --radius-btn: 12px;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
-  font-family: 'Inter', sans-serif;
+  color: var(--dark);
+  background: var(--bg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Organic Card Base Styles */
+@layer components {
+  .card-organic {
+    @apply bg-white border border-border rounded-card;
+    /* Flat, darker shadow like dashboard.html reference */
+    box-shadow: 0 4px 0 #EBE6DC;
+  }
+
+  /* Homes cards - light border with subtle soft shadow */
+  .card-homes {
+    @apply bg-white rounded-card;
+    border: 1px solid #EBE6DC;
+    /* Very subtle soft shadow for minimal lift */
+    box-shadow: 0 2px 8px rgba(44, 62, 45, 0.04);
+  }
+
+  .card-tactile {
+    @apply card-organic;
+    /* Keep same flat shadow */
+    box-shadow: 0 4px 0 #EBE6DC;
+  }
+
+  /* Gradient Top Border Effect ("AI" accent) - exactly 6px high */
+  .gradient-border-top {
+    @apply relative;
+  }
+
+  .gradient-border-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradient-ai);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+
+  /* Button Styles */
+  .btn-primary {
+    @apply bg-forest text-white border-0 px-6 py-3 rounded-btn font-bold cursor-pointer;
+    font-family: var(--font-body);
+    font-size: 16px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    @apply opacity-90;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-forest border-2 border-border px-6 py-3 rounded-btn font-bold cursor-pointer;
+    font-family: var(--font-body);
+    font-size: 16px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-softGreen;
+  }
+
+  .btn-accent {
+    @apply bg-terracotta text-white border-0 px-6 py-3 rounded-btn font-bold cursor-pointer;
+    font-family: var(--font-body);
+    font-size: 16px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-accent:hover {
+    @apply opacity-90;
+  }
 }

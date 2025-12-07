@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CHI Ecosystem - Variant 4 (Typography)</title>
+    <style>
+        body {
+            background: #080808;
+            color: #fff;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 50px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1000px;
+        }
+
+        .card {
+            padding: 40px;
+            border-top: 1px solid #333;
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            border-top-color: #fff;
+        }
+
+        .category {
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        h2 {
+            font-size: 48px;
+            margin: 0 0 20px 0;
+            font-weight: 300;
+            letter-spacing: -1px;
+        }
+
+        p {
+            color: #888;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            font-size: 18px;
+        }
+
+        .actions a {
+            color: #fff;
+            text-decoration: none;
+            border-bottom: 1px solid #666;
+            padding-bottom: 5px;
+            margin-right: 20px;
+            font-size: 14px;
+        }
+
+        .actions a:hover {
+            border-bottom-color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid">
+        <div class="card">
+            <span class="category">Visitor</span>
+            <h2>CHI App</h2>
+            <p>Payments and ticketing. Receive tickets and make cashless payments.</p>
+            <div class="actions"><a href="#">Download iOS</a> <a href="#">Download Android</a></div>
+        </div>
+        <div class="card">
+            <span class="category">Visitor</span>
+            <h2>CHI Tickets</h2>
+            <p>Event ticketing. Purchase and manage your access.</p>
+            <div class="actions"><a href="#">Launch Web</a></div>
+        </div>
+        <div class="card">
+            <span class="category">Stakeholder</span>
+            <h2>CHI POS</h2>
+            <p>Point of sale. Tablet app for product sales.</p>
+            <div class="actions"><a href="#">Download App</a></div>
+        </div>
+        <div class="card">
+            <span class="category">Stakeholder</span>
+            <h2>CHI Backstage</h2>
+            <p>Event management. Dashboard for analytics.</p>
+            <div class="actions"><a href="#">Launch Web</a></div>
+        </div>
+    </div>
+</body>
+
+</html>

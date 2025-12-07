@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Bag - Concept 3</title>
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --bg: #F9F6F0;
+            --teal: #4CA1AF;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 460px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 24px;
+            padding-left: 8px;
+        }
+
+        h1 {
+            font-family: serif;
+            font-size: 24px;
+            color: var(--forest);
+            margin: 0;
+        }
+
+        p {
+            font-size: 14px;
+            color: #666;
+            margin: 4px 0 0;
+        }
+
+        /* Ticket Card */
+        .ticket-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ticket-top {
+            background: var(--forest);
+            color: white;
+            padding: 20px;
+            position: relative;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+
+        /* Perforations */
+        .ticket-top::after,
+        .ticket-top::before {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            width: 20px;
+            height: 20px;
+            background: var(--bg);
+            border-radius: 50%;
+        }
+
+        .ticket-top::after {
+            right: -10px;
+        }
+
+        .ticket-top::before {
+            left: -10px;
+        }
+
+        .route-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0.8;
+            margin-bottom: 12px;
+        }
+
+        .bag-name {
+            font-family: serif;
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .ticket-body {
+            padding: 24px 20px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .check-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 24px 0;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #F0F0F0;
+        }
+
+        .check-item:last-child {
+            border-bottom: none;
+        }
+
+        .check-circle {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #DDD;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .check-circle.done {
+            background: var(--teal);
+            border-color: var(--teal);
+        }
+
+        .item-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .item-meta {
+            font-size: 12px;
+            color: #888;
+            margin-left: auto;
+        }
+
+        .action-area {
+            background: #FAFAFA;
+            padding: 16px;
+            text-align: center;
+            border-top: 1px solid #EEE;
+        }
+
+        .action-link {
+            color: var(--forest);
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        /* Missing */
+        .missing-box {
+            margin-top: 20px;
+            border: 1px dashed #E53E3E;
+            background: #FFF5F5;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .missing-text strong {
+            display: block;
+            color: #C53030;
+            font-size: 14px;
+        }
+
+        .missing-text span {
+            font-size: 12px;
+            color: #9B2C2C;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Check June’s bag</h1>
+            <p>Pack June’s things for her next stay at Mommy’s.</p>
+        </div>
+
+        <div class="ticket-card">
+            <div class="ticket-top">
+                <div class="route-row">
+                    <span>Daddy's</span>
+                    <span>→</span>
+                    <span>Mommy's</span>
+                </div>
+                <h2 class="bag-name">June's Travel Bag</h2>
+            </div>
+
+            <div class="ticket-body">
+                <div class="section-label">Packing List (3/4)</div>
+                <ul class="check-list">
+                    <li class="check-item">
+                        <div class="check-circle done">✓</div>
+                        <span class="item-name">Flashlight</span>
+                        <span class="item-meta">Packed</span>
+                    </li>
+                    <li class="check-item">
+                        <div class="check-circle done">✓</div>
+                        <span class="item-name">iPad</span>
+                        <span class="item-meta">Packed</span>
+                    </li>
+                    <li class="check-item">
+                        <div class="check-circle done">✓</div>
+                        <span class="item-name">Medicine Case</span>
+                        <span class="item-meta">Packed</span>
+                    </li>
+                    <li class="check-item">
+                        <div class="check-circle"></div>
+                        <span class="item-name">School Folder</span>
+                        <span class="item-meta">To pack</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="action-area">
+                <a href="#" class="action-link">Open full checklist →</a>
+            </div>
+        </div>
+
+        <div class="missing-box">
+            <div style="font-size:20px;">👟</div>
+            <div class="missing-text">
+                <strong>Missing: Soccer Cleats</strong>
+                <span>Not found at Daddy's. Check car?</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
