@@ -77,6 +77,7 @@ interface AppStateContextType {
     hiddenHomes: HomeProfile[]; // Only hidden homes (for settings)
     currentJuneCaregiverId: string; // Legacy: will be deprecated
     currentHomeId: string; // NEW: current home where child is located
+    isChildAtUserHome: boolean; // True if child's current home is one of the logged-in user's homes
     onboardingCompleted: boolean;
     setChild: (child: ChildProfile) => void;
     setCaregivers: (caregivers: CaregiverProfile[]) => void;
@@ -502,6 +503,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const activeHomes = homes.filter(h => h.status === "active");
     const hiddenHomes = homes.filter(h => h.status === "hidden");
 
+    // Computed: Is the child currently at one of the logged-in user's homes?
+    // This is used to determine whether to show "Request to pack" actions
+    const currentUserCaregiver = caregivers.find(c => c.isCurrentUser);
+    const currentHome = homes.find(h => h.id === currentHomeId);
+    const isChildAtUserHome = !!(
+        currentHomeId &&
+        currentUserCaregiver &&
+        currentHome && (
+            // Check if user has access to the current home
+            currentUserCaregiver.accessibleHomeIds?.includes(currentHomeId) ||
+            // Or if user owns the current home
+            currentHome.ownerCaregiverId === currentUserCaregiver.id
+        )
+    );
+
     // Switch child's home and move packed items atomically
     const switchChildHomeAndMovePackedItems = async (targetHomeId: string): Promise<SwitchHomeResult> => {
         const oldHomeId = currentHomeId;
@@ -680,6 +696,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 hiddenHomes,
                 currentJuneCaregiverId, // Legacy
                 currentHomeId, // NEW
+                isChildAtUserHome, // True if child is at logged-in user's home
                 onboardingCompleted,
                 setChild,
                 setCaregivers,

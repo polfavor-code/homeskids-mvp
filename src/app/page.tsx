@@ -30,6 +30,7 @@ export default function Home() {
         homes,
         activeHomes, // Only active homes for dashboard display
         currentHomeId,
+        isChildAtUserHome, // True if child is at logged-in user's home
         switchChildHomeAndMovePackedItems,
         currentJuneCaregiverId, // Legacy fallback
         isLoaded: appStateLoaded
@@ -240,12 +241,15 @@ export default function Home() {
                     >
                         + New item
                     </Link>
-                    <Link
-                        href="/items/travel-bag"
-                        className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
-                    >
-                        Request to pack
-                    </Link>
+                    {/* Only show "Request to pack" when child is NOT at the logged-in user's home */}
+                    {!isChildAtUserHome && (
+                        <Link
+                            href="/items/travel-bag"
+                            className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
+                        >
+                            Request to pack
+                        </Link>
+                    )}
                     <Link
                         href="/settings/caregivers"
                         className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
