@@ -42,12 +42,16 @@ function ItemsPageContent() {
     const filteredItems = items.filter((item) => {
         if (filter === "All") return true;
         if (filter === "To be found") return item.isMissing;
-        // Filter by home ID (or fallback to caregiver match via home's owner)
-        if (item.locationHomeId === filter) return !item.isMissing;
-        // Also check if item's caregiver matches the home's owner (for legacy items)
+        if (item.isMissing) return false;
+
+        // If item has a locationHomeId, use that exclusively
+        if (item.locationHomeId) {
+            return item.locationHomeId === filter;
+        }
+        // Only use caregiver fallback if no locationHomeId is set (legacy items)
         const filterHome = homes.find((h) => h.id === filter);
         if (filterHome?.ownerCaregiverId && item.locationCaregiverId === filterHome.ownerCaregiverId) {
-            return !item.isMissing;
+            return true;
         }
         return false;
     });
@@ -56,7 +60,11 @@ function ItemsPageContent() {
     const getHomeItemCount = (homeId: string) => {
         return items.filter((item) => {
             if (item.isMissing) return false;
-            if (item.locationHomeId === homeId) return true;
+            // If item has a locationHomeId, use that exclusively
+            if (item.locationHomeId) {
+                return item.locationHomeId === homeId;
+            }
+            // Only use caregiver fallback if no locationHomeId is set
             const home = homes.find((h) => h.id === homeId);
             if (home?.ownerCaregiverId && item.locationCaregiverId === home.ownerCaregiverId) {
                 return true;

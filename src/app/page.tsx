@@ -244,7 +244,7 @@ export default function Home() {
                         href="/items/travel-bag"
                         className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
                     >
-                        Request packing
+                        Request to pack
                     </Link>
                     <Link
                         href="/settings/caregivers"

@@ -10,6 +10,8 @@ import { ItemsAddedAlertProvider } from "@/lib/ItemsAddedAlertContext";
 import { ItemsAddedToastContainer } from "@/components/ItemsAddedToast";
 import { HomeSwitchAlertProvider } from "@/lib/HomeSwitchAlertContext";
 import { HomeSwitchToastContainer } from "@/components/HomeSwitchToast";
+import { DocumentAddedAlertProvider } from "@/lib/DocumentAddedAlertContext";
+import { DocumentAddedToastContainer } from "@/components/DocumentAddedToast";
 import "../styles/globals.css";
 import Script from "next/script";
 
@@ -52,9 +54,12 @@ export default function RootLayout({
                                         <ContactsProvider>
                                             <HealthProvider>
                                                 <DocumentsProvider>
-                                                    {children}
-                                                    <ItemsAddedToastContainer />
-                                                    <HomeSwitchToastContainer />
+                                                    <DocumentAddedAlertProvider>
+                                                        {children}
+                                                        <ItemsAddedToastContainer />
+                                                        <HomeSwitchToastContainer />
+                                                        <DocumentAddedToastContainer />
+                                                    </DocumentAddedAlertProvider>
                                                 </DocumentsProvider>
                                             </HealthProvider>
                                         </ContactsProvider>
