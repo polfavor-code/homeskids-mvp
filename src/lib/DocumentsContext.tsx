@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/AuthContext";
 
 // Types
 export interface Document {
@@ -36,6 +37,7 @@ interface DocumentsContextType {
 const DocumentsContext = createContext<DocumentsContextType | undefined>(undefined);
 
 export function DocumentsProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [familyId, setFamilyId] = useState<string | null>(null);
@@ -180,6 +182,7 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
                     expiry_date: document.expiryDate,
                     is_pinned: document.isPinned,
                     tags: document.tags,
+                    created_by: user?.id || null,
                 })
                 .select()
                 .single();

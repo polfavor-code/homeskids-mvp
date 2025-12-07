@@ -60,13 +60,18 @@ export default function HomesHorizontalSection({
     const unpackedItems = itemsToPack.filter((item) => !item.isPacked);
     const totalRequested = itemsToPack.length;
 
+    // Get the caregiver at the active home for the status text
+    const activeHomeOwner = activeHome ? getOwnerCaregiver(activeHome) : undefined;
+    const packerName = activeHomeOwner?.label || activeHomeOwner?.name || "someone";
+
     let statusText: string;
     if (totalRequested === 0) {
         statusText = "No items to pack";
     } else if (unpackedItems.length === 0) {
         statusText = "Bag is ready!";
     } else {
-        statusText = `${unpackedItems.length} more item${unpackedItems.length !== 1 ? "s" : ""} to pack`;
+        const itemWord = unpackedItems.length === 1 ? "item" : "items";
+        statusText = `${unpackedItems.length} ${itemWord} for ${packerName} to pack`;
     }
 
     const previewItems = [...unpackedItems, ...packedItems].slice(0, 3);
@@ -725,17 +730,20 @@ export default function HomesHorizontalSection({
                         position: relative;
                     }
 
-                    /* Vertical connector line for mobile */
+                    /* Vertical connector line for mobile - starts/ends at card centers */
                     .homes-row::before {
                         content: '';
                         position: absolute;
-                        top: 0;
-                        bottom: 0;
+                        top: 50%;
+                        bottom: 50%;
                         left: 50%;
                         width: 2px;
                         background: #E0DCD5;
                         transform: translateX(-50%);
                         z-index: 0;
+                        /* Adjust to connect card centers, not extend beyond */
+                        top: calc(10px + 120px); /* padding + approx half of first card */
+                        bottom: calc(10px + 120px); /* padding + approx half of last card */
                     }
 
                     .home-column {
