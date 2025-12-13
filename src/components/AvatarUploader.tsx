@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { supabase } from "@/lib/supabase";
+import { processImageForUpload } from "@/lib/imageUtils";
 
 interface AvatarUploaderProps {
     userId: string;
@@ -79,26 +80,50 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
             }
 
             const file = event.target.files[0];
-            const fileExt = file.name.split(".").pop();
-            // Use family-folder structure: {family_id}/{user_id}-{timestamp}.{ext}
-            const fileName = `${familyId}/${userId}-${Date.now()}.${fileExt}`;
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
 
-            // Upload to Supabase storage with family-folder structure
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            // Process image: create original and display versions
+            const processed = await processImageForUpload(file);
+
+            const originalPath = `${familyId}/${userId}-${timestamp}-${random}_original.${file.name.split(".").pop()}`;
+            const displayPath = `${familyId}/${userId}-${timestamp}-${random}_display.jpg`;
+
+            // Upload original (full resolution)
+            const { error: originalError } = await supabase.storage
                 .from("avatars")
-                .upload(fileName, file, {
-                    cacheControl: "3600",
+                .upload(originalPath, processed.original, {
+                    cacheControl: "31536000", // 1 year cache
                     upsert: true,
                 });
 
-            if (uploadError) {
-                throw uploadError;
+            if (originalError) {
+                throw originalError;
             }
 
-            // Update profile with new avatar path (includes family folder)
+            let finalPath = originalPath;
+
+            // Upload display version (max 1024px) - only if resize was needed
+            if (processed.needsResize) {
+                const { error: displayError } = await supabase.storage
+                    .from("avatars")
+                    .upload(displayPath, processed.display, {
+                        cacheControl: "3600",
+                        upsert: true,
+                    });
+
+                if (displayError) {
+                    console.error("Display upload error:", displayError);
+                    // Continue anyway - we have the original
+                } else {
+                    finalPath = displayPath;
+                }
+            }
+
+            // Update profile with path for UI usage
             const { error: updateError } = await supabase
                 .from("profiles")
-                .update({ avatar_url: fileName })
+                .update({ avatar_url: finalPath })
                 .eq("id", userId);
 
             if (updateError) {
@@ -106,7 +131,7 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
             }
 
             // Load the new avatar
-            await loadAvatar(fileName);
+            await loadAvatar(finalPath);
 
             if (onUploadSuccess) {
                 onUploadSuccess();

@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
+import { processImageForUpload } from "@/lib/imageUtils";
 
 export default function ChildSetupPage() {
     useEnsureOnboarding();
@@ -70,23 +71,48 @@ export default function ChildSetupPage() {
             setUploading(true);
 
             const file = event.target.files[0];
-            const fileExt = file.name.split(".").pop();
-            const fileName = `child-${child.id}-${Date.now()}.${fileExt}`;
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
 
-            // Upload to Supabase storage
-            const { error: uploadError } = await supabase.storage
+            // Process image: create original and display versions
+            const processed = await processImageForUpload(file);
+
+            const originalPath = `child-${child.id}-${timestamp}-${random}_original.${file.name.split(".").pop()}`;
+            const displayPath = `child-${child.id}-${timestamp}-${random}_display.jpg`;
+
+            // Upload original (full resolution)
+            const { error: originalError } = await supabase.storage
                 .from("avatars")
-                .upload(fileName, file, {
-                    cacheControl: "3600",
+                .upload(originalPath, processed.original, {
+                    cacheControl: "31536000", // 1 year cache
                     upsert: true,
                 });
 
-            if (uploadError) throw uploadError;
+            if (originalError) throw originalError;
 
-            // Update child with new avatar path
+            let finalPath = originalPath;
+
+            // Upload display version (max 1024px) - only if resize was needed
+            if (processed.needsResize) {
+                const { error: displayError } = await supabase.storage
+                    .from("avatars")
+                    .upload(displayPath, processed.display, {
+                        cacheControl: "3600",
+                        upsert: true,
+                    });
+
+                if (displayError) {
+                    console.error("Display upload error:", displayError);
+                    // Continue anyway - we have the original
+                } else {
+                    finalPath = displayPath;
+                }
+            }
+
+            // Update child with path for UI usage
             const { error: updateError } = await supabase
                 .from("children")
-                .update({ avatar_url: fileName })
+                .update({ avatar_url: finalPath })
                 .eq("id", child.id);
 
             if (updateError) throw updateError;
@@ -94,7 +120,7 @@ export default function ChildSetupPage() {
             // Load the new avatar URL
             const { data: urlData } = await supabase.storage
                 .from("avatars")
-                .createSignedUrl(fileName, 3600);
+                .createSignedUrl(finalPath, 3600);
 
             if (urlData) {
                 setAvatarUrl(urlData.signedUrl);

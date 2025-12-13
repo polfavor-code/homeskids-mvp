@@ -1,70 +1,86 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import { ChevronDownIcon, ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 
 function ItemsPageContent() {
     useEnsureOnboarding();
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
     const { items } = useItems();
-    const { child, caregivers, homes, activeHomes } = useAppState();
-    const searchParams = useSearchParams();
-    const [filter, setFilter] = useState<string>("All");
+    const { child, caregivers, homes } = useAppState();
 
-    // Handle URL query parameter for filter
-    useEffect(() => {
-        const filterParam = searchParams.get("filter");
-        if (filterParam) {
-            setFilter(filterParam);
+    // Home filter state from URL
+    const filterParam = searchParams.get("filter");
+    const [homeFilter, setHomeFilter] = useState<string>(filterParam || "all");
+
+    // Dropdown open state
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Update URL when filter changes
+    const handleFilterChange = (filter: string) => {
+        setHomeFilter(filter);
+        setIsDropdownOpen(false);
+        if (filter !== "all") {
+            router.push(`/items?filter=${filter}`);
+        } else {
+            router.push("/items");
         }
-    }, [searchParams]);
+    };
 
     // Helper to get location label - prefers home, falls back to caregiver
     const getLocationLabel = (item: { locationHomeId: string | null; locationCaregiverId: string | null; isMissing: boolean }) => {
         if (item.isMissing) return "To be found";
-        // Prefer home-based location
         if (item.locationHomeId) {
             const home = homes.find((h) => h.id === item.locationHomeId);
             if (home) return home.name;
         }
-        // Fallback to caregiver
         const caregiver = caregivers.find((c) => c.id === item.locationCaregiverId);
         return caregiver ? `${caregiver.label}'s Home` : "Unknown Location";
     };
 
-    // Filter items - now supports filtering by home ID
-    const filteredItems = items.filter((item) => {
-        if (filter === "All") return true;
-        if (filter === "To be found") return item.isMissing;
-        if (item.isMissing) return false;
+    // Filter items by home
+    const getFilteredItems = () => {
+        let filtered = items;
 
-        // If item has a locationHomeId, use that exclusively
-        if (item.locationHomeId) {
-            return item.locationHomeId === filter;
+        if (homeFilter !== "all") {
+            filtered = filtered.filter((item) => {
+                if (item.isMissing) return false;
+                if (item.locationHomeId) {
+                    return item.locationHomeId === homeFilter;
+                }
+                const filterHome = homes.find((h) => h.id === homeFilter);
+                if (filterHome?.ownerCaregiverId && item.locationCaregiverId === filterHome.ownerCaregiverId) {
+                    return true;
+                }
+                return false;
+            });
         }
-        // Only use caregiver fallback if no locationHomeId is set (legacy items)
-        const filterHome = homes.find((h) => h.id === filter);
-        if (filterHome?.ownerCaregiverId && item.locationCaregiverId === filterHome.ownerCaregiverId) {
-            return true;
-        }
-        return false;
-    });
 
-    // Calculate counts for each filter
+        return filtered;
+    };
+
+    const filteredItems = getFilteredItems();
+
+    // Calculate counts
+    const missingCount = items.filter((item) => item.isMissing).length;
+    const totalCount = items.length;
+
+    // Get home item count
     const getHomeItemCount = (homeId: string) => {
         return items.filter((item) => {
             if (item.isMissing) return false;
-            // If item has a locationHomeId, use that exclusively
             if (item.locationHomeId) {
                 return item.locationHomeId === homeId;
             }
-            // Only use caregiver fallback if no locationHomeId is set
             const home = homes.find((h) => h.id === homeId);
             if (home?.ownerCaregiverId && item.locationCaregiverId === home.ownerCaregiverId) {
                 return true;
@@ -72,70 +88,175 @@ function ItemsPageContent() {
             return false;
         }).length;
     };
-    const missingCount = items.filter((item) => item.isMissing).length;
 
-    // Determine which homes to show in filter pills:
-    // - Active homes always show
-    // - Hidden homes only show if they have items
+    // Determine which homes to show in filter
     const homesToShowInFilter = homes.filter((home) => {
-        // Active homes always show
         if (home.status === "active") return true;
-        // Hidden homes only show if they have items
         return getHomeItemCount(home.id) > 0;
     });
+
+    // Get current filter label
+    const getCurrentFilterLabel = () => {
+        if (homeFilter === "all") return "All homes";
+        const home = homes.find((h) => h.id === homeFilter);
+        return home?.name || "All homes";
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest(".home-filter-dropdown")) {
+                setIsDropdownOpen(false);
+            }
+        };
+        if (isDropdownOpen) {
+            document.addEventListener("click", handleClickOutside);
+        }
+        return () => document.removeEventListener("click", handleClickOutside);
+    }, [isDropdownOpen]);
 
     return (
         <AppShell>
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900">{child?.name || "Child"}&apos;s Things</h1>
-                    <p className="text-sm text-gray-500">All items across every home.</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                        Showing {filteredItems.length} items
-                    </p>
+                    <h1 className="font-dmSerif text-2xl text-forest mt-2">{child?.name || "Child"}&apos;s Things</h1>
+                    <p className="text-sm text-textSub mt-1">All items across every home.</p>
                 </div>
                 <Link
                     href="/items/new"
-                    className="bg-forest text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-forest/90 transition-colors"
+                    className="bg-forest text-white px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest/90 transition-colors border border-forest"
                 >
                     + New item
                 </Link>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex gap-2 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide mb-2">
-                <button
-                    onClick={() => setFilter("All")}
-                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === "All"
-                        ? "bg-primary text-white"
-                        : "bg-white border border-gray-200 text-gray-600"
-                        }`}
+            {/* Top Tabs - Matching Dashboard Button Style */}
+            <div className="flex flex-wrap gap-2 mb-4">
+                <Link
+                    href="/items"
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-forest text-white border border-forest"
                 >
-                    All ({items.length})
-                </button>
-                {homesToShowInFilter.map((home) => (
-                    <button
-                        key={home.id}
-                        onClick={() => setFilter(home.id)}
-                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === home.id
-                            ? "bg-primary text-white"
-                            : "bg-white border border-gray-200 text-gray-600"
-                            }`}
-                    >
-                        {home.name} ({getHomeItemCount(home.id)})
-                    </button>
-                ))}
-                <button
-                    onClick={() => setFilter("To be found")}
-                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === "To be found"
-                        ? "bg-primary text-white"
-                        : "bg-white border border-gray-200 text-gray-600"
-                        }`}
+                    <ItemsIcon size={16} />
+                    All items ({totalCount})
+                </Link>
+                <Link
+                    href="/items/travel-bag"
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
                 >
+                    <TravelBagIcon size={16} />
+                    Travel bag
+                </Link>
+                <Link
+                    href="/items/to-be-found"
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
+                >
+                    <SearchIcon size={16} />
                     To be found ({missingCount})
-                </button>
+                </Link>
             </div>
+
+            {/* Home Filter Dropdown - Chip Style */}
+            <div className="mb-4 home-filter-dropdown relative">
+                <button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="inline-flex items-center gap-2 pl-4 pr-3 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium text-forest hover:border-forest transition-colors"
+                >
+                    <span>{getCurrentFilterLabel()}</span>
+                    <span className="flex items-center justify-center min-w-[24px] h-6 px-1.5 bg-softGreen text-forest text-xs font-bold rounded-full">
+                        {homeFilter === "all" ? totalCount : getHomeItemCount(homeFilter)}
+                    </span>
+                    <ChevronDownIcon size={14} className={`text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {/* Desktop Dropdown */}
+                {isDropdownOpen && (
+                    <div className="hidden sm:block absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[180px] py-1">
+                        <button
+                            onClick={() => handleFilterChange("all")}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                homeFilter === "all" ? "text-forest font-semibold bg-softGreen/30" : "text-gray-700"
+                            }`}
+                        >
+                            All homes ({totalCount})
+                        </button>
+                        {homesToShowInFilter.map((home) => (
+                            <button
+                                key={home.id}
+                                onClick={() => handleFilterChange(home.id)}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                    homeFilter === home.id ? "text-forest font-semibold bg-softGreen/30" : "text-gray-700"
+                                }`}
+                            >
+                                {home.name} ({getHomeItemCount(home.id)})
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile Bottom Sheet */}
+            {isDropdownOpen && (
+                <div className="sm:hidden fixed inset-0 z-50">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/30"
+                        onClick={() => setIsDropdownOpen(false)}
+                    />
+
+                    {/* Sheet - positioned above mobile nav */}
+                    <div className="absolute bottom-[90px] left-0 right-0 bg-white rounded-3xl shadow-2xl animate-slide-up max-h-[50vh] overflow-y-auto mx-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                            <h2 className="text-lg font-dmSerif text-forest">Filter by home</h2>
+                            <button
+                                onClick={() => setIsDropdownOpen(false)}
+                                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 text-forest"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Options */}
+                        <div className="px-4 py-4 space-y-2">
+                            <button
+                                onClick={() => handleFilterChange("all")}
+                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
+                                    homeFilter === "all"
+                                        ? "bg-softGreen text-forest font-semibold"
+                                        : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                            >
+                                <span>All homes</span>
+                                <span className="text-sm text-gray-500">{totalCount} items</span>
+                            </button>
+                            {homesToShowInFilter.map((home) => (
+                                <button
+                                    key={home.id}
+                                    onClick={() => handleFilterChange(home.id)}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
+                                        homeFilter === home.id
+                                            ? "bg-softGreen text-forest font-semibold"
+                                            : "text-gray-700 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    <span>{home.name}</span>
+                                    <span className="text-sm text-gray-500">{getHomeItemCount(home.id)} items</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Item count */}
+            <p className="text-xs text-gray-400 mb-2">
+                Showing {filteredItems.length} items
+            </p>
 
             {/* Item List */}
             <div className="space-y-2">
@@ -149,29 +270,24 @@ function ItemsPageContent() {
                             className="block bg-white rounded-xl p-3 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform"
                         >
                             <div className="flex items-center justify-between gap-3">
-                                {/* Left: Thumbnail - Use ItemPhoto for real images */}
                                 <ItemPhoto
                                     photoPath={item.photoUrl}
                                     itemName={item.name}
                                     className="w-12 h-12 flex-shrink-0"
                                 />
 
-                                {/* Middle: Info */}
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-medium text-gray-900 truncate">
                                         {item.name}
                                     </h3>
                                     <p className="text-xs text-gray-500 truncate">
                                         {item.category}
-                                        {/* Show location label conditionally based on filter */}
-                                        {filter === "All" && ` · ${locationLabel}`}
+                                        {homeFilter === "all" && ` · ${locationLabel}`}
                                     </p>
                                 </div>
 
-                                {/* Right: Status Badges */}
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                    {/* Show yellow pill only if filter is "All" */}
-                                    {item.isMissing && filter === "All" ? (
+                                    {item.isMissing ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                             To be found
                                         </span>
@@ -201,14 +317,28 @@ function ItemsPageContent() {
                     </div>
                 )}
             </div>
+
+            <style jsx>{`
+                @keyframes slide-up {
+                    from {
+                        transform: translateY(100%);
+                    }
+                    to {
+                        transform: translateY(0);
+                    }
+                }
+                .animate-slide-up {
+                    animation: slide-up 0.3s ease-out;
+                }
+            `}</style>
         </AppShell>
     );
 }
 
 export default function ItemsPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <React.Suspense fallback={<div>Loading...</div>}>
             <ItemsPageContent />
-        </Suspense>
+        </React.Suspense>
     );
 }

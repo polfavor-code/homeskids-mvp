@@ -17,16 +17,16 @@ export default function TravelBagTabs({ activeTab, onTabChange }: TravelBagTabsP
     ];
 
     return (
-        <div className="flex gap-2 border-b border-border/30 pb-3 mb-4">
+        <div className="flex gap-1.5">
             {tabs.map((tab) => (
                 <button
                     key={tab.id}
                     onClick={() => onTabChange(tab.id)}
                     className={`
-                        px-4 py-2 rounded-full text-sm font-medium transition-all
+                        px-3 py-1.5 rounded-full text-xs font-medium transition-all
                         ${activeTab === tab.id
                             ? "bg-forest text-white"
-                            : "bg-cream/70 text-forest/70 hover:bg-cream hover:text-forest"
+                            : "bg-transparent text-gray-400 hover:text-gray-600"
                         }
                     `}
                 >

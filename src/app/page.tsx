@@ -208,8 +208,8 @@ export default function Home() {
 
     return (
         <AppShell>
-            {/* Dashboard Container - Width defined by 3 cards */}
-            <div className="dashboard-container">
+            {/* Dashboard Content */}
+            <div>
                 {/* Header Section - V6 Style */}
                 <div className="grid grid-cols-[1fr_auto] gap-5 mb-3 items-start mt-3">
                     <div className="greeting-col">
@@ -301,31 +301,6 @@ export default function Home() {
 
             {/* Toast notifications */}
             <ToastContainer toasts={toasts} onDismiss={removeToast} />
-
-            <style jsx>{`
-                .dashboard-container {
-                    width: 100%;
-                    max-width: 1084px;
-                    margin: 0 auto;
-                    display: flex;
-                    flex-direction: column;
-                    min-height: calc(100vh - 120px);
-                }
-
-                @media (max-width: 1150px) {
-                    .dashboard-container {
-                        max-width: 100%;
-                        padding: 0 24px;
-                    }
-                }
-
-                @media (max-width: 1100px) {
-                    .dashboard-container {
-                        max-width: 400px;
-                        padding: 0;
-                    }
-                }
-            `}</style>
         </AppShell>
     );
 }

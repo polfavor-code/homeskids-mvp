@@ -172,7 +172,7 @@ export default function DocumentsPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="text-2xl font-dmSerif text-forest">All Documents</h1>
+                    <h1 className="font-dmSerif text-2xl text-forest mt-2">All Documents</h1>
                     <p className="text-sm text-textSub mt-1">
                         A shared place for everything important for {childName}.
                     </p>

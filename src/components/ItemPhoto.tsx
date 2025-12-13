@@ -7,9 +7,56 @@ interface ItemPhotoProps {
     photoPath: string | undefined;
     itemName: string;
     className?: string;
+    useOriginal?: boolean; // If true, load original instead of display version
 }
 
-export default function ItemPhoto({ photoPath, itemName, className = "" }: ItemPhotoProps) {
+/**
+ * Get possible original paths from a display path.
+ * Display: {family}/{timestamp}-{random}_display.jpg
+ * Original: {family}/{timestamp}-{random}_original.{ext}
+ * Returns array of possible paths to try (different extensions)
+ */
+function getPossibleOriginalPaths(displayPath: string): string[] {
+    if (displayPath.includes('_original')) {
+        return [displayPath]; // Already original
+    }
+    if (displayPath.includes('_display')) {
+        const basePath = displayPath.replace('_display.jpg', '_original');
+        // Try common image extensions
+        return [
+            `${basePath}.jpg`,
+            `${basePath}.jpeg`,
+            `${basePath}.JPG`,
+            `${basePath}.JPEG`,
+            `${basePath}.png`,
+            `${basePath}.PNG`,
+            `${basePath}.heic`,
+            `${basePath}.HEIC`,
+        ];
+    }
+    // Legacy path without suffix - return as is
+    return [displayPath];
+}
+
+/**
+ * Try to get a signed URL for a path. Returns null if not found.
+ */
+async function tryGetSignedUrl(path: string): Promise<string | null> {
+    try {
+        const { data, error } = await supabase.storage
+            .from("item-photos")
+            .createSignedUrl(path, 3600);
+
+        if (error || !data) {
+            return null;
+        }
+        return data.signedUrl;
+    } catch {
+        return null;
+    }
+}
+
+export default function ItemPhoto({ photoPath, itemName, className = "", useOriginal = false }: ItemPhotoProps) {
     const [photoUrl, setPhotoUrl] = useState<string>("");
     const [loading, setLoading] = useState(true);
 
@@ -19,19 +66,36 @@ export default function ItemPhoto({ photoPath, itemName, className = "" }: ItemP
             return;
         }
 
-        const getSignedUrl = async () => {
+        const loadPhoto = async () => {
             try {
-                const { data, error } = await supabase.storage
-                    .from("item-photos")
-                    .createSignedUrl(photoPath, 3600); // 1 hour expiry
+                if (useOriginal) {
+                    // Try to find the original file by testing different extensions
+                    const possiblePaths = getPossibleOriginalPaths(photoPath);
+                    console.log("[ItemPhoto] Looking for original, trying paths:", possiblePaths);
 
-                if (error) {
-                    console.error("Error getting signed URL:", error);
-                    setLoading(false);
-                    return;
+                    for (const path of possiblePaths) {
+                        const url = await tryGetSignedUrl(path);
+                        if (url) {
+                            console.log("[ItemPhoto] Found original at:", path);
+                            setPhotoUrl(url);
+                            setLoading(false);
+                            return;
+                        }
+                    }
+
+                    // No original found, fall back to display path
+                    console.log("[ItemPhoto] No original found, falling back to display:", photoPath);
+                    const fallbackUrl = await tryGetSignedUrl(photoPath);
+                    if (fallbackUrl) {
+                        setPhotoUrl(fallbackUrl);
+                    }
+                } else {
+                    // Just load the display path directly
+                    const url = await tryGetSignedUrl(photoPath);
+                    if (url) {
+                        setPhotoUrl(url);
+                    }
                 }
-
-                setPhotoUrl(data.signedUrl);
             } catch (err) {
                 console.error("Failed to load photo:", err);
             } finally {
@@ -39,8 +103,8 @@ export default function ItemPhoto({ photoPath, itemName, className = "" }: ItemP
             }
         };
 
-        getSignedUrl();
-    }, [photoPath]);
+        loadPhoto();
+    }, [photoPath, useOriginal]);
 
     if (!photoPath || !photoUrl) {
         // Show placeholder

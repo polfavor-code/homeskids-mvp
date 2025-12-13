@@ -10,6 +10,7 @@ import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import Avatar from "@/components/Avatar";
 import ItemPhoto from "@/components/ItemPhoto";
 import { supabase } from "@/lib/supabase";
+import { processImageForUpload, generateImagePaths } from "@/lib/imageUtils";
 
 const CATEGORIES = [
     "Clothing",
@@ -130,17 +131,44 @@ export default function ItemDetailPage({
                 throw new Error("No family found. Please complete onboarding.");
             }
 
-            const fileExt = file.name.split(".").pop();
-            // Use family-folder structure: {family_id}/{item_id}-{timestamp}.{ext}
-            const fileName = `${familyMember.family_id}/${item.id}-${Date.now()}.${fileExt}`;
+            // Process image: create original and display versions
+            const processed = await processImageForUpload(file);
+            const paths = generateImagePaths(familyMember.family_id, file.name);
 
-            const { error: uploadError } = await supabase.storage
+            console.log("[Image Upload] Original size:", processed.originalWidth, "x", processed.originalHeight);
+            console.log("[Image Upload] Needs resize:", processed.needsResize);
+
+            // Upload original (full resolution)
+            const { error: originalError } = await supabase.storage
                 .from("item-photos")
-                .upload(fileName, file);
+                .upload(paths.originalPath, processed.original, {
+                    cacheControl: "31536000", // 1 year cache for originals
+                    upsert: false,
+                });
 
-            if (uploadError) throw uploadError;
+            if (originalError) throw originalError;
 
-            await updateItemPhoto(item.id, fileName);
+            let finalPhotoPath = paths.originalPath;
+
+            // Upload display version (max 1024px) - only if different from original
+            if (processed.needsResize) {
+                const { error: displayError } = await supabase.storage
+                    .from("item-photos")
+                    .upload(paths.displayPath, processed.display, {
+                        cacheControl: "3600", // 1 hour cache for display
+                        upsert: false,
+                    });
+
+                if (displayError) {
+                    console.error("Display upload error:", displayError);
+                    // Continue anyway - we have the original
+                } else {
+                    finalPhotoPath = paths.displayPath;
+                }
+            }
+
+            // Store the path for UI usage
+            await updateItemPhoto(item.id, finalPhotoPath);
         } catch (error) {
             console.error("Error uploading photo:", error);
             alert("Failed to upload photo");
@@ -278,6 +306,7 @@ export default function ItemDetailPage({
                             photoPath={item.photoUrl}
                             itemName={item.name}
                             className="w-full h-full object-cover"
+                            useOriginal={true}
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-8xl font-bold text-gray-300">
