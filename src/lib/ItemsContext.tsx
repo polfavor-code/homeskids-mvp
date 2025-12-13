@@ -110,6 +110,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                         photoUrl: item.photo_url,
                         notes: item.notes,
                         requestedBy: item.requested_by || null,
+                        requestedAt: item.requested_at || null,
                         packedBy: item.packed_by || null,
                         createdBy: item.created_by || null,
                         createdAt: item.created_at || null,

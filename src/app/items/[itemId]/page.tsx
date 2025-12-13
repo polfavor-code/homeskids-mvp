@@ -740,25 +740,55 @@ export default function ItemDetailPage({
                         </div>
                     ))}
 
-                    {/* Requested for next visit - only show if requested */}
-                    {item.isRequestedForNextVisit && (
-                        <div className="flex gap-3">
-                            <div className="flex flex-col items-center">
-                                <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
-                                <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                    {/* Added to packing list - only show if requested */}
+                    {item.isRequestedForNextVisit && item.requestedBy && (() => {
+                        const currentUserCg = caregivers.find(c => c.isCurrentUser);
+                        const requester = caregivers.find(c => c.id === item.requestedBy);
+                        const requesterName = requester?.label || requester?.name;
+
+                        // Format the requested timestamp
+                        const requestedTime = item.requestedAt
+                            ? new Date(item.requestedAt).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                                year: new Date(item.requestedAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                              })
+                            : "Recently";
+
+                        // If current user added it to their own packing list
+                        if (currentUserCg && item.requestedBy === currentUserCg.id) {
+                            return (
+                                <div className="flex gap-3">
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
+                                        <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                                    </div>
+                                    <div className="pb-2">
+                                        <p className="text-sm text-gray-900">Added to packing list</p>
+                                        <p className="text-xs text-gray-400">{requestedTime}</p>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // Someone else requested it - show who (with fallback for missing caregiver data)
+                        const displayName = requesterName || "someone";
+                        if (!requesterName && item.requestedBy) {
+                            console.warn(`Data integrity: Caregiver lookup failed for requestedBy ID: ${item.requestedBy}`);
+                        }
+                        return (
+                            <div className="flex gap-3">
+                                <div className="flex flex-col items-center">
+                                    <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
+                                    <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                                </div>
+                                <div className="pb-2">
+                                    <p className="text-sm text-gray-900">Requested by {displayName}</p>
+                                    <p className="text-xs text-gray-400">{requestedTime}</p>
+                                </div>
                             </div>
-                            <div className="pb-2">
-                                <p className="text-sm text-gray-900">
-                                    Requested for next visit
-                                    {item.requestedBy && (() => {
-                                        const requester = caregivers.find(c => c.id === item.requestedBy);
-                                        return requester ? ` by ${requester.label || requester.name}` : "";
-                                    })()}
-                                </p>
-                                <p className="text-xs text-gray-400">Recently</p>
-                            </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Item created */}
                     <div className="flex gap-3">
