@@ -71,16 +71,6 @@ function LogoIcon({ size = 24, isActive = false }: { size?: number; isActive?: b
                 fill={fillColor}
                 fillOpacity={0.5}
             />
-
-            {/* Ground Line */}
-            <path
-                d="M10 85H110"
-                stroke={strokeColor}
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-            />
         </svg>
     );
 }
@@ -132,19 +122,18 @@ export default function MobileNav() {
                         <span className="text-[10px] mt-0.5 font-medium">Calendar</span>
                     </Link>
 
-                    {/* 3. Home (Dashboard) - Center, same style as other nav items */}
+                    {/* 3. Home (Dashboard) - Center with logo, elevated */}
                     <Link
                         href="/"
-                        className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ${
-                            pathname === '/'
-                                ? 'text-forest'
-                                : 'text-gray-400'
-                        }`}
+                        className="flex items-center justify-center -mt-7 transition-all"
                     >
-                        <div className="w-6 h-5 flex items-center justify-center">
-                            <LogoIcon size={28} isActive={pathname === '/'} />
+                        <div className={`w-[68px] h-[68px] rounded-2xl flex items-center justify-center shadow-lg border-4 border-white ${
+                            pathname === '/' ? 'bg-gradient-forest' : 'bg-gray-200'
+                        }`}>
+                            <div className="-mt-[2px]">
+                                <LogoIcon size={52} isActive={pathname === '/'} />
+                            </div>
                         </div>
-                        <span className="text-[10px] mt-0.5 font-medium">Home</span>
                     </Link>
 
                     {/* 4. Contacts */}
