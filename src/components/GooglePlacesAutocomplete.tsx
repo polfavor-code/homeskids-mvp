@@ -99,8 +99,14 @@ export default function GooglePlacesAutocomplete({
     useEffect(() => {
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+        console.log("GooglePlacesAutocomplete: Checking API key...", { 
+            hasKey: !!apiKey, 
+            keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'undefined'
+        });
+
         if (!apiKey) {
             console.error("Google Maps API key not found in environment variables");
+            console.error("Available env vars:", Object.keys(process.env).filter(k => k.includes('GOOGLE')));
             return;
         }
 
