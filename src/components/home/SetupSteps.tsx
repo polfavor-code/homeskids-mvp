@@ -167,32 +167,37 @@ export default function SetupSteps({
     const stepNumber = completedSteps + 1;
 
     return (
-        <div className="mt-auto pt-6 border-t border-[#EBE6DC]">
-            <div className="mb-2">
-                <span className="text-[10px] text-textSub font-bold tracking-[0.1em] uppercase">
+        <div className="mt-auto pt-5 border-t border-[#EBE6DC]">
+            {/* Progress indicator */}
+            <div className="flex items-center gap-3 mb-3">
+                <span className="text-[10px] text-textSub font-bold tracking-[0.1em] uppercase whitespace-nowrap">
                     STEP {stepNumber} OF {totalSteps}
                 </span>
-                <div className="inline-block w-[200px] h-1 bg-[#EBE6DC] rounded-sm ml-3 align-middle">
+                <div className="flex-1 h-1 bg-[#EBE6DC] rounded-full">
                     <div
-                        className="h-full bg-forest rounded-sm transition-all duration-300"
+                        className="h-full bg-forest rounded-full transition-all duration-300"
                         style={{ width: `${progressPercent}%` }}
                     />
                 </div>
             </div>
 
-            <div className="flex justify-between items-center gap-4">
+            {/* Content - mobile stacked, desktop side-by-side */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+                {/* Text */}
                 <div className="flex-1 min-w-0">
-                    <h3 className={`font-dmSerif text-[22px] m-0 mb-1 ${currentStep.isMuted ? 'text-textSub' : 'text-forest'}`}>
+                    <h3 className={`font-dmSerif text-lg sm:text-[22px] m-0 leading-tight ${currentStep.isMuted ? 'text-textSub' : 'text-forest'}`}>
                         {currentStep.title}
                     </h3>
-                    <p className="text-sm text-textSub m-0">
+                    <p className="text-sm text-textSub m-0 mt-0.5">
                         {currentStep.description}
                     </p>
                 </div>
-                <div className="flex items-center gap-4 flex-shrink-0">
+
+                {/* Actions - inline on mobile */}
+                <div className="flex items-center gap-3 flex-shrink-0">
                     <Link
                         href={currentStep.primaryAction.href}
-                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${
+                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${
                             currentStep.isMuted
                                 ? 'bg-cream border border-border text-forest hover:bg-white'
                                 : 'bg-forest text-white hover:bg-forest/90'
@@ -205,7 +210,7 @@ export default function SetupSteps({
                             type="button"
                             onClick={currentStep.secondaryAction.onClick}
                             disabled={skippingHealth}
-                            className="text-textSub text-[13px] cursor-pointer hover:text-forest disabled:opacity-50 whitespace-nowrap underline underline-offset-2"
+                            className="text-textSub text-sm cursor-pointer hover:text-forest disabled:opacity-50 whitespace-nowrap underline underline-offset-2"
                         >
                             {currentStep.id === "health" && skippingHealth
                                 ? "Saving..."

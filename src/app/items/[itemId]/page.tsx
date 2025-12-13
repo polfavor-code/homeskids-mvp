@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
+import ImageCropper from "@/components/ImageCropper";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -80,6 +81,10 @@ export default function ItemDetailPage({
     // State for photo upload
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+    // Image cropper state
+    const [showCropper, setShowCropper] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string>("");
+
     const handleSaveName = async () => {
         if (!item || !editedName.trim()) return;
         try {
@@ -110,11 +115,30 @@ export default function ItemDetailPage({
         }
     };
 
-    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !item) return;
+        if (!file) return;
 
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImageToCrop(reader.result as string);
+            setShowCropper(true);
+        };
+        reader.readAsDataURL(file);
+
+        // Reset input so same file can be selected again
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleCroppedPhoto = async (croppedBlob: Blob) => {
+        if (!item) return;
+
+        setShowCropper(false);
+        setImageToCrop("");
         setUploadingPhoto(true);
+
         try {
             // Get user's family ID for family-folder structure
             const { data: { session } } = await supabase.auth.getSession();
@@ -131,6 +155,9 @@ export default function ItemDetailPage({
             if (!familyMember) {
                 throw new Error("No family found. Please complete onboarding.");
             }
+
+            // Convert blob to file
+            const file = new File([croppedBlob], "cropped-image.jpg", { type: "image/jpeg" });
 
             // Process image: create original and display versions
             const processed = await processImageForUpload(file);
@@ -175,9 +202,6 @@ export default function ItemDetailPage({
             alert("Failed to upload photo");
         } finally {
             setUploadingPhoto(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
         }
     };
 
@@ -321,7 +345,7 @@ export default function ItemDetailPage({
                             ref={fileInputRef}
                             type="file"
                             accept="image/*"
-                            onChange={handlePhotoUpload}
+                            onChange={handlePhotoSelect}
                             className="hidden"
                         />
                         <button
@@ -341,6 +365,20 @@ export default function ItemDetailPage({
                         )}
                     </div>
                 </div>
+
+                {/* Image Cropper Modal */}
+                {showCropper && imageToCrop && (
+                    <ImageCropper
+                        imageSrc={imageToCrop}
+                        onCropComplete={handleCroppedPhoto}
+                        onCancel={() => {
+                            setShowCropper(false);
+                            setImageToCrop("");
+                        }}
+                        aspectRatio={4 / 3}
+                        cropShape="rect"
+                    />
+                )}
 
                 {/* Item Info */}
                 <div className="p-6 text-center">

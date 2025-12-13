@@ -212,14 +212,28 @@ export default function ImportantIDsPage() {
 
                             <div>
                                 <label className="block text-sm font-semibold text-forest mb-1.5">
-                                    Expiry Date
+                                    Expiry Date <span className="font-normal text-textSub">(optional)</span>
                                 </label>
-                                <input
-                                    type="date"
-                                    value={newDocument.expiryDate}
-                                    onChange={(e) => setNewDocument({ ...newDocument, expiryDate: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={newDocument.expiryDate}
+                                        onChange={(e) => setNewDocument({ ...newDocument, expiryDate: e.target.value })}
+                                        className={`w-full px-4 py-3 rounded-xl border border-border bg-white focus:outline-none focus:ring-2 focus:ring-forest/20 ${newDocument.expiryDate ? 'text-forest' : 'text-textSub'}`}
+                                    />
+                                    {newDocument.expiryDate && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewDocument({ ...newDocument, expiryDate: "" })}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-textSub hover:text-forest transition-colors"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             <div>

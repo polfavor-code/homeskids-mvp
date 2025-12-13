@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
+import ImageCropper from "@/components/ImageCropper";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { processImageForUpload, generateImagePaths } from "@/lib/imageUtils";
@@ -33,6 +34,10 @@ export default function AddItemPage() {
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string>("");
     const [uploading, setUploading] = useState(false);
+
+    // Image cropper state
+    const [showCropper, setShowCropper] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string>("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -188,13 +193,15 @@ export default function AddItemPage() {
                         onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                                setPhotoFile(file);
                                 const reader = new FileReader();
                                 reader.onloadend = () => {
-                                    setPhotoPreview(reader.result as string);
+                                    setImageToCrop(reader.result as string);
+                                    setShowCropper(true);
                                 };
                                 reader.readAsDataURL(file);
                             }
+                            // Reset input so same file can be selected again
+                            e.target.value = "";
                         }}
                     />
                     {photoPreview ? (
@@ -225,6 +232,29 @@ export default function AddItemPage() {
                         </label>
                     )}
                 </div>
+
+                {/* Image Cropper Modal */}
+                {showCropper && imageToCrop && (
+                    <ImageCropper
+                        imageSrc={imageToCrop}
+                        onCropComplete={(croppedBlob) => {
+                            // Convert blob to file
+                            const file = new File([croppedBlob], "cropped-image.jpg", { type: "image/jpeg" });
+                            setPhotoFile(file);
+                            // Create preview URL
+                            const previewUrl = URL.createObjectURL(croppedBlob);
+                            setPhotoPreview(previewUrl);
+                            setShowCropper(false);
+                            setImageToCrop("");
+                        }}
+                        onCancel={() => {
+                            setShowCropper(false);
+                            setImageToCrop("");
+                        }}
+                        aspectRatio={4 / 3}
+                        cropShape="rect"
+                    />
+                )}
 
                 {/* Name */}
                 <div>
