@@ -20,6 +20,8 @@ export interface Item {
     notes?: string; // Optional notes
     requestedBy?: string | null; // Caregiver ID who requested the item
     packedBy?: string | null; // Caregiver ID who packed the item
+    createdBy?: string | null; // User ID who created the item
+    createdAt?: string | null; // ISO string when item was created
 }
 
 export interface Child {

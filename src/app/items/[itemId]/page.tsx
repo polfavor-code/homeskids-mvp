@@ -709,36 +709,48 @@ export default function ItemDetailPage({
                         </div>
                     ))}
 
-                    {/* Mocked history entries */}
-                    <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
-                            <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                    {/* Requested for next visit - only show if requested */}
+                    {item.isRequestedForNextVisit && (
+                        <div className="flex gap-3">
+                            <div className="flex flex-col items-center">
+                                <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
+                                <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                            </div>
+                            <div className="pb-2">
+                                <p className="text-sm text-gray-900">
+                                    Requested for next visit
+                                    {item.requestedBy && (() => {
+                                        const requester = caregivers.find(c => c.id === item.requestedBy);
+                                        return requester ? ` by ${requester.label || requester.name}` : "";
+                                    })()}
+                                </p>
+                                <p className="text-xs text-gray-400">Recently</p>
+                            </div>
                         </div>
-                        <div className="pb-2">
-                            <p className="text-sm text-gray-900">Requested for next visit</p>
-                            <p className="text-xs text-gray-400">Today</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
-                            <div className="w-0.5 flex-1 bg-gray-100 my-1" />
-                        </div>
-                        <div className="pb-2">
-                            <p className="text-sm text-gray-900">
-                                Location changed to {locationLabel}
-                            </p>
-                            <p className="text-xs text-gray-400">1 day ago</p>
-                        </div>
-                    </div>
+                    )}
+
+                    {/* Item created */}
                     <div className="flex gap-3">
                         <div className="flex flex-col items-center">
                             <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-900">Item created</p>
-                            <p className="text-xs text-gray-400">2 days ago</p>
+                            <p className="text-sm text-gray-900">
+                                Item created
+                                {item.createdBy && (() => {
+                                    const creator = caregivers.find(c => c.id === item.createdBy);
+                                    return creator ? ` by ${creator.label || creator.name}` : "";
+                                })()}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                                {item.createdAt
+                                    ? new Date(item.createdAt).toLocaleDateString(undefined, {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: new Date(item.createdAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                      })
+                                    : "Unknown date"}
+                            </p>
                         </div>
                     </div>
                 </div>

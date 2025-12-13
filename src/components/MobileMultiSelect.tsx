@@ -56,7 +56,8 @@ export default function MobileMultiSelect({
         return `${selectedLabels.length} selected`;
     };
 
-    const handleToggle = (optionValue: string) => {
+    const handleToggle = (e: React.MouseEvent, optionValue: string) => {
+        e.stopPropagation(); // Prevent closing dropdown
         if (values.includes(optionValue)) {
             onChange(values.filter(v => v !== optionValue));
         } else {
@@ -64,7 +65,8 @@ export default function MobileMultiSelect({
         }
     };
 
-    const handleAllToggle = () => {
+    const handleAllToggle = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent closing dropdown
         if (isAllSelected) {
             // Deselect all
             onChange([]);
@@ -139,7 +141,7 @@ export default function MobileMultiSelect({
                         <button
                             key={option.value}
                             type="button"
-                            onClick={() => handleToggle(option.value)}
+                            onClick={(e) => handleToggle(e, option.value)}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-left"
                         >
                             <Checkbox checked={values.includes(option.value)} />
@@ -156,7 +158,7 @@ export default function MobileMultiSelect({
                     {allOption && (
                         <button
                             type="button"
-                            onClick={handleAllToggle}
+                            onClick={(e) => handleAllToggle(e)}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left border-t border-gray-100 ${
                                 isAllSelected ? "bg-softGreen/30" : "hover:bg-gray-50"
                             }`}
@@ -203,7 +205,7 @@ export default function MobileMultiSelect({
                                 <button
                                     key={option.value}
                                     type="button"
-                                    onClick={() => handleToggle(option.value)}
+                                    onClick={(e) => handleToggle(e, option.value)}
                                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left hover:bg-gray-50"
                                 >
                                     <Checkbox checked={values.includes(option.value)} />
@@ -220,7 +222,7 @@ export default function MobileMultiSelect({
                             {allOption && (
                                 <button
                                     type="button"
-                                    onClick={handleAllToggle}
+                                    onClick={(e) => handleAllToggle(e)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left ${
                                         isAllSelected ? "bg-softGreen" : "hover:bg-gray-50"
                                     }`}

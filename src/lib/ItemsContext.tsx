@@ -111,6 +111,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                         notes: item.notes,
                         requestedBy: item.requested_by || null,
                         packedBy: item.packed_by || null,
+                        createdBy: item.created_by || null,
+                        createdAt: item.created_at || null,
                     }));
                     setItems(mappedItems);
                     // Mark that we've successfully completed an authenticated fetch

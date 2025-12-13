@@ -222,15 +222,18 @@ export default function Home() {
                         </p>
                     </div>
 
-                    {/* Stats Box */}
-                    <div className="bg-white p-4 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-right min-w-[100px]">
+                    {/* Stats Box - Links to all items */}
+                    <Link
+                        href="/items"
+                        className="bg-white p-4 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-right min-w-[100px] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-shadow"
+                    >
                         <span className="block text-2xl font-bold text-forest leading-none mb-1">
                             {items.length}
                         </span>
                         <span className="text-[11px] text-forest/60 uppercase font-bold tracking-wide">
                             ITEMS TOTAL
                         </span>
-                    </div>
+                    </Link>
                 </div>
 
                 {/* Action Buttons Row - Tighter spacing to divider */}
