@@ -105,7 +105,7 @@ export default function GooglePlacesAutocomplete({
         }
 
         const initServices = () => {
-            if (window.google?.maps?.places) {
+            if (window.google?.maps?.places && window.google?.maps?.Geocoder) {
                 try {
                     autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
                     const dummyDiv = document.createElement("div");
@@ -120,30 +120,38 @@ export default function GooglePlacesAutocomplete({
             }
         };
 
-        if (window.google?.maps?.places) {
+        // Check if already loaded
+        if (window.google?.maps?.places && window.google?.maps?.Geocoder) {
             initServices();
             return;
         }
 
-        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+        // Check for existing script to avoid duplicates
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
         if (existingScript) {
+            console.log("Google Maps script already exists, waiting for load...");
             const checkLoaded = setInterval(() => {
-                if (window.google?.maps?.places) {
+                if (window.google?.maps?.places && window.google?.maps?.Geocoder) {
                     clearInterval(checkLoaded);
                     initServices();
                 }
             }, 100);
+            // Timeout after 10 seconds
+            setTimeout(() => clearInterval(checkLoaded), 10000);
             return () => clearInterval(checkLoaded);
         }
 
+        // Load the script only if it doesn't exist
+        console.log("Loading Google Maps script...");
         const script = document.createElement("script");
-        // Changed to use marker library without v=weekly for better mobile compatibility
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&loading=async`;
+        // Include geocoding library explicitly for mobile compatibility
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker,geocoding&loading=async`;
         script.async = true;
         script.defer = true;
+        script.id = "google-maps-script"; // Add ID to track it
         script.onload = () => {
-            console.log("Google Maps script loaded");
-            setTimeout(initServices, 100);
+            console.log("Google Maps script loaded successfully");
+            setTimeout(initServices, 200); // Increased timeout for mobile
         };
         script.onerror = (error) => {
             console.error("Failed to load Google Maps script:", error);
@@ -151,10 +159,11 @@ export default function GooglePlacesAutocomplete({
         document.head.appendChild(script);
 
         return () => {
+            // Don't remove script on cleanup - let it persist for other components
             // Cleanup script if component unmounts during loading
-            if (!window.google?.maps?.places) {
-                script.remove();
-            }
+            // if (!window.google?.maps?.places) {
+            //     script.remove();
+            // }
         };
     }, []);
 
