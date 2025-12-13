@@ -162,8 +162,8 @@ export default function GooglePlacesAutocomplete({
             createMarker(mapCenter.lat, mapCenter.lng, false);
         }
 
-        // Allow clicking on map to set location
-        mapRef.current.addListener("click", (e: any) => {
+        // Allow clicking on map to set location - capture listener for cleanup
+        const clickListener = mapRef.current.addListener("click", (e: any) => {
             if (e.latLng) {
                 const lat = e.latLng.lat();
                 const lng = e.latLng.lng();
@@ -171,6 +171,28 @@ export default function GooglePlacesAutocomplete({
                 reverseGeocode(lat, lng);
             }
         });
+
+        // Cleanup function to remove listeners and prevent memory leaks
+        return () => {
+            // Remove the click listener
+            if (clickListener) {
+                clickListener.remove();
+            }
+
+            // Clear all instance listeners on the map
+            if (mapRef.current && window.google?.maps?.event?.clearInstanceListeners) {
+                window.google.maps.event.clearInstanceListeners(mapRef.current);
+            }
+
+            // Clean up marker
+            if (markerRef.current) {
+                markerRef.current.map = null;
+                markerRef.current = null;
+            }
+
+            // Clean up map reference
+            mapRef.current = null;
+        };
     }, [isLoaded]);
 
     // Create marker element for AdvancedMarkerElement
@@ -204,38 +226,23 @@ export default function GooglePlacesAutocomplete({
         return markerEl;
     };
 
-    // Create or update marker using AdvancedMarkerElement
+    // Create or update marker using AdvancedMarkerElement (new API)
     const createMarker = (lat: number, lng: number, animate: boolean = true) => {
         if (!mapRef.current || !window.google?.maps?.marker?.AdvancedMarkerElement) {
-            // Fallback to legacy Marker if AdvancedMarkerElement not available
-            if (window.google?.maps?.Marker) {
-                if (markerRef.current) {
-                    markerRef.current.setPosition({ lat, lng });
-                } else {
-                    markerRef.current = new window.google.maps.Marker({
-                        position: { lat, lng },
-                        map: mapRef.current,
-                        draggable: true,
-                    });
-                    markerRef.current.addListener("dragend", () => {
-                        const pos = markerRef.current.getPosition();
-                        if (pos) {
-                            reverseGeocode(pos.lat(), pos.lng());
-                            setMapCenter({ lat: pos.lat(), lng: pos.lng() });
-                        }
-                    });
-                }
-            }
+            console.warn("AdvancedMarkerElement not available yet");
             return;
         }
 
-        // Remove existing marker
+        // Remove existing marker from map
         if (markerRef.current) {
             markerRef.current.map = null;
+            markerRef.current = null;
         }
 
+        // Create marker content element with optional drop animation
         const markerContent = createMarkerElement(animate);
 
+        // Create new AdvancedMarkerElement
         markerRef.current = new window.google.maps.marker.AdvancedMarkerElement({
             position: { lat, lng },
             map: mapRef.current,
@@ -243,16 +250,24 @@ export default function GooglePlacesAutocomplete({
             gmpDraggable: true,
         });
 
-        // Add dragend listener
+        // Attach dragend listener to update address when marker is dragged
         markerRef.current.addListener("dragend", () => {
             const pos = markerRef.current.position;
             if (pos) {
+                // Handle both LatLng object styles (function vs property)
                 const newLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
                 const newLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
                 reverseGeocode(newLat, newLng);
                 setMapCenter({ lat: newLat, lng: newLng });
             }
         });
+
+        // Remove animation class after animation completes
+        if (animate) {
+            setTimeout(() => {
+                markerContent.classList.remove("marker-drop-animation");
+            }, 500);
+        }
     };
 
     // Update marker position
