@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
 import { useAppState } from "@/lib/AppStateContext";
@@ -80,6 +81,14 @@ export default function DietaryNeedsPage() {
 
     return (
         <AppShell>
+            {/* Back Link */}
+            <Link
+                href="/health"
+                className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-4"
+            >
+                ← Health
+            </Link>
+
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>

@@ -140,8 +140,8 @@ function ContactsPageContent() {
 
                             {/* Info - Clickable */}
                             <Link href={`/contacts/${contact.id}`} className="flex-1 min-w-0 overflow-hidden">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-forest truncate hover:text-teal transition-colors">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <h3 className="font-medium text-forest truncate hover:text-teal transition-colors min-w-0">
                                         {contact.name}
                                     </h3>
                                     {contact.isFavorite && (

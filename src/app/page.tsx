@@ -207,6 +207,56 @@ export default function Home() {
     const currentUser = caregivers.find(c => c.isCurrentUser);
     const userName = currentUser?.name || user?.user_metadata?.name?.split(' ')[0] || 'there';
 
+    // Get requested items count and who requested them
+    const requestedItems = items.filter(item => item.isRequestedForNextVisit && !item.isMissing);
+    const requestedByOthers = requestedItems.filter(item => item.requestedBy && item.requestedBy !== currentUser?.id);
+
+    // Find who requested items (get the first requester's name for simplicity)
+    const getRequesterName = () => {
+        if (requestedByOthers.length === 0) return null;
+        const requesterId = requestedByOthers[0].requestedBy;
+        const requester = caregivers.find(c => c.id === requesterId);
+        return requester?.name || requester?.label || null;
+    };
+
+    // Get the home where the child currently is (for display when not at user's home)
+    const childCurrentHome = activeHomes.find(h => h.id === currentHomeId);
+    const childHomeOwner = childCurrentHome ? caregivers.find(c => c.id === childCurrentHome.ownerCaregiverId) : null;
+
+    // Build dynamic subtitle
+    const getDynamicSubtitle = () => {
+        const childName = child?.name || "Your child";
+        const pronoun = child?.name ? (child.name.endsWith('s') ? "their" : "her") : "their"; // Simple heuristic
+
+        if (isChildAtUserHome) {
+            // Child is at user's home
+            const requesterName = getRequesterName();
+            if (requestedByOthers.length > 0 && requesterName) {
+                return (
+                    <>
+                        {childName} is staying at your home.<br />
+                        {requesterName} requested {requestedByOthers.length} {requestedByOthers.length === 1 ? 'item' : 'items'} to be packed for {pronoun} next stay.
+                    </>
+                );
+            }
+            return (
+                <>
+                    {childName} is staying at your home.<br />
+                    Everything is up to date.
+                </>
+            );
+        } else {
+            // Child is at another home
+            const homeName = childHomeOwner?.label || childCurrentHome?.name || "another home";
+            return (
+                <>
+                    {childName} is staying at {pronoun} {homeName}.<br />
+                    Request items for {pronoun} next stay at yours.
+                </>
+            );
+        }
+    };
+
     return (
         <AppShell>
             {/* Dashboard Content */}
@@ -218,7 +268,7 @@ export default function Home() {
                             Hi {userName},
                         </h1>
                         <p className="text-sm text-forest/60 leading-relaxed">
-                            Here's everything organized for {child?.name || "your child"}.
+                            {getDynamicSubtitle()}
                         </p>
                     </div>
 
