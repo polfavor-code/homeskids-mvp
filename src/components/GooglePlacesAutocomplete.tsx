@@ -2,6 +2,73 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 
+// Global styles for pac-container (Google's autocomplete dropdown)
+const injectPacContainerStyles = () => {
+    const styleId = "google-pac-container-styles";
+    if (typeof document === "undefined" || document.getElementById(styleId)) return;
+
+    const style = document.createElement("style");
+    style.id = styleId;
+    style.textContent = `
+        .pac-container {
+            z-index: 99999 !important;
+            border-radius: 12px !important;
+            border: 1px solid #e5e7eb !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+            margin-top: 4px !important;
+            font-family: inherit !important;
+            background: white !important;
+            /* Ensure pointer events work on mobile */
+            pointer-events: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        .pac-item {
+            padding: 14px 16px !important;
+            font-size: 15px !important;
+            cursor: pointer !important;
+            border-top: 1px solid #f3f4f6 !important;
+            /* Ensure tappable on mobile */
+            -webkit-tap-highlight-color: rgba(0,0,0,0.1) !important;
+            touch-action: manipulation !important;
+        }
+        .pac-item:first-child {
+            border-top: none !important;
+        }
+        .pac-item:hover, .pac-item-selected, .pac-item:active {
+            background-color: #f0fdf4 !important;
+        }
+        .pac-item-query {
+            font-size: 15px !important;
+            color: #243425 !important;
+        }
+        .pac-matched {
+            font-weight: 600 !important;
+        }
+        .pac-icon {
+            margin-right: 12px !important;
+        }
+        /* Mobile specific - ensure dropdown is visible above keyboard */
+        @media (max-width: 640px) {
+            .pac-container {
+                position: fixed !important;
+                left: 8px !important;
+                right: 8px !important;
+                width: auto !important;
+                max-height: 50vh !important;
+                overflow-y: auto !important;
+                top: auto !important;
+                bottom: 50% !important;
+                transform: translateY(50%) !important;
+            }
+            .pac-item {
+                padding: 16px !important;
+                min-height: 48px !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+};
+
 // Interactive Map Preview component
 function MapPreview({ lat, lng, isLoaded }: { lat: number; lng: number; isLoaded: boolean }) {
     const mapRef = useRef<HTMLDivElement>(null);
@@ -131,6 +198,11 @@ export default function GooglePlacesAutocomplete({
     useEffect(() => {
         if (!isLoaded || !inputRef.current || autocompleteRef.current) return;
 
+        // Inject styles for the dropdown
+        injectPacContainerStyles();
+
+        let observer: MutationObserver | null = null;
+
         try {
             autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
                 types: ["address"],
@@ -159,6 +231,9 @@ export default function GooglePlacesAutocomplete({
                 setMapCenter({ lat, lng });
                 setShowMap(true);
 
+                // Blur input to dismiss keyboard on mobile
+                inputRef.current?.blur();
+
                 onAddressSelectRef.current({
                     ...addressComponents,
                     lat,
@@ -166,9 +241,56 @@ export default function GooglePlacesAutocomplete({
                     formattedAddress: place.formatted_address || "",
                 });
             });
+
+            // Fix for mobile: ensure pac-container touch events work
+            // Google's autocomplete can have issues with touch on mobile/iOS
+            const fixMobileTouchEvents = () => {
+                const pacContainers = document.querySelectorAll('.pac-container');
+                pacContainers.forEach(container => {
+                    const el = container as HTMLElement;
+                    // Ensure touch events work
+                    el.style.pointerEvents = 'auto';
+
+                    // Add touch event handlers for iOS
+                    el.addEventListener('touchstart', () => {}, { passive: true });
+                    el.addEventListener('touchend', (e) => {
+                        // Find the pac-item that was tapped
+                        const target = e.target as HTMLElement;
+                        const pacItem = target.closest('.pac-item');
+                        if (pacItem) {
+                            // Trigger a click on the item
+                            (pacItem as HTMLElement).click();
+                        }
+                    }, { passive: false });
+                });
+            };
+
+            // Use MutationObserver to catch when pac-container is added to DOM
+            observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node instanceof HTMLElement && node.classList.contains('pac-container')) {
+                            fixMobileTouchEvents();
+                        }
+                    });
+                });
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // Also run immediately in case container already exists
+            setTimeout(fixMobileTouchEvents, 300);
+
         } catch (error) {
             console.error("Error initializing autocomplete:", error);
         }
+
+        // Cleanup observer on unmount
+        return () => {
+            if (observer) {
+                observer.disconnect();
+            }
+        };
     }, [isLoaded]);
 
     // Parse Google address components into our format
@@ -251,7 +373,12 @@ export default function GooglePlacesAutocomplete({
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                         placeholder={placeholder}
-                        className="flex-1 text-sm outline-none bg-transparent"
+                        className="flex-1 text-sm outline-none bg-transparent text-forest"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
+                        enterKeyHint="search"
                     />
                     {/* Google Logo */}
                     <svg height="14" viewBox="0 0 24 24" className="opacity-40 flex-shrink-0">

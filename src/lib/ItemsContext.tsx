@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { Item, MOCK_ITEMS } from "@/lib/mockData";
 import { supabase } from "@/lib/supabase";
 
@@ -50,17 +50,31 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     // Store family ID for realtime subscription
     const [familyId, setFamilyId] = useState<string | null>(null);
 
+    // Track if we've successfully loaded items with a valid authenticated user
+    // This prevents showing empty/welcome state before items are actually loaded
+    const hasCompletedAuthenticatedFetchRef = useRef(false);
+
     // Fetch items from Supabase
     const fetchItems = useCallback(async () => {
+        console.log("Items: fetchItems called");
         try {
             // Use getSession for more reliable auth state on initial load
             const { data: { session } } = await supabase.auth.getSession();
             const user = session?.user;
 
+            console.log("Items: fetchItems - user:", user?.id, "hasCompletedFetch:", hasCompletedAuthenticatedFetchRef.current);
+
             if (!user) {
                 setItems([]);
                 setFamilyId(null);
-                setIsLoaded(true);
+                // Only mark as loaded if we've previously completed an authenticated fetch
+                // This prevents showing welcome screen during initial auth when session isn't ready
+                if (hasCompletedAuthenticatedFetchRef.current) {
+                    console.log("Items: No user, but had previous authenticated fetch, marking loaded");
+                    setIsLoaded(true);
+                } else {
+                    console.log("Items: No user and no previous fetch, NOT marking loaded (waiting for auth)");
+                }
                 return;
             }
 
@@ -82,6 +96,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     .eq("family_id", fId);
 
                 if (itemsData) {
+                    console.log("Items: Fetched", itemsData.length, "items for family", fId);
                     const mappedItems: Item[] = itemsData.map((item: any) => ({
                         id: item.id,
                         name: item.name,
@@ -98,6 +113,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                         packedBy: item.packed_by || null,
                     }));
                     setItems(mappedItems);
+                    // Mark that we've successfully completed an authenticated fetch
+                    hasCompletedAuthenticatedFetchRef.current = true;
 
                     // Self-healing: Check for items assigned to my invite and claim them
                     const itemsToClaim = mappedItems.filter(i => i.locationCaregiverId && i.locationCaregiverId.startsWith("pending-"));
@@ -146,26 +163,68 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             } else {
                 setItems([]);
                 setFamilyId(null);
+                // Still mark as completed - user is authenticated but not in a family yet
+                hasCompletedAuthenticatedFetchRef.current = true;
             }
         } catch (error) {
             console.error("Failed to load items:", error);
+            // On error, still mark as loaded to prevent infinite loading
+            hasCompletedAuthenticatedFetchRef.current = true;
         } finally {
+            console.log("Items: fetchItems complete, setting isLoaded=true");
             setIsLoaded(true);
         }
     }, []);
 
     // Initial fetch and auth state listener
     useEffect(() => {
-        fetchItems();
+        // Don't do initial fetch - wait for auth state to be determined
+        // This prevents the race condition where getSession() returns null
+        // before the session is restored from storage
 
         const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log("Items: Auth state changed:", event);
-            setIsLoaded(false);
-            fetchItems();
+            console.log("Items: Auth state changed:", event, "hasSession:", !!session, "userId:", session?.user?.id);
+
+            if (event === "INITIAL_SESSION") {
+                // This is the first auth event - session state is now known
+                if (!session) {
+                    // User is definitely not logged in - mark as loaded with empty items
+                    console.log("Items: No session on INITIAL_SESSION, marking loaded");
+                    setItems([]);
+                    setFamilyId(null);
+                    setIsLoaded(true);
+                } else {
+                    // User is logged in - fetch items
+                    console.log("Items: Session exists on INITIAL_SESSION, fetching items");
+                    fetchItems();
+                }
+            } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+                // User signed in or token refreshed - fetch items
+                console.log("Items: SIGNED_IN/TOKEN_REFRESHED, refetching items");
+                setIsLoaded(false);
+                fetchItems();
+            } else if (event === "SIGNED_OUT") {
+                // User signed out - clear items
+                console.log("Items: SIGNED_OUT, clearing items");
+                setItems([]);
+                setFamilyId(null);
+                hasCompletedAuthenticatedFetchRef.current = false;
+                setIsLoaded(true);
+            }
         });
+
+        // Fallback: If no auth event fires within 3 seconds, try to fetch anyway
+        // This handles edge cases where auth events might not fire
+        const fallbackTimeout = setTimeout(() => {
+            if (!hasCompletedAuthenticatedFetchRef.current) {
+                console.log("Items: Fallback fetch triggered");
+                fetchItems();
+            }
+        }, 3000);
 
         return () => {
             authSubscription.unsubscribe();
+            clearTimeout(fallbackTimeout);
         };
     }, [fetchItems]);
 

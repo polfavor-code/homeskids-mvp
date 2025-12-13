@@ -273,7 +273,10 @@ export default function HomePeopleModal({
             </div>
 
             {/* Mobile Bottom Sheet */}
-            <div className="sm:hidden absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up max-h-[70vh] flex flex-col">
+            <div
+                className="sm:hidden absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up max-h-[70vh] flex flex-col"
+                style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+            >
                 {/* Handle bar */}
                 <div className="flex justify-center pt-3 pb-2">
                     <div className="w-10 h-1 bg-gray-300 rounded-full" />
@@ -333,7 +336,7 @@ export default function HomePeopleModal({
                 </div>
 
                 {/* Safe area padding for mobile */}
-                <div className="h-6" />
+                <div className="h-8" />
             </div>
 
             <style jsx>{`
