@@ -116,22 +116,29 @@ function ItemsPageContent() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, [isDropdownOpen]);
 
-    // Get current user caregiver
+    // Get current user caregiver and their home
     const currentUserCaregiver = caregivers.find(c => c.isCurrentUser);
+    const currentUserHome = homes.find(h => h.ownerCaregiverId === currentUserCaregiver?.id);
 
-    // Helper to get role-aware "Requested by" label
-    const getRequestedLabel = (requestedById: string | null | undefined) => {
-        if (!requestedById) return "Requested";
+    // Helper to get status label for requested items
+    // - If YOU marked it → "To pack" (you're preparing to pack it)
+    // - If SOMEONE ELSE requested it → "Requested by [Name]" (they asked you to pack it)
+    const getRequestedLabel = (item: { requestedBy?: string | null; locationHomeId: string | null }) => {
+        const requestedById = item.requestedBy;
+        if (!requestedById) return "To pack";
+
         if (currentUserCaregiver && requestedById === currentUserCaregiver.id) {
-            return "Requested by you";
+            // I marked this item - just show "To pack"
+            return "To pack";
         }
+
+        // Someone else requested it - show who
         const requester = caregivers.find(c => c.id === requestedById);
         if (requester) {
-            // Use first name only
             const firstName = requester.name.split(" ")[0];
             return `Requested by ${firstName}`;
         }
-        return "Requested";
+        return "To pack";
     };
 
     // Helper to get role-aware "Packed by" label
@@ -332,7 +339,7 @@ function ItemsPageContent() {
                                         </span>
                                     ) : item.isRequestedForNextVisit ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            {getRequestedLabel(item.requestedBy)}
+                                            {getRequestedLabel(item)}
                                         </span>
                                     ) : null}
                                 </div>
