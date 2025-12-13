@@ -14,13 +14,12 @@ export default function PlaceholderPage({ title, icon, joke, description, featur
         <AppShell>
             <div className="space-y-6">
                 {/* Page Header */}
-                <div className="flex items-center gap-3">
-                    {icon && <div className="text-forest">{icon}</div>}
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-dmSerif text-forest">{title}</h1>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h1 className="font-dmSerif text-2xl text-forest mt-2">{title}</h1>
                         <p className="text-sm text-textSub italic mt-1">{joke}</p>
                     </div>
-                    <span className="px-3 py-1 bg-softGreen text-forest text-xs font-bold rounded-full">
+                    <span className="px-3 py-1 bg-softGreen text-forest text-xs font-bold rounded-full mt-2">
                         Coming soon
                     </span>
                 </div>

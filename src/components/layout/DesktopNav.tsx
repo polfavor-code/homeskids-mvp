@@ -8,8 +8,8 @@ import { useAppState } from '@/lib/AppStateContext';
 import { useAuth } from '@/lib/AuthContext';
 import Avatar from '@/components/Avatar';
 import {
-    HomeIcon,
     ItemsIcon,
+    TravelBagIcon,
     CalendarIcon,
     ContactsIcon,
     DocumentsIcon,
@@ -20,9 +20,81 @@ import {
     ChevronRightIcon,
 } from '@/components/icons/DuotoneIcons';
 
+// Logo icon for home button - matches the brand logo
+function LogoIcon({ size = 24, isActive = false }: { size?: number; isActive?: boolean }) {
+    const id = isActive ? "logoGradDesktop-active" : "logoGradDesktop-inactive";
+    const fillOpacity = isActive ? 0.3 : 0.15;
+    const mainStrokeColor = isActive ? "#FFFFFF" : "#4B5563"; // gray-600 for middle house
+    const mainFillColor = isActive ? "#FFFFFF" : "#9CA3AF"; // gray-400 for middle house fill
+    // Width is 1.2x height to accommodate the wider logo
+    const width = size * 1.2;
+    const height = size;
+
+    return (
+        <svg
+            width={width}
+            height={height}
+            viewBox="0 0 120 100"
+            className="overflow-visible"
+        >
+            <defs>
+                <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={isActive ? "#FFFFFF" : "#6B7280"} />
+                    <stop offset="100%" stopColor={isActive ? "#FFFFFF" : "#9CA3AF"} />
+                </linearGradient>
+            </defs>
+
+            {/* House 1 (Left, Back) */}
+            <path
+                d="M15 45V75H45V45L30 30Z"
+                stroke={mainStrokeColor}
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill={mainFillColor}
+                fillOpacity={fillOpacity}
+                opacity={0.6}
+            />
+
+            {/* House 2 (Right, Back) */}
+            <path
+                d="M75 45V75H105V45L90 30Z"
+                stroke={mainStrokeColor}
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill={mainFillColor}
+                fillOpacity={fillOpacity}
+                opacity={0.6}
+            />
+
+            {/* House 3 (Center, Front) */}
+            <path
+                d="M35 85V50L60 25L85 50V85H35Z"
+                stroke={mainStrokeColor}
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill={mainFillColor}
+                fillOpacity={0.5}
+            />
+
+            {/* Ground Line */}
+            <path
+                d="M10 85H110"
+                stroke={`url(#${id})`}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+            />
+        </svg>
+    );
+}
+
 const iconMap = {
-    HomeIcon,
     ItemsIcon,
+    TravelBagIcon,
     CalendarIcon,
     ContactsIcon,
     DocumentsIcon,
@@ -71,7 +143,11 @@ export default function DesktopNav() {
         });
     }, [pathname]);
 
-    const renderIcon = (iconName: string, size: number = 24) => {
+    const renderIcon = (iconName: string, size: number = 24, isActive: boolean = false) => {
+        // Special case for Home - use logo icon
+        if (iconName === 'HomeIcon') {
+            return <LogoIcon size={size} isActive={isActive} />;
+        }
         const IconComponent = iconMap[iconName as keyof typeof iconMap];
         if (!IconComponent) return null;
         return <IconComponent size={size} />;
@@ -138,8 +214,8 @@ export default function DesktopNav() {
                                         : 'text-gray-700 hover:bg-softGreen hover:text-forest font-semibold'
                                     }`}
                             >
-                                <div className="flex-shrink-0 flex items-center justify-center w-6 h-6">
-                                    {renderIcon(item.icon, 24)}
+                                <div className={`flex-shrink-0 flex items-center justify-center ${item.icon === 'HomeIcon' ? 'w-8 h-6 -mt-[2px]' : 'w-6 h-6'}`}>
+                                    {renderIcon(item.icon, item.icon === 'HomeIcon' ? 32 : 24, isActive || hasActiveSub)}
                                 </div>
                                 {!isCollapsed && (
                                     <>

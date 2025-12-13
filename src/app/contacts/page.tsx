@@ -88,10 +88,10 @@ function ContactsPageContent() {
             <div className="mb-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="font-dmSerif text-xl text-forest">
+                        <h1 className="font-dmSerif text-2xl text-forest mt-2">
                             {child?.name || "Child"}&apos;s Contacts
                         </h1>
-                        <p className="text-sm text-textSub">
+                        <p className="text-sm text-textSub mt-1">
                             Important people shared between both homes.
                         </p>
                     </div>
@@ -105,7 +105,7 @@ function ContactsPageContent() {
             </div>
 
             {/* Filter Pills */}
-            <div className="flex gap-2 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide mb-2">
+            <div className="flex gap-2 flex-wrap mb-4">
                 {CATEGORIES.map((cat) => (
                     <button
                         key={cat.value}

@@ -22,10 +22,6 @@ export const navItems: NavItem[] = [
         label: "June's Items",
         icon: 'ItemsIcon',
         route: '/items',
-        subItems: [
-            { label: 'All Items', route: '/items' },
-            { label: 'Travel Bag', route: '/items/travel-bag' },
-        ],
     },
     {
         label: 'Calendar',
@@ -36,44 +32,21 @@ export const navItems: NavItem[] = [
         label: 'Contacts',
         icon: 'ContactsIcon',
         route: '/contacts',
-        subItems: [
-            { label: 'All Contacts', route: '/contacts' },
-            { label: 'Medical', route: '/contacts/medical' },
-            { label: 'School', route: '/contacts/school' },
-        ],
     },
     {
         label: 'Documents',
         icon: 'DocumentsIcon',
         route: '/documents',
-        subItems: [
-            { label: 'All Documents', route: '/documents' },
-            { label: 'Important IDs', route: '/documents/ids' },
-            { label: 'School Docs', route: '/documents/school' },
-        ],
     },
     {
         label: 'Health',
         icon: 'HealthIcon',
         route: '/health',
-        subItems: [
-            { label: 'Overview', route: '/health' },
-            { label: 'Medication', route: '/health/medication' },
-            { label: 'Allergies', route: '/health/allergies' },
-            { label: 'Dietary Needs', route: '/health/diet' },
-        ],
     },
     {
         label: 'Settings',
         icon: 'SettingsIcon',
         route: '/settings',
-        subItems: [
-            { label: 'Child Profile', route: '/settings/child' },
-            { label: 'Homes', route: '/settings/homes' },
-            { label: 'Caregivers', route: '/settings/caregivers' },
-            { label: 'Permissions', route: '/settings/permissions' },
-            { label: 'My Account', route: '/settings/account' },
-        ],
     },
 ];
 

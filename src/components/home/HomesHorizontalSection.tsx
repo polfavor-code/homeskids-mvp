@@ -318,6 +318,19 @@ export default function HomesHorizontalSection({
                     width: 100%;
                 }
 
+                /* Horizontal connector line behind all cards */
+                .homes-row::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 80px;
+                    right: 80px;
+                    height: 2px;
+                    background: #E0DCD5;
+                    transform: translateY(-50%);
+                    z-index: 0;
+                }
+
                 .home-column {
                     position: relative;
                     z-index: 2;
@@ -331,29 +344,10 @@ export default function HomesHorizontalSection({
                     max-width: 340px;
                 }
 
-                /* Connector line segments */
-                .home-column.center-column::before {
-                    content: '';
-                    position: absolute;
-                    top: 50%;
-                    right: 100%;
-                    width: 32px;
-                    height: 2px;
-                    background: #E0DCD5;
-                    z-index: 0;
-                    transform: translateY(-50%);
-                }
-
+                /* Connector line segments - removed from center column */
+                .home-column.center-column::before,
                 .home-column.center-column::after {
-                    content: '';
-                    position: absolute;
-                    top: 50%;
-                    left: 100%;
-                    width: 32px;
-                    height: 2px;
-                    background: #E0DCD5;
-                    z-index: 0;
-                    transform: translateY(-50%);
+                    display: none;
                 }
 
                 /* Link wrapper for clickable cards */

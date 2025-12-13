@@ -98,7 +98,7 @@ export default function HealthPage() {
                 <div className="space-y-6">
                     {/* Page Header */}
                     <div>
-                        <h1 className="text-2xl font-dmSerif text-forest">Health information</h1>
+                        <h1 className="font-dmSerif text-2xl text-forest mt-2">Health information</h1>
                         <p className="text-sm text-textSub mt-1">
                             No information provided yet for {childName}.
                         </p>
@@ -266,7 +266,7 @@ export default function HealthPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="text-2xl font-dmSerif text-forest">Health Overview</h1>
+                    <h1 className="font-dmSerif text-2xl text-forest mt-2">Health Overview</h1>
                     <p className="text-sm text-textSub mt-1">
                         Quickly see allergies, medication, and key health notes for {childName}.
                     </p>
