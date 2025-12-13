@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import PhoneInput from "@/components/PhoneInput";
-import MobileSelect from "@/components/MobileSelect";
+import MobileMultiSelect from "@/components/MobileMultiSelect";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
 import ImageCropper from "@/components/ImageCropper";
 import { useContacts, ContactCategory } from "@/lib/ContactsContext";
@@ -34,7 +34,7 @@ export default function NewContactPage() {
     const [name, setName] = useState("");
     const [role, setRole] = useState("");
     const [category, setCategory] = useState<ContactCategory>("other");
-    const [connectedWith, setConnectedWith] = useState<string>("");
+    const [connectedWith, setConnectedWith] = useState<string[]>([]);
     const [phone, setPhone] = useState("");
     const [phoneCountryCode, setPhoneCountryCode] = useState("+1");
     const [email, setEmail] = useState("");
@@ -82,18 +82,17 @@ export default function NewContactPage() {
         fetchFamilyId();
     }, []);
 
-    // Multi-side option label
-    const multiSideLabel = caregivers.length > 2 ? "All caregivers" : "Both sides";
-    const multiSideValue = caregivers.length > 2 ? "all" : "both";
+    // Caregiver options for MobileMultiSelect
+    const caregiverOptions = caregivers.map((caregiver) => ({
+        value: caregiver.id,
+        label: caregiver.label || caregiver.name,
+    }));
 
-    // Caregiver options for MobileSelect
-    const caregiverOptions = [
-        ...caregivers.map((caregiver) => ({
-            value: caregiver.id,
-            label: caregiver.label || caregiver.name,
-        })),
-        { value: multiSideValue, label: multiSideLabel },
-    ];
+    // "All caregivers" option for the multi-select
+    const allOption = {
+        value: "all",
+        label: caregivers.length > 2 ? "All caregivers" : "Both sides",
+    };
 
     // Handle photo upload
     const handlePhotoClick = () => {
@@ -263,7 +262,7 @@ export default function NewContactPage() {
             addressLng: addressLng,
             notes: notes.trim() || undefined,
             isFavorite,
-            connectedWith: connectedWith || undefined,
+            connectedWith: connectedWith.length > 0 ? connectedWith.join(",") : undefined,
             avatarUrl: avatarUrl || undefined,
         });
 
@@ -437,11 +436,12 @@ export default function NewContactPage() {
                             <h3 className="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">
                                 Connected With
                             </h3>
-                            <MobileSelect
-                                value={connectedWith}
+                            <MobileMultiSelect
+                                values={connectedWith}
                                 onChange={setConnectedWith}
                                 options={caregiverOptions}
-                                placeholder="Select caregiver..."
+                                allOption={allOption}
+                                placeholder="Select caregivers..."
                                 title="Connected with"
                             />
                             <p className="text-xs text-textSub mt-2">

@@ -189,8 +189,11 @@ export default function HomeMapModal({ isOpen, home, onClose }: HomeMapModalProp
 
             {/* Mobile Bottom Sheet */}
             <div
-                className="sm:hidden absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up"
-                style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+                className="sm:hidden absolute left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up"
+                style={{
+                    bottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)",
+                    paddingBottom: "16px"
+                }}
             >
                 {/* Handle bar */}
                 <div className="flex justify-center pt-3 pb-2">
@@ -264,9 +267,6 @@ export default function HomeMapModal({ isOpen, home, onClose }: HomeMapModalProp
                         </button>
                     )}
                 </div>
-
-                {/* Safe area padding for mobile */}
-                <div className="h-8" />
             </div>
 
             <style jsx>{`

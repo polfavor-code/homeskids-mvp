@@ -24,9 +24,24 @@ export default function MyAccountPage() {
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
+    // Email editing state
+    const [email, setEmail] = useState("");
+    const [isEditingEmail, setIsEditingEmail] = useState(false);
+    const [emailError, setEmailError] = useState("");
+    const [savingEmail, setSavingEmail] = useState(false);
+
+    // Password editing state
+    const [isEditingPassword, setIsEditingPassword] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmNewPassword, setConfirmNewPassword] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const [savingPassword, setSavingPassword] = useState(false);
+
     useEffect(() => {
         if (user) {
             loadProfileData();
+            setEmail(user.email || "");
         }
     }, [user]);
 
@@ -90,6 +105,153 @@ export default function MyAccountPage() {
             console.error("Logout error:", err);
             router.push("/login");
         }
+    };
+
+    const handleEmailSave = async () => {
+        const newEmail = email.trim().toLowerCase();
+        const currentEmail = user?.email?.toLowerCase();
+
+        setEmailError("");
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            setEmailError("Please enter a valid email address");
+            return;
+        }
+
+        // Check if email is the same
+        if (newEmail === currentEmail) {
+            setEmailError("This is already your email");
+            return;
+        }
+
+        setSavingEmail(true);
+
+        try {
+            // Check if email is already in use
+            const { data: existing } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("email", newEmail)
+                .neq("id", user?.id)
+                .maybeSingle();
+
+            if (existing) {
+                setEmailError("This email is already in use");
+                setSavingEmail(false);
+                return;
+            }
+
+            // Update Supabase Auth email
+            const { error: authError } = await supabase.auth.updateUser({
+                email: newEmail
+            });
+
+            if (authError) {
+                setEmailError(authError.message);
+                setSavingEmail(false);
+                return;
+            }
+
+            // Update profiles table to keep in sync
+            const { error: profileError } = await supabase
+                .from("profiles")
+                .update({ email: newEmail })
+                .eq("id", user?.id);
+
+            if (profileError) {
+                console.error("Error updating profile email:", profileError);
+                // Don't fail - auth email was updated successfully
+            }
+
+            await refreshData();
+            setIsEditingEmail(false);
+            setSuccessMessage("Email updated successfully!");
+            setTimeout(() => setSuccessMessage(""), 3000);
+        } catch (err: any) {
+            console.error("Error updating email:", err);
+            setEmailError(err.message || "Failed to update email");
+        } finally {
+            setSavingEmail(false);
+        }
+    };
+
+    const handleEmailCancel = () => {
+        setEmail(user?.email || "");
+        setEmailError("");
+        setIsEditingEmail(false);
+    };
+
+    const handlePasswordSave = async () => {
+        setPasswordError("");
+
+        // Validate inputs
+        if (!currentPassword) {
+            setPasswordError("Please enter your current password");
+            return;
+        }
+
+        if (!newPassword) {
+            setPasswordError("Please enter a new password");
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            setPasswordError("New password must be at least 6 characters");
+            return;
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            setPasswordError("New passwords don't match");
+            return;
+        }
+
+        setSavingPassword(true);
+
+        try {
+            // First, verify current password by re-authenticating
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: user?.email || "",
+                password: currentPassword,
+            });
+
+            if (signInError) {
+                setPasswordError("Current password is incorrect");
+                setSavingPassword(false);
+                return;
+            }
+
+            // Update to new password
+            const { error: updateError } = await supabase.auth.updateUser({
+                password: newPassword,
+            });
+
+            if (updateError) {
+                throw updateError;
+            }
+
+            // Success - reset form
+            setIsEditingPassword(false);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmNewPassword("");
+            setSuccessMessage("Password updated successfully!");
+            setTimeout(() => setSuccessMessage(""), 3000);
+        } catch (err: any) {
+            console.error("Error updating password:", err);
+            setPasswordError(err.message || "Failed to update password");
+        } finally {
+            setSavingPassword(false);
+        }
+    };
+
+    const handlePasswordCancel = () => {
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setPasswordError("");
+        setIsEditingPassword(false);
     };
 
     // Loading state
@@ -184,11 +346,54 @@ export default function MyAccountPage() {
                             <label className="block text-sm font-semibold text-forest mb-1.5">
                                 Email
                             </label>
-                            <div className="px-4 py-3 rounded-xl border border-border bg-cream/50 text-textSub text-sm">
-                                {user.email}
-                            </div>
+                            {isEditingEmail ? (
+                                <div className="space-y-2">
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value);
+                                            setEmailError("");
+                                        }}
+                                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                                        placeholder="your@email.com"
+                                        autoFocus
+                                    />
+                                    {emailError && (
+                                        <p className="text-xs text-terracotta">{emailError}</p>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleEmailSave}
+                                            disabled={savingEmail}
+                                            className="flex-1 py-2 px-4 rounded-xl bg-forest text-white text-sm font-semibold hover:bg-forest/90 disabled:opacity-50"
+                                        >
+                                            {savingEmail ? "Saving..." : "Save"}
+                                        </button>
+                                        <button
+                                            onClick={handleEmailCancel}
+                                            disabled={savingEmail}
+                                            className="flex-1 py-2 px-4 rounded-xl border border-border text-forest text-sm font-semibold hover:bg-cream disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 px-4 py-3 rounded-xl border border-border bg-cream/50 text-textSub text-sm">
+                                        {user.email}
+                                    </div>
+                                    <button
+                                        onClick={() => setIsEditingEmail(true)}
+                                        className="px-4 py-3 rounded-xl border border-border text-forest text-sm font-semibold hover:bg-cream"
+                                    >
+                                        Edit
+                                    </button>
+                                </div>
+                            )}
                             <p className="text-xs text-textSub mt-1.5">
-                                Email cannot be changed
+                                This is also your login email
                             </p>
                         </div>
                     </div>
@@ -207,29 +412,94 @@ export default function MyAccountPage() {
                     <h2 className="font-bold text-forest text-lg">Security</h2>
 
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 rounded-xl bg-cream/50">
-                            <div>
-                                <p className="font-semibold text-forest text-sm">Password</p>
-                                <p className="text-xs text-textSub">Last changed: Unknown</p>
+                        {isEditingPassword ? (
+                            <div className="p-4 rounded-xl bg-cream/50 space-y-3">
+                                <p className="font-semibold text-forest text-sm mb-2">Change Password</p>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-forest mb-1">
+                                        Current Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={(e) => {
+                                            setCurrentPassword(e.target.value);
+                                            setPasswordError("");
+                                        }}
+                                        placeholder="••••••••"
+                                        className="w-full px-3 py-2 rounded-lg border border-border bg-white text-forest text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-forest mb-1">
+                                        New Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => {
+                                            setNewPassword(e.target.value);
+                                            setPasswordError("");
+                                        }}
+                                        placeholder="••••••••"
+                                        className="w-full px-3 py-2 rounded-lg border border-border bg-white text-forest text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-forest mb-1">
+                                        Confirm New Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={confirmNewPassword}
+                                        onChange={(e) => {
+                                            setConfirmNewPassword(e.target.value);
+                                            setPasswordError("");
+                                        }}
+                                        placeholder="••••••••"
+                                        className="w-full px-3 py-2 rounded-lg border border-border bg-white text-forest text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                    />
+                                </div>
+
+                                {passwordError && (
+                                    <p className="text-xs text-terracotta">{passwordError}</p>
+                                )}
+
+                                <div className="flex gap-2 pt-1">
+                                    <button
+                                        onClick={handlePasswordSave}
+                                        disabled={savingPassword}
+                                        className="flex-1 py-2 px-4 rounded-xl bg-forest text-white text-sm font-semibold hover:bg-forest/90 disabled:opacity-50"
+                                    >
+                                        {savingPassword ? "Saving..." : "Update Password"}
+                                    </button>
+                                    <button
+                                        onClick={handlePasswordCancel}
+                                        disabled={savingPassword}
+                                        className="flex-1 py-2 px-4 rounded-xl border border-border text-forest text-sm font-semibold hover:bg-cream disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
-                                            redirectTo: `${window.location.origin}/reset-password`,
-                                        });
-                                        if (error) throw error;
-                                        setSuccessMessage("Password reset email sent!");
-                                        setTimeout(() => setSuccessMessage(""), 3000);
-                                    } catch (err: any) {
-                                        setError(err.message || "Failed to send reset email");
-                                    }
-                                }}
-                                className="text-sm font-semibold text-forest hover:text-forest/70"
-                            >
-                                Change
-                            </button>
-                        </div>
+                        ) : (
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-cream/50">
+                                <div>
+                                    <p className="font-semibold text-forest text-sm">Password</p>
+                                    <p className="text-xs text-textSub">Change your account password</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsEditingPassword(true)}
+                                    className="text-sm font-semibold text-forest hover:text-forest/70"
+                                >
+                                    Change
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
