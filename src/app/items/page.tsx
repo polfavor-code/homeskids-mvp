@@ -116,6 +116,39 @@ function ItemsPageContent() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, [isDropdownOpen]);
 
+    // Get current user caregiver
+    const currentUserCaregiver = caregivers.find(c => c.isCurrentUser);
+
+    // Helper to get role-aware "Requested by" label
+    const getRequestedLabel = (requestedById: string | null | undefined) => {
+        if (!requestedById) return "Requested";
+        if (currentUserCaregiver && requestedById === currentUserCaregiver.id) {
+            return "Requested by you";
+        }
+        const requester = caregivers.find(c => c.id === requestedById);
+        if (requester) {
+            // Use first name only
+            const firstName = requester.name.split(" ")[0];
+            return `Requested by ${firstName}`;
+        }
+        return "Requested";
+    };
+
+    // Helper to get role-aware "Packed by" label
+    const getPackedLabel = (packedById: string | null | undefined) => {
+        if (!packedById) return "Packed";
+        if (currentUserCaregiver && packedById === currentUserCaregiver.id) {
+            return "Packed by you";
+        }
+        const packer = caregivers.find(c => c.id === packedById);
+        if (packer) {
+            // Use first name only
+            const firstName = packer.name.split(" ")[0];
+            return `Packed by ${firstName}`;
+        }
+        return "Packed";
+    };
+
     return (
         <AppShell>
             {/* Header */}
@@ -293,13 +326,13 @@ function ItemsPageContent() {
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                             Missing
                                         </span>
+                                    ) : item.isPacked ? (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-softGreen text-forest">
+                                            {getPackedLabel(item.packedBy)}
+                                        </span>
                                     ) : item.isRequestedForNextVisit ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            Requested
-                                        </span>
-                                    ) : item.isPacked ? (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Packed
+                                            {getRequestedLabel(item.requestedBy)}
                                         </span>
                                     ) : null}
                                 </div>

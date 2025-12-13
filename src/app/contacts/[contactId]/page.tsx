@@ -291,7 +291,7 @@ export default function ContactDetailPage() {
                 <div className="flex gap-2 mb-4">
                     {contact.phone && (
                         <a
-                            href={`tel:${contact.phone}`}
+                            href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
                             className="flex-1 py-3 bg-softGreen text-forest rounded-xl font-medium text-center hover:bg-forest hover:text-white transition-colors"
                         >
                             Call
@@ -323,7 +323,11 @@ export default function ContactDetailPage() {
                         />
                     ) : (
                         <p className="text-sm text-forest">
-                            {contact.phone || <span className="text-textSub/50">Not provided</span>}
+                            {contact.phone ? (
+                                `${contact.phoneCountryCode || ''} ${contact.phone}`
+                            ) : (
+                                <span className="text-textSub/50">Not provided</span>
+                            )}
                         </p>
                     )}
                 </div>

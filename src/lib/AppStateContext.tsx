@@ -44,6 +44,13 @@ export type HomeProfile = {
     name: string;
     photoUrl?: string;
     address?: string;
+    addressStreet?: string;
+    addressCity?: string;
+    addressState?: string;
+    addressZip?: string;
+    addressCountry?: string;
+    addressLat?: number;
+    addressLng?: number;
     notes?: string;
     ownerCaregiverId?: string;
     accessibleCaregiverIds?: string[];
@@ -142,8 +149,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 .limit(1);
 
             if (fmError || !familyMembers || familyMembers.length === 0) {
-                console.log("No family found for user, likely needs onboarding");
-                setOnboardingCompleted(false);
+                console.log("No family found for user, checking profile onboarding status");
+                // Still check profile for onboarding_completed flag even without family
+                // This handles edge cases where user might be in waiting state
+                const { data: profileData } = await supabase
+                    .from("profiles")
+                    .select("onboarding_completed")
+                    .eq("id", user.id)
+                    .single();
+
+                setOnboardingCompleted(profileData?.onboarding_completed || false);
                 return;
             }
 
@@ -360,6 +375,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         name: h.name,
                         photoUrl: photoUrl,
                         address: h.address,
+                        addressStreet: h.address_street,
+                        addressCity: h.address_city,
+                        addressState: h.address_state,
+                        addressZip: h.address_zip,
+                        addressCountry: h.address_country,
+                        addressLat: h.address_lat,
+                        addressLng: h.address_lng,
                         notes: h.notes,
                         ownerCaregiverId: h.owner_caregiver_id,
                         accessibleCaregiverIds: h.accessible_caregiver_ids || [],

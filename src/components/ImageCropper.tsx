@@ -104,9 +104,12 @@ export default function ImageCropper({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black">
+        <div
+            className="fixed inset-0 z-[9999] flex flex-col bg-black"
+            style={{ touchAction: 'none' }}
+        >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-black/80">
+            <div className="flex items-center justify-between px-4 py-3 bg-black/80 safe-area-top">
                 <button
                     onClick={onCancel}
                     className="text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
@@ -125,7 +128,7 @@ export default function ImageCropper({
             </div>
 
             {/* Cropper Area */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 overflow-hidden" style={{ touchAction: 'none' }}>
                 <Cropper
                     image={imageSrc}
                     crop={crop}
@@ -136,11 +139,22 @@ export default function ImageCropper({
                     onCropChange={onCropChange}
                     onZoomChange={onZoomChange}
                     onCropComplete={onCropAreaComplete}
+                    objectFit="contain"
+                    style={{
+                        containerStyle: {
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: '#000',
+                        },
+                        cropAreaStyle: {
+                            border: '2px solid white',
+                        },
+                    }}
                 />
             </div>
 
             {/* Zoom Slider */}
-            <div className="px-8 py-6 bg-black/80">
+            <div className="px-8 py-6 bg-black/80 safe-area-bottom">
                 <div className="flex items-center gap-4">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                         <circle cx="11" cy="11" r="8" />
@@ -178,6 +192,15 @@ export default function ImageCropper({
                     Pinch or use slider to zoom
                 </p>
             </div>
+
+            <style jsx>{`
+                .safe-area-top {
+                    padding-top: max(12px, env(safe-area-inset-top));
+                }
+                .safe-area-bottom {
+                    padding-bottom: max(24px, env(safe-area-inset-bottom));
+                }
+            `}</style>
         </div>
     );
 }

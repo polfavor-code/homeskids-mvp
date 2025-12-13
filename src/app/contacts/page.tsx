@@ -169,7 +169,7 @@ function ContactsPageContent() {
                             <div className="flex gap-1 flex-shrink-0">
                                 {contact.phone && (
                                     <a
-                                        href={`tel:${contact.phone}`}
+                                        href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
                                         className="w-8 h-8 rounded-full bg-softGreen flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors"
                                         title="Call"
                                     >

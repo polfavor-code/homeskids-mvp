@@ -18,6 +18,8 @@ export interface Item {
     isRequestCanceled: boolean; // When requester cancels a packed item - packer must confirm removal
     photoUrl?: string; // Optional photo URL from Supabase Storage
     notes?: string; // Optional notes
+    requestedBy?: string | null; // Caregiver ID who requested the item
+    packedBy?: string | null; // Caregiver ID who packed the item
 }
 
 export interface Child {

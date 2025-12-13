@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts Page - Design Exploration</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --forest: #2C3E2D;
+            --teal: #4CA1AF;
+            --cream: #FAF8F5;
+            --softGreen: #E8EFE8;
+            --border: #E5E0D8;
+            --textSub: #888899;
+            --terracotta: #E07B39;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Karla', sans-serif;
+            background: #f5f5f5;
+            color: var(--forest);
+        }
+
+        .design-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(375px, 1fr));
+            gap: 40px;
+            padding: 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .design-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .design-header {
+            background: var(--forest);
+            color: white;
+            padding: 16px 20px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .phone-frame {
+            background: var(--cream);
+            padding: 0;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        /* Shared styles */
+        .page-content {
+            padding: 20px;
+            min-height: 100%;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: var(--textSub);
+            text-decoration: none;
+            margin-bottom: 16px;
+        }
+
+        .page-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            color: var(--forest);
+            margin-bottom: 4px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--textSub);
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--forest);
+            margin-bottom: 12px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--forest);
+            margin-bottom: 6px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--teal);
+            box-shadow: 0 0 0 3px rgba(76, 161, 175, 0.1);
+        }
+
+        .input-field::placeholder {
+            color: #bbb;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: var(--forest);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1e2b1f;
+        }
+
+        /* ============================================
+           VERSION 1: Clean Minimal Cards
+           ============================================ */
+        .v1 .category-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .v1 .category-btn {
+            padding: 14px 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: white;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .v1 .category-btn:hover {
+            border-color: var(--teal);
+        }
+
+        .v1 .category-btn.active {
+            background: var(--forest);
+            border-color: var(--forest);
+            color: white;
+        }
+
+        .v1 .category-btn .cat-name {
+            font-weight: 600;
+            font-size: 14px;
+            display: block;
+        }
+
+        .v1 .category-btn .cat-desc {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        .v1 .phone-input-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+
+        .v1 .country-select {
+            width: 90px;
+            padding: 12px 8px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .v1 .phone-number {
+            flex: 1;
+        }
+
+        .v1 .address-wrapper {
+            position: relative;
+        }
+
+        .v1 .address-input {
+            padding-left: 40px;
+        }
+
+        .v1 .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--textSub);
+        }
+
+        .v1 .mini-map {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(135deg, #e8f4f8 0%, #d4e8ed 100%);
+            border-radius: 10px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--teal);
+            font-size: 12px;
+        }
+
+        .v1 .favorite-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #FFFBEB;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .v1 .favorite-toggle .star {
+            font-size: 20px;
+        }
+
+        /* ============================================
+           VERSION 2: Single Scrolling Form
+           ============================================ */
+        .v2 .form-section {
+            margin-bottom: 24px;
+        }
+
+        .v2 .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--textSub);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .v2 .category-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .v2 .category-pill {
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .v2 .category-pill:hover {
+            border-color: var(--forest);
+        }
+
+        .v2 .category-pill.active {
+            background: var(--forest);
+            border-color: var(--forest);
+            color: white;
+        }
+
+        .v2 .phone-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .v2 .country-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 12px;
+            background: #f9f9f9;
+            border: none;
+            border-right: 1px solid var(--border);
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .v2 .country-btn .flag {
+            font-size: 18px;
+        }
+
+        .v2 .phone-input {
+            flex: 1;
+            border: none;
+            padding: 12px;
+            font-size: 15px;
+            font-family: inherit;
+        }
+
+        .v2 .phone-input:focus {
+            outline: none;
+        }
+
+        .v2 .address-search {
+            position: relative;
+        }
+
+        .v2 .address-search .input-field {
+            padding-right: 100px;
+        }
+
+        .v2 .powered-by {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: var(--textSub);
+        }
+
+        .v2 .powered-by img {
+            height: 16px;
+        }
+
+        .v2 .map-preview {
+            width: 100%;
+            height: 140px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect fill="%23e8f4f8" width="400" height="200"/><circle fill="%234CA1AF" cx="200" cy="100" r="8"/><circle fill="none" stroke="%234CA1AF" stroke-width="2" cx="200" cy="100" r="20" opacity="0.5"/></svg>') center/cover;
+            border-radius: 12px;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .v2 .address-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .v2 .address-fields .input-field {
+            font-size: 13px;
+            padding: 10px 12px;
+            background: #f9f9f9;
+        }
+
+        /* ============================================
+           VERSION 3: Step-by-Step Wizard
+           ============================================ */
+        .v3 .steps-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .v3 .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .v3 .step-dot.active {
+            background: var(--forest);
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .v3 .step-content {
+            text-align: center;
+        }
+
+        .v3 .step-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .v3 .step-desc {
+            font-size: 14px;
+            color: var(--textSub);
+            margin-bottom: 24px;
+        }
+
+        .v3 .category-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .v3 .category-card {
+            padding: 20px 16px;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            background: white;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .v3 .category-card:hover {
+            border-color: var(--teal);
+            transform: translateY(-2px);
+        }
+
+        .v3 .category-card.active {
+            border-color: var(--forest);
+            background: var(--softGreen);
+        }
+
+        .v3 .category-card .icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .v3 .category-card .name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .v3 .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .v3 .btn-secondary {
+            flex: 1;
+            padding: 14px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .v3 .btn-next {
+            flex: 2;
+            padding: 14px;
+            background: var(--forest);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* ============================================
+           VERSION 4: Floating Labels
+           ============================================ */
+        .v4 .float-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .v4 .float-input {
+            width: 100%;
+            padding: 20px 14px 8px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .v4 .float-input:focus {
+            outline: none;
+            border-color: var(--forest);
+        }
+
+        .v4 .float-label {
+            position: absolute;
+            left: 14px;
+            top: 14px;
+            font-size: 15px;
+            color: var(--textSub);
+            transition: all 0.2s;
+            pointer-events: none;
+        }
+
+        .v4 .float-input:focus + .float-label,
+        .v4 .float-input:not(:placeholder-shown) + .float-label {
+            top: 6px;
+            font-size: 11px;
+            color: var(--forest);
+            font-weight: 600;
+        }
+
+        .v4 .category-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 4px 0;
+            margin: 0 -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .v4 .category-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .v4 .category-chip {
+            flex-shrink: 0;
+            padding: 12px 18px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .v4 .category-chip.active {
+            background: var(--forest);
+            border-color: var(--forest);
+            color: white;
+        }
+
+        .v4 .phone-container {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .v4 .country-picker {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 14px 12px;
+            background: var(--cream);
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .v4 .country-picker .flag {
+            font-size: 20px;
+        }
+
+        .v4 .country-picker .code {
+            font-weight: 600;
+            color: var(--forest);
+        }
+
+        .v4 .phone-field {
+            flex: 1;
+            border: none;
+            padding: 14px;
+            font-size: 15px;
+            font-family: inherit;
+        }
+
+        .v4 .phone-field:focus {
+            outline: none;
+        }
+
+        .v4 .location-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .v4 .location-search {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .v4 .location-search input {
+            flex: 1;
+            border: none;
+            font-size: 15px;
+            font-family: inherit;
+        }
+
+        .v4 .location-search input:focus {
+            outline: none;
+        }
+
+        .v4 .location-map {
+            height: 120px;
+            background: linear-gradient(135deg, #e8f4f8 0%, #d4e8ed 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--teal);
+        }
+
+        /* ============================================
+           VERSION 5: Bottom Sheet Style
+           ============================================ */
+        .v5 .page-content {
+            padding: 0;
+        }
+
+        .v5 .header-section {
+            padding: 20px;
+            padding-bottom: 16px;
+        }
+
+        .v5 .contact-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--softGreen);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 32px;
+            color: var(--forest);
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .v5 .name-input {
+            text-align: center;
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            border: none;
+            background: transparent;
+            width: 100%;
+            padding: 8px;
+        }
+
+        .v5 .name-input:focus {
+            outline: none;
+        }
+
+        .v5 .name-input::placeholder {
+            color: #ccc;
+        }
+
+        .v5 .role-input {
+            text-align: center;
+            font-size: 14px;
+            color: var(--textSub);
+            border: none;
+            background: transparent;
+            width: 100%;
+            padding: 4px;
+        }
+
+        .v5 .role-input:focus {
+            outline: none;
+        }
+
+        .v5 .form-sheet {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            padding: 24px 20px;
+            margin-top: 8px;
+            min-height: 500px;
+        }
+
+        .v5 .sheet-handle {
+            width: 40px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+
+        .v5 .info-row {
+            display: flex;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+            gap: 14px;
+        }
+
+        .v5 .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .v5 .info-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .v5 .info-content {
+            flex: 1;
+        }
+
+        .v5 .info-label {
+            font-size: 11px;
+            color: var(--textSub);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .v5 .info-input {
+            width: 100%;
+            border: none;
+            font-size: 15px;
+            font-family: inherit;
+            padding: 0;
+        }
+
+        .v5 .info-input:focus {
+            outline: none;
+        }
+
+        .v5 .category-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .v5 .category-tag {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--cream);
+            color: var(--forest);
+            border: 1px solid transparent;
+        }
+
+        .v5 .category-tag.active {
+            background: var(--forest);
+            color: white;
+        }
+
+        .v5 .save-btn {
+            position: sticky;
+            bottom: 20px;
+            margin-top: 24px;
+        }
+
+        /* ============================================
+           VERSION 6: Modern Compact
+           ============================================ */
+        .v6 .compact-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .v6 .avatar-upload {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--softGreen);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px dashed var(--border);
+            flex-shrink: 0;
+        }
+
+        .v6 .avatar-upload:hover {
+            border-color: var(--teal);
+        }
+
+        .v6 .header-inputs {
+            flex: 1;
+        }
+
+        .v6 .header-inputs input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            padding: 4px 0;
+        }
+
+        .v6 .header-inputs input:focus {
+            outline: none;
+        }
+
+        .v6 .header-inputs .name-field {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .v6 .header-inputs .role-field {
+            font-size: 13px;
+            color: var(--textSub);
+        }
+
+        .v6 .quick-category {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .v6 .quick-category::-webkit-scrollbar {
+            display: none;
+        }
+
+        .v6 .quick-cat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 20px;
+            background: white;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .v6 .quick-cat.active {
+            background: var(--forest);
+            border-color: var(--forest);
+            color: white;
+        }
+
+        .v6 .quick-cat .emoji {
+            font-size: 14px;
+        }
+
+        .v6 .form-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .v6 .grid-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .v6 .input-icon {
+            position: relative;
+        }
+
+        .v6 .input-icon .icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--textSub);
+            font-size: 16px;
+        }
+
+        .v6 .input-icon input {
+            padding-left: 40px;
+        }
+
+        .v6 .compact-input {
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .v6 .compact-input:focus {
+            outline: none;
+            border-color: var(--teal);
+        }
+
+        .v6 .phone-combo {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .v6 .phone-combo .flag-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 12px;
+            background: #f9f9f9;
+            border: none;
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .v6 .phone-combo input {
+            flex: 1;
+            border: none;
+            padding: 12px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .v6 .phone-combo input:focus {
+            outline: none;
+        }
+
+        .v6 .map-search-box {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .v6 .map-search-input {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .v6 .map-search-input input {
+            flex: 1;
+            border: none;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .v6 .map-search-input input:focus {
+            outline: none;
+        }
+
+        .v6 .map-search-input .google-logo {
+            height: 14px;
+            opacity: 0.5;
+        }
+
+        .v6 .mini-map-preview {
+            height: 100px;
+            background: linear-gradient(135deg, #e8f4f8 0%, #d4e8ed 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .v6 .address-auto-fields {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 8px;
+            padding: 12px;
+            background: #f9f9f9;
+        }
+
+        .v6 .address-auto-fields input {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            background: white;
+        }
+
+        .v6 .favorite-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px;
+            background: #FFFBEB;
+            border-radius: 10px;
+            margin-top: 4px;
+        }
+
+        .v6 .favorite-bar span {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .v6 .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: var(--border);
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .v6 .toggle-switch.on {
+            background: var(--terracotta);
+        }
+
+        .v6 .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .v6 .toggle-switch.on::after {
+            left: 22px;
+        }
+
+        /* Country Selector Modal (shared) */
+        .country-modal {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .country-modal.show {
+            display: block;
+        }
+
+        .country-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .country-option:hover {
+            background: var(--cream);
+        }
+
+        .country-option .flag {
+            font-size: 20px;
+        }
+
+        .country-option .name {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .country-option .code {
+            font-size: 13px;
+            color: var(--textSub);
+            font-weight: 600;
+        }
+
+        /* Google Maps Autocomplete Dropdown (shared) */
+        .places-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            margin-top: 4px;
+            z-index: 100;
+            display: none;
+        }
+
+        .places-dropdown.show {
+            display: block;
+        }
+
+        .place-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .place-item:hover {
+            background: var(--cream);
+        }
+
+        .place-item .place-icon {
+            color: var(--teal);
+            margin-top: 2px;
+        }
+
+        .place-item .place-main {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .place-item .place-sub {
+            font-size: 12px;
+            color: var(--textSub);
+            margin-top: 2px;
+        }
+
+        .powered-google {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            padding: 8px 14px;
+            border-top: 1px solid var(--border);
+            font-size: 10px;
+            color: var(--textSub);
+        }
+    </style>
+</head>
+<body>
+    <div class="design-grid">
+
+        <!-- VERSION 1: Clean Minimal Cards -->
+        <div class="design-card">
+            <div class="design-header">Version 1: Clean Minimal Cards</div>
+            <div class="phone-frame">
+                <div class="page-content v1">
+                    <a href="#" class="back-link">← Back to contacts</a>
+                    <h1 class="page-title">Add Contact</h1>
+                    <p class="page-subtitle">Add an important person to your shared contact list.</p>
+
+                    <div class="card">
+                        <div class="input-group">
+                            <label class="input-label">Name *</label>
+                            <input type="text" class="input-field" placeholder="e.g., Dr. Ellis Johnson">
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label class="input-label">Role / Title</label>
+                            <input type="text" class="input-field" placeholder="e.g., Pediatrician, Teacher">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label class="input-label">Connected with</label>
+                            <select class="input-field">
+                                <option value="">Select caregiver...</option>
+                                <option value="1">Pablito</option>
+                                <option value="2">Nata</option>
+                                <option value="3">Both caregivers</option>
+                            </select>
+                            <p style="font-size: 12px; color: var(--textSub); margin-top: 6px;">Which caregiver is this contact primarily connected with?</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Category</div>
+                        <div class="category-grid">
+                            <button class="category-btn">
+                                <span class="cat-name">Medical</span>
+                                <span class="cat-desc">Doctors, dentists</span>
+                            </button>
+                            <button class="category-btn">
+                                <span class="cat-name">School</span>
+                                <span class="cat-desc">Teachers, staff</span>
+                            </button>
+                            <button class="category-btn">
+                                <span class="cat-name">Family</span>
+                                <span class="cat-desc">Relatives</span>
+                            </button>
+                            <button class="category-btn">
+                                <span class="cat-name">Friends</span>
+                                <span class="cat-desc">Playmates</span>
+                            </button>
+                            <button class="category-btn">
+                                <span class="cat-name">Activities</span>
+                                <span class="cat-desc">Coaches</span>
+                            </button>
+                            <button class="category-btn active">
+                                <span class="cat-name">Other</span>
+                                <span class="cat-desc">Babysitters</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="input-group">
+                            <label class="input-label">Phone</label>
+                            <div class="phone-input-wrapper">
+                                <select class="country-select">
+                                    <option>🇺🇸 +1</option>
+                                    <option>🇬🇧 +44</option>
+                                    <option>🇪🇸 +34</option>
+                                </select>
+                                <input type="tel" class="input-field phone-number" placeholder="555-123-4567">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label class="input-label">Email</label>
+                            <input type="email" class="input-field" placeholder="doctor@clinic.com">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label class="input-label">Address</label>
+                            <div class="address-wrapper">
+                                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <input type="text" class="input-field address-input" placeholder="Search for address...">
+                            </div>
+                            <div class="mini-map">
+                                <span>📍 Map preview will appear here</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label class="input-label">Notes</label>
+                            <textarea class="input-field" rows="3" placeholder="Any additional information..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="favorite-toggle">
+                        <span class="star">⭐</span>
+                        <div>
+                            <strong>Mark as favorite</strong>
+                            <div style="font-size: 12px; color: var(--textSub);">Favorites appear at the top</div>
+                        </div>
+                        <input type="checkbox" style="margin-left: auto; width: 20px; height: 20px;">
+                    </div>
+
+                    <button class="btn-primary" style="margin-top: 20px;">Add Contact</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 2: Single Scrolling Form -->
+        <div class="design-card">
+            <div class="design-header">Version 2: Single Scrolling Form with Google Places</div>
+            <div class="phone-frame">
+                <div class="page-content v2">
+                    <a href="#" class="back-link">← Back</a>
+                    <h1 class="page-title">New Contact</h1>
+                    <p class="page-subtitle">Share important contacts with all caregivers.</p>
+
+                    <div class="form-section">
+                        <div class="section-title">Basic Info</div>
+                        <div class="input-group">
+                            <input type="text" class="input-field" placeholder="Full name *">
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="input-field" placeholder="Role (e.g., Pediatrician)">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title">Category</div>
+                        <div class="category-pills">
+                            <button class="category-pill">🏥 Medical</button>
+                            <button class="category-pill">🏫 School</button>
+                            <button class="category-pill">👨‍👩‍👧 Family</button>
+                            <button class="category-pill active">🎯 Activities</button>
+                            <button class="category-pill">👋 Friends</button>
+                            <button class="category-pill">📋 Other</button>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title">Connected with</div>
+                        <select class="input-field">
+                            <option value="">Select caregiver...</option>
+                            <option value="1">Pablito</option>
+                            <option value="2">Nata</option>
+                            <option value="3">Both caregivers</option>
+                        </select>
+                        <p style="font-size: 12px; color: var(--textSub); margin-top: 6px;">Which caregiver is this contact primarily connected with?</p>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title">Contact Details</div>
+                        <div class="input-group">
+                            <div class="phone-row">
+                                <button class="country-btn">
+                                    <span class="flag">🇺🇸</span>
+                                    <span>+1</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                                </button>
+                                <input type="tel" class="phone-input" placeholder="Phone number">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <input type="email" class="input-field" placeholder="Email address">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title">Location</div>
+                        <div class="address-search" style="position: relative;">
+                            <input type="text" class="input-field" placeholder="Search address...">
+                            <div class="powered-by">
+                                <span>powered by</span>
+                                <svg height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                            </div>
+                        </div>
+                        <div class="map-preview"></div>
+                        <div class="address-fields">
+                            <input type="text" class="input-field" placeholder="City" value="San Francisco">
+                            <input type="text" class="input-field" placeholder="State" value="CA">
+                            <input type="text" class="input-field" placeholder="ZIP" value="94102">
+                            <input type="text" class="input-field" placeholder="Country" value="USA">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title">Notes</div>
+                        <textarea class="input-field" rows="3" placeholder="Additional information..."></textarea>
+                    </div>
+
+                    <button class="btn-primary">Save Contact</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 3: Step-by-Step Wizard -->
+        <div class="design-card">
+            <div class="design-header">Version 3: Step-by-Step Wizard</div>
+            <div class="phone-frame">
+                <div class="page-content v3">
+                    <a href="#" class="back-link">← Cancel</a>
+
+                    <div class="steps-indicator">
+                        <div class="step-dot active"></div>
+                        <div class="step-dot"></div>
+                        <div class="step-dot"></div>
+                    </div>
+
+                    <div class="step-content">
+                        <h2 class="step-title">What type of contact?</h2>
+                        <p class="step-desc">This helps organize your contacts list.</p>
+
+                        <div class="category-cards">
+                            <div class="category-card">
+                                <div class="icon">🏥</div>
+                                <div class="name">Medical</div>
+                            </div>
+                            <div class="category-card active">
+                                <div class="icon">🏫</div>
+                                <div class="name">School</div>
+                            </div>
+                            <div class="category-card">
+                                <div class="icon">👨‍👩‍👧</div>
+                                <div class="name">Family</div>
+                            </div>
+                            <div class="category-card">
+                                <div class="icon">⚽</div>
+                                <div class="name">Activities</div>
+                            </div>
+                            <div class="category-card">
+                                <div class="icon">👋</div>
+                                <div class="name">Friends</div>
+                            </div>
+                            <div class="category-card">
+                                <div class="icon">📋</div>
+                                <div class="name">Other</div>
+                            </div>
+                        </div>
+
+                        <div class="btn-row">
+                            <button class="btn-secondary">Back</button>
+                            <button class="btn-next">Continue →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 4: Floating Labels -->
+        <div class="design-card">
+            <div class="design-header">Version 4: Floating Labels + Horizontal Scroll</div>
+            <div class="phone-frame">
+                <div class="page-content v4">
+                    <a href="#" class="back-link">← Back to contacts</a>
+                    <h1 class="page-title">Add Contact</h1>
+                    <p class="page-subtitle">Important people in your child's life.</p>
+
+                    <div class="category-scroll">
+                        <div class="category-chip">🏥 Medical</div>
+                        <div class="category-chip">🏫 School</div>
+                        <div class="category-chip active">👨‍👩‍👧 Family</div>
+                        <div class="category-chip">⚽ Activities</div>
+                        <div class="category-chip">👋 Friends</div>
+                        <div class="category-chip">📋 Other</div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <div class="float-group">
+                            <input type="text" class="float-input" placeholder=" " value="Grandma Rose">
+                            <label class="float-label">Full Name *</label>
+                        </div>
+
+                        <div class="float-group">
+                            <input type="text" class="float-input" placeholder=" " value="Grandmother">
+                            <label class="float-label">Role / Relationship</label>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Connected with</label>
+                            <select class="input-field" style="padding: 14px;">
+                                <option value="">Select caregiver...</option>
+                                <option value="1">Pablito</option>
+                                <option value="2" selected>Nata</option>
+                                <option value="3">Both caregivers</option>
+                            </select>
+                            <p style="font-size: 12px; color: var(--textSub); margin-top: 6px;">Which caregiver is this contact primarily connected with?</p>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Phone</label>
+                            <div class="phone-container">
+                                <div class="country-picker">
+                                    <span class="flag">🇺🇸</span>
+                                    <span class="code">+1</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                                </div>
+                                <input type="tel" class="phone-field" placeholder="Phone number">
+                            </div>
+                        </div>
+
+                        <div class="float-group">
+                            <input type="email" class="float-input" placeholder=" ">
+                            <label class="float-label">Email</label>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Address</label>
+                            <div class="location-card">
+                                <div class="location-search">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input type="text" placeholder="Search address with Google Maps">
+                                </div>
+                                <div class="location-map">📍</div>
+                            </div>
+                        </div>
+
+                        <div class="float-group">
+                            <textarea class="float-input" placeholder=" " rows="3" style="resize: none;"></textarea>
+                            <label class="float-label">Notes</label>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary">Save Contact</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 5: Bottom Sheet Style -->
+        <div class="design-card">
+            <div class="design-header">Version 5: Contact Card Style</div>
+            <div class="phone-frame">
+                <div class="page-content v5">
+                    <div class="header-section">
+                        <a href="#" class="back-link">← Cancel</a>
+
+                        <div class="contact-avatar">👤</div>
+                        <input type="text" class="name-input" placeholder="Contact Name">
+                        <input type="text" class="role-input" placeholder="Role or relationship">
+                    </div>
+
+                    <div class="form-sheet">
+                        <div class="sheet-handle"></div>
+
+                        <div class="info-row">
+                            <div class="info-icon">🏷️</div>
+                            <div class="info-content">
+                                <div class="info-label">Category</div>
+                                <div class="category-tags">
+                                    <span class="category-tag">Medical</span>
+                                    <span class="category-tag active">School</span>
+                                    <span class="category-tag">Family</span>
+                                    <span class="category-tag">Activities</span>
+                                    <span class="category-tag">Other</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-icon">👥</div>
+                            <div class="info-content">
+                                <div class="info-label">Connected with</div>
+                                <select class="info-input" style="border: none; padding: 0; font-size: 15px; background: transparent;">
+                                    <option value="">Select caregiver...</option>
+                                    <option value="1">Pablito</option>
+                                    <option value="2">Nata</option>
+                                    <option value="3">Both caregivers</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-icon">📞</div>
+                            <div class="info-content">
+                                <div class="info-label">Phone</div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 18px;">🇺🇸</span>
+                                    <input type="tel" class="info-input" placeholder="+1 555-123-4567">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-icon">✉️</div>
+                            <div class="info-content">
+                                <div class="info-label">Email</div>
+                                <input type="email" class="info-input" placeholder="email@example.com">
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-icon">📍</div>
+                            <div class="info-content">
+                                <div class="info-label">Address</div>
+                                <input type="text" class="info-input" placeholder="Search with Google Maps...">
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-icon">📝</div>
+                            <div class="info-content">
+                                <div class="info-label">Notes</div>
+                                <input type="text" class="info-input" placeholder="Additional info...">
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-icon">⭐</div>
+                            <div class="info-content">
+                                <div style="font-weight: 600;">Mark as favorite</div>
+                                <div style="font-size: 12px; color: var(--textSub);">Show at top of list</div>
+                            </div>
+                            <div class="toggle-switch" style="margin-left: auto;"></div>
+                        </div>
+
+                        <button class="btn-primary save-btn">Save Contact</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 6: Modern Compact -->
+        <div class="design-card">
+            <div class="design-header">Version 6: Modern Compact with Full Google Maps Integration</div>
+            <div class="phone-frame">
+                <div class="page-content v6">
+                    <a href="#" class="back-link">← Contacts</a>
+
+                    <div class="compact-header">
+                        <div class="avatar-upload">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                        <div class="header-inputs">
+                            <input type="text" class="name-field" placeholder="Contact name *">
+                            <input type="text" class="role-field" placeholder="Role (e.g., Pediatrician)">
+                        </div>
+                    </div>
+
+                    <div class="quick-category">
+                        <button class="quick-cat"><span class="emoji">🏥</span> Medical</button>
+                        <button class="quick-cat active"><span class="emoji">🏫</span> School</button>
+                        <button class="quick-cat"><span class="emoji">👨‍👩‍👧</span> Family</button>
+                        <button class="quick-cat"><span class="emoji">⚽</span> Activities</button>
+                        <button class="quick-cat"><span class="emoji">👋</span> Friends</button>
+                        <button class="quick-cat"><span class="emoji">📋</span> Other</button>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label class="input-label">Connected with</label>
+                            <select class="compact-input">
+                                <option value="">Select caregiver...</option>
+                                <option value="1">Pablito</option>
+                                <option value="2">Nata</option>
+                                <option value="3">Both caregivers</option>
+                            </select>
+                            <p style="font-size: 11px; color: var(--textSub); margin-top: 4px;">Which caregiver is this contact primarily connected with?</p>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Phone</label>
+                            <div class="phone-combo">
+                                <button class="flag-btn">
+                                    🇺🇸 +1
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                                </button>
+                                <input type="tel" placeholder="Phone number">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Email</label>
+                            <div class="input-icon">
+                                <span class="icon">✉️</span>
+                                <input type="email" class="compact-input" placeholder="email@example.com" style="padding-left: 40px;">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Address</label>
+                            <div class="map-search-box">
+                                <div class="map-search-input">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input type="text" placeholder="Search address...">
+                                    <svg class="google-logo" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                                </div>
+                                <div class="mini-map-preview">📍</div>
+                                <div class="address-auto-fields">
+                                    <input type="text" placeholder="Street" value="123 Main St">
+                                    <input type="text" placeholder="Apt/Suite">
+                                    <input type="text" placeholder="City" value="San Francisco">
+                                    <input type="text" placeholder="State" value="CA">
+                                    <input type="text" placeholder="ZIP" value="94102">
+                                    <input type="text" placeholder="Country" value="USA">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Notes</label>
+                            <textarea class="compact-input" rows="2" placeholder="Additional information..." style="resize: none;"></textarea>
+                        </div>
+
+                        <div class="favorite-bar">
+                            <span>⭐ Mark as favorite</span>
+                            <div class="toggle-switch on"></div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" style="margin-top: 20px;">Add Contact</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Toggle active states for demo
+        document.querySelectorAll('.category-btn, .category-pill, .category-chip, .category-card, .category-tag, .quick-cat').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const parent = this.closest('.category-grid, .category-pills, .category-scroll, .category-cards, .category-tags, .quick-category');
+                if (parent) {
+                    parent.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // Toggle switches
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                this.classList.toggle('on');
+            });
+        });
+    </script>
+</body>
+</html>

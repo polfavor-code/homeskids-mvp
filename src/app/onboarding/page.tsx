@@ -101,11 +101,25 @@ export default function OnboardingPage() {
     // Track if user was invited (already has a family)
     const [wasInvited, setWasInvited] = useState(false);
 
-    // Check if user already has a family (via invite)
+    // Check if user is already onboarded - redirect to home if so
     useEffect(() => {
-        const checkExistingFamily = async () => {
+        const checkOnboardingStatus = async () => {
             if (!user) return;
 
+            // Check if user has already completed onboarding
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("onboarding_completed")
+                .eq("id", user.id)
+                .single();
+
+            if (profile?.onboarding_completed) {
+                // User is already onboarded, redirect to home
+                router.push("/");
+                return;
+            }
+
+            // Check if user already has a family (via invite)
             const { data: familyMember } = await supabase
                 .from("family_members")
                 .select("family_id")
@@ -117,8 +131,8 @@ export default function OnboardingPage() {
                 setWasInvited(true); // User was invited and already belongs to a family
             }
         };
-        checkExistingFamily();
-    }, [user]);
+        checkOnboardingStatus();
+    }, [user, router]);
 
     // Helper to check if selected role is parent/step-parent
     const isParentRole = () => {
