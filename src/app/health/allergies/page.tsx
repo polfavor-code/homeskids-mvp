@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import AppShell from "@/components/layout/AppShell";
+import MobileSelect from "@/components/MobileSelect";
 import { useAppState } from "@/lib/AppStateContext";
 import { useHealth, Allergy } from "@/lib/HealthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -166,31 +167,33 @@ export default function AllergiesPage() {
                                     <label className="block text-sm font-semibold text-forest mb-1.5">
                                         Category
                                     </label>
-                                    <select
+                                    <MobileSelect
                                         value={newAllergy.category}
-                                        onChange={(e) => setNewAllergy({ ...newAllergy, category: e.target.value as Allergy["category"] })}
-                                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                                    >
-                                        <option value="food">Food</option>
-                                        <option value="medication">Medication</option>
-                                        <option value="environmental">Environmental</option>
-                                        <option value="other">Other</option>
-                                    </select>
+                                        onChange={(value) => setNewAllergy({ ...newAllergy, category: value as Allergy["category"] })}
+                                        options={[
+                                            { value: "food", label: "Food" },
+                                            { value: "medication", label: "Medication" },
+                                            { value: "environmental", label: "Environmental" },
+                                            { value: "other", label: "Other" },
+                                        ]}
+                                        title="Select category"
+                                    />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-semibold text-forest mb-1.5">
                                         Severity
                                     </label>
-                                    <select
+                                    <MobileSelect
                                         value={newAllergy.severity}
-                                        onChange={(e) => setNewAllergy({ ...newAllergy, severity: e.target.value as Allergy["severity"] })}
-                                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                                    >
-                                        <option value="mild">Mild</option>
-                                        <option value="moderate">Moderate</option>
-                                        <option value="severe">Severe</option>
-                                    </select>
+                                        onChange={(value) => setNewAllergy({ ...newAllergy, severity: value as Allergy["severity"] })}
+                                        options={[
+                                            { value: "mild", label: "Mild" },
+                                            { value: "moderate", label: "Moderate" },
+                                            { value: "severe", label: "Severe" },
+                                        ]}
+                                        title="Select severity"
+                                    />
                                 </div>
                             </div>
 

@@ -142,11 +142,11 @@ export default function TravelBagPage() {
                         </div>
                     )}
 
-                    {/* To Be Found Section */}
+                    {/* Missing Items Section */}
                     {missingItems.length > 0 && (
                         <div>
                             <div className="flex items-center gap-2 mb-3">
-                                <h2 className="font-bold text-gray-900">To be found</h2>
+                                <h2 className="font-bold text-gray-900">Missing</h2>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                     {missingItems.length}
                                 </span>

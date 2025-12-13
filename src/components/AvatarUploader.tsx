@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { supabase } from "@/lib/supabase";
 import { processImageForUpload } from "@/lib/imageUtils";
+import ImageCropper from "./ImageCropper";
 
 interface AvatarUploaderProps {
     userId: string;
@@ -18,6 +19,8 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
     const [avatarUrl, setAvatarUrl] = useState<string>("");
     const [error, setError] = useState("");
     const [familyId, setFamilyId] = useState<string | null>(null);
+    const [cropperImage, setCropperImage] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Fetch user's family ID on mount
     useEffect(() => {
@@ -67,26 +70,52 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
     };
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        console.log("handleFileChange triggered");
+
+        if (!event.target.files || event.target.files.length === 0) {
+            console.log("No files selected");
+            return;
+        }
+
+        if (!familyId) {
+            console.log("No familyId");
+            setError("No family found. Please complete onboarding.");
+            return;
+        }
+
+        const file = event.target.files[0];
+        console.log("File selected:", file.name, file.type, file.size);
+
+        try {
+            // Create object URL for cropper
+            const imageUrl = URL.createObjectURL(file);
+            console.log("Object URL created:", imageUrl);
+            setCropperImage(imageUrl);
+        } catch (err) {
+            console.error("Error creating object URL:", err);
+            setError("Failed to load image. Please try again.");
+        }
+
+        // Reset input so same file can be selected again
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
         try {
             setError("");
+            setCropperImage(null);
             setUploading(true);
 
-            if (!event.target.files || event.target.files.length === 0) {
-                return;
-            }
-
-            if (!familyId) {
-                throw new Error("No family found. Please complete onboarding.");
-            }
-
-            const file = event.target.files[0];
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(7);
 
-            // Process image: create original and display versions
-            const processed = await processImageForUpload(file);
+            // Process cropped image: create original and display versions
+            const croppedFile = new File([croppedBlob], "cropped.jpg", { type: "image/jpeg" });
+            const processed = await processImageForUpload(croppedFile);
 
-            const originalPath = `${familyId}/${userId}-${timestamp}-${random}_original.${file.name.split(".").pop()}`;
+            const originalPath = `${familyId}/${userId}-${timestamp}-${random}_original.jpg`;
             const displayPath = `${familyId}/${userId}-${timestamp}-${random}_display.jpg`;
 
             // Upload original (full resolution)
@@ -144,21 +173,46 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
         }
     };
 
+    const handleCropCancel = () => {
+        if (cropperImage) {
+            URL.revokeObjectURL(cropperImage);
+        }
+        setCropperImage(null);
+    };
+
     const initials = userName.charAt(0).toUpperCase();
 
     return (
-        <div className="flex flex-col items-center gap-3">
-            <div className="relative group">
-                <input
-                    type="file"
-                    id="avatar-upload"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    disabled={uploading}
+        <>
+            {/* Image Cropper Modal */}
+            {cropperImage && (
+                <ImageCropper
+                    imageSrc={cropperImage}
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                    aspectRatio={1}
+                    cropShape="round"
                 />
-                <label
-                    htmlFor="avatar-upload"
+            )}
+
+            <div className="flex flex-col items-center gap-3">
+                <div className="relative group">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        id="avatar-upload"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={handleFileChange}
+                        disabled={uploading}
+                    />
+                <button
+                    type="button"
+                    onClick={() => {
+                        console.log("Avatar button clicked");
+                        fileInputRef.current?.click();
+                    }}
+                    disabled={uploading}
                     className={`block w-24 h-24 rounded-full overflow-hidden cursor-pointer border-4 border-border hover:border-forest transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                 >
@@ -173,7 +227,7 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
                             {initials}
                         </div>
                     )}
-                </label>
+                </button>
                 <div className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 border-2 border-forest shadow-md">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-forest">
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -191,6 +245,7 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
             )}
 
             <p className="text-xs text-textSub text-center">Click to change photo</p>
-        </div>
+            </div>
+        </>
     );
 }

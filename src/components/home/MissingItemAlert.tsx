@@ -69,7 +69,7 @@ export default function MissingItemAlert({ missingItems }: MissingItemAlertProps
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
                 <Link
-                    href="/items?filter=To be found"
+                    href="/items/missing"
                     onClick={handleView}
                     className="bg-white/20 hover:bg-white/30 px-4 py-1.5 rounded-full text-[13px] font-bold transition-colors"
                 >

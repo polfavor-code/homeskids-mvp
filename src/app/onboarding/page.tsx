@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
 import { QRCodeSVG } from "qrcode.react";
+import MobileSelect from "@/components/MobileSelect";
 
 // Canonical role options - used throughout the app
 // Only Parent and Step-parent can create families via direct signup
@@ -715,24 +716,12 @@ export default function OnboardingPage() {
                         <label className="block text-sm font-medium text-forest mb-1.5">
                             Your role
                         </label>
-                        <div className="relative">
-                            <select
-                                value={selectedRole}
-                                onChange={(e) => setSelectedRole(e.target.value)}
-                                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all appearance-none cursor-pointer pr-10"
-                            >
-                                {ROLE_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                                <svg className="h-4 w-4 text-forest/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-                        </div>
+                        <MobileSelect
+                            value={selectedRole}
+                            onChange={setSelectedRole}
+                            options={ROLE_OPTIONS}
+                            title="Select your role"
+                        />
                         {!isParentRole() && !wasInvited && (
                             <p className="text-xs text-amber-600 mt-2">
                                 As a {ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}, you'll need an invite from a parent to join a family.
@@ -847,24 +836,12 @@ export default function OnboardingPage() {
                         <label className="block text-sm font-medium text-forest mb-1.5">
                             Their role
                         </label>
-                        <div className="relative">
-                            <select
-                                value={otherCaregiverRole}
-                                onChange={(e) => setOtherCaregiverRole(e.target.value)}
-                                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all appearance-none cursor-pointer pr-10"
-                            >
-                                {OTHER_CAREGIVER_ROLE_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                                <svg className="h-4 w-4 text-forest/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-                        </div>
+                        <MobileSelect
+                            value={otherCaregiverRole}
+                            onChange={setOtherCaregiverRole}
+                            options={OTHER_CAREGIVER_ROLE_OPTIONS}
+                            title="Select their role"
+                        />
                     </div>
 
                     <p className="text-xs text-textSub">
@@ -1191,7 +1168,7 @@ export default function OnboardingPage() {
                                             <div className="bg-cream p-3 rounded-xl border border-border/50 flex-shrink-0">
                                                 <QRCodeSVG
                                                     value={inviteLink}
-                                                    size={100}
+                                                    size={200}
                                                     level="M"
                                                 />
                                             </div>

@@ -7,15 +7,16 @@ import AppShell from "@/components/layout/AppShell";
 import { useContacts, ContactCategory, Contact } from "@/lib/ContactsContext";
 import { useAppState, CaregiverProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
-import { MedicalIcon, SchoolIcon, ContactsIcon } from "@/components/icons/DuotoneIcons";
+import { MedicalIcon, SchoolIcon, ContactsIcon, FamilyIcon, FriendsIcon, ActivitiesIcon, OtherIcon, GridIcon } from "@/components/icons/DuotoneIcons";
 
 const CATEGORIES: { value: ContactCategory | "all"; label: string; icon?: React.ReactNode }[] = [
-    { value: "all", label: "All" },
+    { value: "all", label: "All", icon: <GridIcon size={14} /> },
     { value: "medical", label: "Medical", icon: <MedicalIcon size={14} /> },
     { value: "school", label: "School", icon: <SchoolIcon size={14} /> },
-    { value: "family", label: "Family" },
-    { value: "activities", label: "Activities" },
-    { value: "other", label: "Other" },
+    { value: "family", label: "Family", icon: <FamilyIcon size={14} /> },
+    { value: "friends", label: "Friends", icon: <FriendsIcon size={14} /> },
+    { value: "activities", label: "Activities", icon: <ActivitiesIcon size={14} /> },
+    { value: "other", label: "Other", icon: <OtherIcon size={14} /> },
 ];
 
 function ContactsPageContent() {
@@ -65,6 +66,8 @@ function ContactsPageContent() {
                 return "bg-blue-50 text-blue-700";
             case "family":
                 return "bg-purple-50 text-purple-700";
+            case "friends":
+                return "bg-amber-50 text-amber-700";
             case "activities":
                 return "bg-green-50 text-green-700";
             default:
@@ -99,7 +102,7 @@ function ContactsPageContent() {
                         href="/contacts/new"
                         className="flex items-center gap-1.5 px-3 py-2 bg-forest text-white rounded-xl text-sm font-medium hover:bg-teal transition-colors"
                     >
-                        + Add
+                        + Add contact
                     </Link>
                 </div>
             </div>

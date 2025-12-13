@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import AppShell from "@/components/layout/AppShell";
+import MobileSelect from "@/components/MobileSelect";
 import { useAppState } from "@/lib/AppStateContext";
 import { useHealth, DietType, DietaryNeeds } from "@/lib/HealthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -110,17 +111,13 @@ export default function DietaryNeedsPage() {
                         <label className="block text-sm font-semibold text-forest mb-1.5">
                             Main diet
                         </label>
-                        <select
+                        <MobileSelect
                             value={formData.dietType}
-                            onChange={(e) => setFormData({ ...formData, dietType: e.target.value as DietType })}
-                            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                        >
-                            {DIET_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
+                            onChange={(value) => setFormData({ ...formData, dietType: value as DietType })}
+                            options={DIET_OPTIONS}
+                            placeholder="Select diet type..."
+                            title="Select diet type"
+                        />
                         <p className="text-xs text-textSub mt-1.5">
                             Choose the option that best matches {childName}'s diet. You can add details below.
                         </p>

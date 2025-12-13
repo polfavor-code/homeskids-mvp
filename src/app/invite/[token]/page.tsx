@@ -7,6 +7,7 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
+import { UserIcon } from "@/components/icons/DuotoneIcons";
 
 export default function InvitePage() {
     const params = useParams();
@@ -39,20 +40,32 @@ export default function InvitePage() {
             }
 
             if (data) {
-                // Fetch child name for display (e.g., "June's Family" instead of family name)
+                // Fetch child name and avatar for display (e.g., "June's Family" instead of family name)
                 const { data: childData, error: childError } = await supabase
                     .from("children")
-                    .select("name")
+                    .select("name, avatar_url")
                     .eq("family_id", data.family_id)
                     .limit(1)
                     .single();
 
                 console.log("Child data fetch:", { childData, childError, family_id: data.family_id });
 
-                // Add child name to invite data
+                // Get signed URL for avatar if it exists
+                let childAvatarUrl = null;
+                if (childData?.avatar_url) {
+                    const { data: urlData } = await supabase.storage
+                        .from("avatars")
+                        .createSignedUrl(childData.avatar_url, 3600);
+                    if (urlData) {
+                        childAvatarUrl = urlData.signedUrl;
+                    }
+                }
+
+                // Add child name and avatar to invite data
                 const inviteWithChild = {
                     ...data,
-                    child_name: childData?.name || null
+                    child_name: childData?.name || null,
+                    child_avatar_url: childAvatarUrl
                 };
                 console.log("Invite with child:", inviteWithChild);
                 setInvite(inviteWithChild);
@@ -343,8 +356,16 @@ export default function InvitePage() {
                         </div>
 
                         <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-teal/20 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
-                                👋
+                            <div className="w-16 h-16 bg-teal/20 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                                {invite?.child_avatar_url ? (
+                                    <img
+                                        src={invite.child_avatar_url}
+                                        alt={invite.child_name || "Child"}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <UserIcon size={32} className="text-teal" />
+                                )}
                             </div>
                             <h2 className="font-dmSerif text-2xl text-forest mb-2">
                                 You're invited!

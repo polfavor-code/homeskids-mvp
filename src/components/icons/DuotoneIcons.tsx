@@ -315,3 +315,57 @@ export function MoreIcon(props: IconProps) {
         </DuotoneIcon>
     );
 }
+
+// Contact Category Icons
+export function FamilyIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="currentColor" fillOpacity="0.2" />
+            <circle cx="9" cy="7" r="4" fill="currentColor" fillOpacity="0.2" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" fill="none" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" fill="none" />
+        </DuotoneIcon>
+    );
+}
+
+export function FriendsIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <circle cx="12" cy="12" r="10" fill="currentColor" fillOpacity="0.2" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="currentColor" fill="none" />
+            <line x1="9" y1="9" x2="9.01" y2="9" stroke="currentColor" strokeWidth="2" />
+            <line x1="15" y1="9" x2="15.01" y2="9" stroke="currentColor" strokeWidth="2" />
+        </DuotoneIcon>
+    );
+}
+
+export function ActivitiesIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <circle cx="12" cy="12" r="10" fill="currentColor" fillOpacity="0.2" />
+            <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" fillOpacity="0.4" stroke="currentColor" />
+        </DuotoneIcon>
+    );
+}
+
+export function OtherIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <circle cx="12" cy="12" r="10" fill="currentColor" fillOpacity="0.2" />
+            <circle cx="12" cy="12" r="1" fill="currentColor" />
+            <circle cx="8" cy="12" r="1" fill="currentColor" />
+            <circle cx="16" cy="12" r="1" fill="currentColor" />
+        </DuotoneIcon>
+    );
+}
+
+export function GridIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <rect x="3" y="3" width="7" height="7" fill="currentColor" fillOpacity="0.2" />
+            <rect x="14" y="3" width="7" height="7" fill="currentColor" fillOpacity="0.2" />
+            <rect x="14" y="14" width="7" height="7" fill="currentColor" fillOpacity="0.2" />
+            <rect x="3" y="14" width="7" height="7" fill="currentColor" fillOpacity="0.2" />
+        </DuotoneIcon>
+    );
+}

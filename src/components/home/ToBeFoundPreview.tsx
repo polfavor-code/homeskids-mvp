@@ -14,12 +14,12 @@ export default function ToBeFoundPreview({ missingItems }: ToBeFoundPreviewProps
         <div className="card-organic p-5">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <h3 className="font-dmSerif text-lg text-forest">To be found</h3>
+                    <h3 className="font-dmSerif text-lg text-forest">Missing</h3>
                     <span className="bg-terracotta/20 text-terracotta text-xs font-bold px-2.5 py-1 rounded-full">
                         {missingItems.length}
                     </span>
                 </div>
-                <Link href="/items?filter=To be found" className="text-sm font-bold text-forest hover:text-terracotta transition-colors">
+                <Link href="/items/missing" className="text-sm font-bold text-forest hover:text-terracotta transition-colors">
                     View all →
                 </Link>
             </div>

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { QRCodeSVG } from "qrcode.react";
+import MobileSelect from "@/components/MobileSelect";
 
 interface InviteCaregiverPanelProps {
     onClose: () => void;
@@ -206,7 +207,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                     <div className="bg-white p-4 rounded-xl border border-border">
                         <QRCodeSVG
                             value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${inviteToken}`}
-                            size={140}
+                            size={200}
                             level="M"
                             includeMargin={false}
                         />
@@ -300,19 +301,13 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                     <label htmlFor="invitee-role" className="block text-sm font-semibold text-forest mb-1.5">
                         Role
                     </label>
-                    <select
-                        id="invitee-role"
+                    <MobileSelect
                         value={inviteRole}
-                        onChange={(e) => setInviteRole(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                    >
-                        <option value="">Select role...</option>
-                        {ROLE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
+                        onChange={setInviteRole}
+                        options={ROLE_OPTIONS}
+                        placeholder="Select role..."
+                        title="Select role"
+                    />
                 </div>
 
                 {/* Home Access Selection */}

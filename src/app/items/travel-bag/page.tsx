@@ -19,7 +19,7 @@ import { Item } from "@/lib/mockData";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 
 // Shared tab type for the items section
-type ItemsTab = "all" | "travel-bag" | "to-be-found";
+type ItemsTab = "all" | "travel-bag" | "missing";
 
 function TravelBagCheckPageContent() {
     useEnsureOnboarding();
@@ -217,11 +217,11 @@ function TravelBagCheckPageContent() {
                     Travel bag
                 </Link>
                 <Link
-                    href="/items/to-be-found"
+                    href="/items/missing"
                     className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
                 >
                     <SearchIcon size={16} />
-                    To be found ({missingItemsCount})
+                    Missing ({missingItemsCount})
                 </Link>
             </div>
 
