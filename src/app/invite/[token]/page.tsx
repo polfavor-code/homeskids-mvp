@@ -207,8 +207,15 @@ export default function InvitePage() {
 
                 setOnboardingCompleted(true);
 
+                // Wait a moment for auth state to fully propagate through the app
+                // This ensures AuthContext has updated before we refresh data
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 // Force refresh app state to ensure fresh data is available
                 await refreshData();
+
+                // Small delay to ensure state is fully settled before navigation
+                await new Promise(resolve => setTimeout(resolve, 50));
 
                 // Check if this is a parent/step-parent role and if there are unclaimed homes
                 const isParentRole = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
@@ -229,7 +236,10 @@ export default function InvitePage() {
                     }
                 }
 
-                router.push("/");
+                // Use replace to prevent back navigation to invite page
+                // and refresh to ensure all contexts reload with fresh data
+                router.replace("/");
+                router.refresh();
             }
 
         } catch (err: any) {

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import MobileSelect from "@/components/MobileSelect";
+import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -23,9 +24,15 @@ const TIME_ZONE_OPTIONS = [
 interface HomeFormData {
     name: string;
     address: string;
+    addressStreet: string;
+    addressCity: string;
+    addressState: string;
+    addressZip: string;
+    addressCountry: string;
+    addressLat: number | null;
+    addressLng: number | null;
     timeZone: string;
     homePhone: string;
-    emergencyContact: string;
     wifiName: string;
     wifiPassword: string;
     notes: string;
@@ -36,9 +43,15 @@ interface HomeFormData {
 const defaultFormData: HomeFormData = {
     name: "",
     address: "",
+    addressStreet: "",
+    addressCity: "",
+    addressState: "",
+    addressZip: "",
+    addressCountry: "",
+    addressLat: null,
+    addressLng: null,
     timeZone: "auto",
     homePhone: "",
-    emergencyContact: "",
     wifiName: "",
     wifiPassword: "",
     notes: "",
@@ -76,9 +89,15 @@ export default function HomeSetupPage() {
         setFormData({
             name: home.name,
             address: home.address || "",
+            addressStreet: home.addressStreet || "",
+            addressCity: home.addressCity || "",
+            addressState: home.addressState || "",
+            addressZip: home.addressZip || "",
+            addressCountry: home.addressCountry || "",
+            addressLat: home.addressLat || null,
+            addressLng: home.addressLng || null,
             timeZone: home.timeZone || "auto",
             homePhone: home.homePhone || "",
-            emergencyContact: home.emergencyContact || "",
             wifiName: home.wifiName || "",
             wifiPassword: home.wifiPassword || "",
             notes: home.notes || "",
@@ -120,9 +139,15 @@ export default function HomeSetupPage() {
             const homeData = {
                 name: formData.name.trim(),
                 address: formData.address.trim() || null,
+                address_street: formData.addressStreet.trim() || null,
+                address_city: formData.addressCity.trim() || null,
+                address_state: formData.addressState.trim() || null,
+                address_zip: formData.addressZip.trim() || null,
+                address_country: formData.addressCountry.trim() || null,
+                address_lat: formData.addressLat || null,
+                address_lng: formData.addressLng || null,
                 time_zone: formData.timeZone || "auto",
                 home_phone: formData.homePhone.trim() || null,
-                emergency_contact: formData.emergencyContact.trim() || null,
                 wifi_name: formData.wifiName.trim() || null,
                 wifi_password: formData.wifiPassword.trim() || null,
                 notes: formData.notes.trim() || null,
@@ -448,12 +473,27 @@ export default function HomeSetupPage() {
                             {/* Location Section */}
                             <div>
                                 <h4 className="text-sm font-semibold text-forest mb-2">Location</h4>
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {home.address ? (
                                         <>
+                                            {/* Static Map Preview */}
+                                            {home.addressLat && home.addressLng && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${home.addressLat},${home.addressLng}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block rounded-xl overflow-hidden border border-border"
+                                                >
+                                                    <img
+                                                        src={`https://maps.googleapis.com/maps/api/staticmap?center=${home.addressLat},${home.addressLng}&zoom=15&size=400x150&scale=2&markers=color:red%7C${home.addressLat},${home.addressLng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
+                                                        alt="Map preview"
+                                                        className="w-full h-[120px] object-cover"
+                                                    />
+                                                </a>
+                                            )}
                                             <p className="text-sm text-textSub">{home.address}</p>
                                             <a
-                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(home.address)}`}
+                                                href={`https://www.google.com/maps/search/?api=1&query=${home.addressLat && home.addressLng ? `${home.addressLat},${home.addressLng}` : encodeURIComponent(home.address)}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-xs text-teal hover:underline inline-flex items-center gap-1"
@@ -481,21 +521,12 @@ export default function HomeSetupPage() {
                             </div>
 
                             {/* Contact Info */}
-                            {(home.homePhone || home.emergencyContact) && (
+                            {home.homePhone && (
                                 <div>
                                     <h4 className="text-sm font-semibold text-forest mb-2">Contact Info</h4>
-                                    <div className="space-y-1">
-                                        {home.homePhone && (
-                                            <p className="text-sm text-textSub">
-                                                <span className="text-forest/70">Phone:</span> {home.homePhone}
-                                            </p>
-                                        )}
-                                        {home.emergencyContact && (
-                                            <p className="text-sm text-textSub">
-                                                <span className="text-forest/70">Emergency:</span> {home.emergencyContact}
-                                            </p>
-                                        )}
-                                    </div>
+                                    <p className="text-sm text-textSub">
+                                        <span className="text-forest/70">Phone:</span> {home.homePhone}
+                                    </p>
                                 </div>
                             )}
 
@@ -846,15 +877,34 @@ function HomeForm({
                     <label className="block text-sm font-medium text-forest mb-1.5">
                         Address
                     </label>
-                    <input
-                        type="text"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                        placeholder="123 Main St, City, State"
+                    <GooglePlacesAutocomplete
+                        onAddressSelect={(address: AddressComponents) => {
+                            setFormData({
+                                ...formData,
+                                address: address.formattedAddress,
+                                addressStreet: address.street,
+                                addressCity: address.city,
+                                addressState: address.state,
+                                addressZip: address.zip,
+                                addressCountry: address.country,
+                                addressLat: address.lat,
+                                addressLng: address.lng,
+                            });
+                        }}
+                        initialAddress={{
+                            formattedAddress: formData.address,
+                            street: formData.addressStreet,
+                            city: formData.addressCity,
+                            state: formData.addressState,
+                            zip: formData.addressZip,
+                            country: formData.addressCountry,
+                            lat: formData.addressLat || 0,
+                            lng: formData.addressLng || 0,
+                        }}
+                        placeholder="Search for address..."
                     />
-                    <p className="text-xs text-textSub mt-1">
-                        Add a rough location so parents and helpers know where this home is.
+                    <p className="text-xs text-textSub mt-2">
+                        Add a location so parents and helpers know where this home is.
                     </p>
                 </div>
             </div>
@@ -878,31 +928,17 @@ function HomeForm({
             {/* Contact Info */}
             <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-forest border-b border-border/30 pb-2">Contact Info</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            Home Phone
-                        </label>
-                        <input
-                            type="tel"
-                            value={formData.homePhone}
-                            onChange={(e) => setFormData({ ...formData, homePhone: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                            placeholder="(555) 123-4567"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            Emergency Contact
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.emergencyContact}
-                            onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                            placeholder="Name & number"
-                        />
-                    </div>
+                <div>
+                    <label className="block text-sm font-medium text-forest mb-1.5">
+                        Home Phone
+                    </label>
+                    <input
+                        type="tel"
+                        value={formData.homePhone}
+                        onChange={(e) => setFormData({ ...formData, homePhone: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                        placeholder="+1 555 123 4567"
+                    />
                 </div>
             </div>
 

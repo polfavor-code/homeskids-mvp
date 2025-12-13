@@ -2,14 +2,18 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CaregiverProfile, ChildProfile, HomeProfile } from "@/lib/AppStateContext";
 import { Item } from "@/lib/mockData";
 import ItemPhoto from "@/components/ItemPhoto";
+import HomeMapModal from "@/components/home/HomeMapModal";
+import HomePeopleModal from "@/components/home/HomePeopleModal";
 
 interface HomesHorizontalSectionProps {
     activeHome: HomeProfile | undefined;
     otherHomes: HomeProfile[];
     child: ChildProfile | null;
+    caregivers: CaregiverProfile[]; // All caregivers for people modal
     getItemsForHome: (homeId: string) => Item[];
     getOwnerCaregiver: (home: HomeProfile) => CaregiverProfile | undefined;
     getValidCaregiverCount: (home: HomeProfile) => number;
@@ -23,6 +27,7 @@ export default function HomesHorizontalSection({
     activeHome,
     otherHomes,
     child,
+    caregivers,
     getItemsForHome,
     getOwnerCaregiver,
     getValidCaregiverCount,
@@ -31,6 +36,8 @@ export default function HomesHorizontalSection({
     items,
     currentCaregiver,
 }: HomesHorizontalSectionProps) {
+    const router = useRouter();
+
     // Pagination for other homes
     const [currentDestinationIndex, setCurrentDestinationIndex] = useState(0);
     const currentDestination = otherHomes[currentDestinationIndex];
@@ -39,6 +46,10 @@ export default function HomesHorizontalSection({
     const [nextStayHomeId, setNextStayHomeId] = useState<string | null>(
         otherHomes.length > 0 ? otherHomes[0].id : null
     );
+
+    // Modal states
+    const [mapModalHome, setMapModalHome] = useState<HomeProfile | null>(null);
+    const [peopleModalHome, setPeopleModalHome] = useState<HomeProfile | null>(null);
 
     const nextDestination = () => {
         setCurrentDestinationIndex((prev) => (prev + 1) % otherHomes.length);
@@ -96,50 +107,62 @@ export default function HomesHorizontalSection({
                 {/* COLUMN 1: Current Home */}
                 {activeHome && (
                     <div className="home-column">
-                        <Link
-                            href={`/items?filter=${activeHome.id}`}
-                            className="home-card-link"
-                        >
-                            <div className="home-card">
-                                {/* Top row: section label only (no pagination on left card) */}
-                                <div className="card-label-row">
-                                    <span className="card-section-label">WHERE {childName.toUpperCase()} IS</span>
-                                </div>
-                                {/* Title */}
+                        <div className="home-card">
+                            {/* Top row: section label only (no pagination on left card) */}
+                            <div className="card-label-row">
+                                <span className="card-section-label">WHERE {childName.toUpperCase()} IS</span>
+                            </div>
+                            {/* Title - clickable to home detail */}
+                            <Link href={`/homes/${activeHome.id}`} className="card-title-link">
                                 <h3 className="card-title">{activeHome.name}</h3>
-                                {/* Local time */}
-                                <div className="time-label">Local time {getCurrentTime(activeHome)}</div>
+                            </Link>
+                            {/* Local time */}
+                            <div className="time-label">Local time {getCurrentTime(activeHome)}</div>
 
-                                {/* Stats grid */}
-                                <div className="stats-grid">
-                                    <div className="stat-item">
-                                        <span className="stat-val">Map</span>
-                                        <span className="stat-lbl">VIEW</span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-val">{getValidCaregiverCount(activeHome)}</span>
-                                        <span className="stat-lbl">
-                                            {getValidCaregiverCount(activeHome) === 1 ? 'PERSON' : 'PEOPLE'}
-                                        </span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-val">{getItemsForHome(activeHome.id).length}</span>
-                                        <span className="stat-lbl">ITEMS</span>
-                                    </div>
-                                </div>
+                            {/* Stats grid - each item is clickable */}
+                            <div className="stats-grid">
+                                <button
+                                    type="button"
+                                    className="stat-item stat-item-clickable"
+                                    onClick={() => setMapModalHome(activeHome)}
+                                    aria-label={`View map for ${activeHome.name}`}
+                                >
+                                    <span className="stat-val">Map</span>
+                                    <span className="stat-lbl">VIEW</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="stat-item stat-item-clickable"
+                                    onClick={() => setPeopleModalHome(activeHome)}
+                                    aria-label={`View people at ${activeHome.name}`}
+                                >
+                                    <span className="stat-val">{getValidCaregiverCount(activeHome)}</span>
+                                    <span className="stat-lbl">
+                                        {getValidCaregiverCount(activeHome) === 1 ? 'PERSON' : 'PEOPLE'}
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="stat-item stat-item-clickable"
+                                    onClick={() => router.push(`/items?filter=${activeHome.id}`)}
+                                    aria-label={`View items at ${activeHome.name}`}
+                                >
+                                    <span className="stat-val">{getItemsForHome(activeHome.id).length}</span>
+                                    <span className="stat-lbl">ITEMS</span>
+                                </button>
+                            </div>
 
-                                {/* Status button - unified style */}
-                                <div className="card-footer">
-                                    <div className="card-btn card-btn-status">
-                                        <svg className="status-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                            <circle cx="12" cy="10" r="3"></circle>
-                                        </svg>
-                                        <span>{childName} is staying here now</span>
-                                    </div>
+                            {/* Status button - unified style */}
+                            <div className="card-footer">
+                                <div className="card-btn card-btn-status">
+                                    <svg className="status-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    <span>{childName} is staying here now</span>
                                 </div>
                             </div>
-                        </Link>
+                        </div>
                     </div>
                 )}
 
@@ -201,10 +224,7 @@ export default function HomesHorizontalSection({
                 {/* COLUMN 3: Destination Home */}
                 {currentDestination && (
                     <div className="home-column">
-                        <div
-                            className="home-card"
-                            onClick={() => {}}
-                        >
+                        <div className="home-card">
                             {/* Top row: section label + pagination aligned */}
                             <div className="card-label-row">
                                 <span className="card-section-label">NEXT DESTINATION(S)</span>
@@ -230,7 +250,9 @@ export default function HomesHorizontalSection({
                             </div>
                             {/* Title with Next stay badge/button */}
                             <div className="card-title-row">
-                                <h3 className="card-title">{currentDestination.name}</h3>
+                                <Link href={`/homes/${currentDestination.id}`} className="card-title-link">
+                                    <h3 className="card-title">{currentDestination.name}</h3>
+                                </Link>
                                 {nextStayHomeId === currentDestination.id ? (
                                     <span className="next-stay-badge next-stay-active">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -253,22 +275,37 @@ export default function HomesHorizontalSection({
                             {/* Local time */}
                             <div className="time-label">Local time {getCurrentTime(currentDestination)}</div>
 
-                            {/* Stats grid */}
+                            {/* Stats grid - each item is clickable */}
                             <div className="stats-grid">
-                                <div className="stat-item">
+                                <button
+                                    type="button"
+                                    className="stat-item stat-item-clickable"
+                                    onClick={() => setMapModalHome(currentDestination)}
+                                    aria-label={`View map for ${currentDestination.name}`}
+                                >
                                     <span className="stat-val">Map</span>
                                     <span className="stat-lbl">VIEW</span>
-                                </div>
-                                <div className="stat-item">
+                                </button>
+                                <button
+                                    type="button"
+                                    className="stat-item stat-item-clickable"
+                                    onClick={() => setPeopleModalHome(currentDestination)}
+                                    aria-label={`View people at ${currentDestination.name}`}
+                                >
                                     <span className="stat-val">{getValidCaregiverCount(currentDestination)}</span>
                                     <span className="stat-lbl">
                                         {getValidCaregiverCount(currentDestination) === 1 ? 'PERSON' : 'PEOPLE'}
                                     </span>
-                                </div>
-                                <div className="stat-item">
+                                </button>
+                                <button
+                                    type="button"
+                                    className="stat-item stat-item-clickable"
+                                    onClick={() => router.push(`/items?filter=${currentDestination.id}`)}
+                                    aria-label={`View items at ${currentDestination.name}`}
+                                >
                                     <span className="stat-val">{getItemsForHome(currentDestination.id).length}</span>
                                     <span className="stat-lbl">ITEMS</span>
-                                </div>
+                                </button>
                             </div>
 
                             {/* Switch button - unified style */}
@@ -290,10 +327,10 @@ export default function HomesHorizontalSection({
                                                 <circle className="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                                 <path className="spinner-head" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                             </svg>
-                                            Switching...
+                                            Moving...
                                         </span>
                                     ) : (
-                                        "Switch to this home"
+                                        `Move ${child?.name || "Child"} here`
                                     )}
                                 </button>
                             </div>
@@ -512,6 +549,26 @@ export default function HomesHorizontalSection({
                     display: flex;
                     flex-direction: column;
                     gap: 2px;
+                    background: transparent;
+                    border: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .stat-item.stat-item-clickable {
+                    cursor: pointer;
+                    border-radius: 8px;
+                    padding: 6px 4px;
+                    margin: -6px -4px;
+                    transition: all 0.15s ease;
+                }
+
+                .stat-item.stat-item-clickable:hover {
+                    background: rgba(44, 62, 45, 0.08);
+                }
+
+                .stat-item.stat-item-clickable:active {
+                    transform: scale(0.96);
                 }
 
                 .stat-val {
@@ -526,6 +583,29 @@ export default function HomesHorizontalSection({
                     text-transform: uppercase;
                     letter-spacing: 0.05em;
                     font-weight: 700;
+                }
+
+                /* Title link styling */
+                .card-title-link {
+                    text-decoration: none;
+                    color: inherit;
+                    display: inline-block;
+                }
+
+                .card-title-link:hover .card-title {
+                    color: #4CA1AF;
+                }
+
+                .card-title-row .card-title-link {
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .card-title-row .card-title-link .card-title {
+                    margin: 0;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
 
                 /* Card footer */
@@ -724,20 +804,18 @@ export default function HomesHorizontalSection({
                         position: relative;
                     }
 
-                    /* Vertical connector line for mobile - starts/ends at card centers */
+                    /* Vertical connector line for mobile - runs through center of all cards */
                     .homes-row::before {
                         content: '';
                         position: absolute;
-                        top: 50%;
-                        bottom: 50%;
+                        top: 60px;
+                        bottom: 60px;
                         left: 50%;
                         width: 2px;
+                        height: auto;
                         background: #E0DCD5;
                         transform: translateX(-50%);
                         z-index: 0;
-                        /* Adjust to connect card centers, not extend beyond */
-                        top: calc(10px + 120px); /* padding + approx half of first card */
-                        bottom: calc(10px + 120px); /* padding + approx half of last card */
                     }
 
                     .home-column {
@@ -789,6 +867,19 @@ export default function HomesHorizontalSection({
                     }
                 }
             `}</style>
+
+            {/* Modals */}
+            <HomeMapModal
+                isOpen={mapModalHome !== null}
+                home={mapModalHome}
+                onClose={() => setMapModalHome(null)}
+            />
+            <HomePeopleModal
+                isOpen={peopleModalHome !== null}
+                home={peopleModalHome}
+                caregivers={caregivers}
+                onClose={() => setPeopleModalHome(null)}
+            />
         </div>
     );
 }

@@ -94,6 +94,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                         isRequestCanceled: item.is_request_canceled || false,
                         photoUrl: item.photo_url,
                         notes: item.notes,
+                        requestedBy: item.requested_by || null,
+                        packedBy: item.packed_by || null,
                     }));
                     setItems(mappedItems);
 
@@ -361,17 +363,25 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     };
 
     const updateItemRequested = async (itemId: string, requested: boolean) => {
+        // Get current user ID for tracking who requested
+        const { data: { user } } = await supabase.auth.getUser();
+        const requestedBy = requested ? (user?.id || null) : null;
+
         // Immediately update local state
         setItems((prev) =>
             prev.map((item) =>
-                item.id === itemId ? { ...item, isRequestedForNextVisit: requested } : item
+                item.id === itemId ? { ...item, isRequestedForNextVisit: requested, requestedBy } : item
             )
         );
 
         try {
             const { error } = await supabase
                 .from("items")
-                .update({ is_requested_for_next_visit: requested })
+                .update({
+                    is_requested_for_next_visit: requested,
+                    requested_by: requestedBy,
+                    requested_at: requested ? new Date().toISOString() : null,
+                })
                 .eq("id", itemId);
 
             if (error) throw error;
@@ -381,17 +391,25 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     };
 
     const updateItemPacked = async (itemId: string, packed: boolean) => {
+        // Get current user ID for tracking who packed
+        const { data: { user } } = await supabase.auth.getUser();
+        const packedBy = packed ? (user?.id || null) : null;
+
         // Immediately update local state
         setItems((prev) =>
             prev.map((item) =>
-                item.id === itemId ? { ...item, isPacked: packed } : item
+                item.id === itemId ? { ...item, isPacked: packed, packedBy } : item
             )
         );
 
         try {
             const { error } = await supabase
                 .from("items")
-                .update({ is_packed: packed })
+                .update({
+                    is_packed: packed,
+                    packed_by: packedBy,
+                    packed_at: packed ? new Date().toISOString() : null,
+                })
                 .eq("id", itemId);
 
             if (error) throw error;

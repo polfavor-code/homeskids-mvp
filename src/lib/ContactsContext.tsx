@@ -11,11 +11,20 @@ export interface Contact {
     role: string; // e.g., "Pediatrician", "Teacher", "Grandma"
     category: ContactCategory;
     phone?: string;
+    phoneCountryCode?: string; // e.g., "+1", "+44"
     email?: string;
-    address?: string;
+    address?: string; // Legacy full address field
+    addressStreet?: string;
+    addressCity?: string;
+    addressState?: string;
+    addressZip?: string;
+    addressCountry?: string;
+    addressLat?: number;
+    addressLng?: number;
     notes?: string;
     isFavorite: boolean;
     connectedWith?: string; // caregiverId, "both", or "all"
+    avatarUrl?: string; // URL to contact's avatar image
     createdAt: string;
 }
 
@@ -96,11 +105,20 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                         role: c.role || "",
                         category: c.category || "other",
                         phone: c.phone,
+                        phoneCountryCode: c.phone_country_code,
                         email: c.email,
                         address: c.address,
+                        addressStreet: c.address_street,
+                        addressCity: c.address_city,
+                        addressState: c.address_state,
+                        addressZip: c.address_zip,
+                        addressCountry: c.address_country,
+                        addressLat: c.address_lat,
+                        addressLng: c.address_lng,
                         notes: c.notes,
                         isFavorite: c.is_favorite || false,
                         connectedWith: c.connected_with,
+                        avatarUrl: c.avatar_url,
                         createdAt: c.created_at,
                     }));
                     setContacts(mappedContacts);
@@ -151,11 +169,20 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                     role: contact.role,
                     category: contact.category,
                     phone: contact.phone || null,
+                    phone_country_code: contact.phoneCountryCode || null,
                     email: contact.email || null,
                     address: contact.address || null,
+                    address_street: contact.addressStreet || null,
+                    address_city: contact.addressCity || null,
+                    address_state: contact.addressState || null,
+                    address_zip: contact.addressZip || null,
+                    address_country: contact.addressCountry || null,
+                    address_lat: contact.addressLat || null,
+                    address_lng: contact.addressLng || null,
                     notes: contact.notes || null,
                     is_favorite: contact.isFavorite,
                     connected_with: contact.connectedWith || null,
+                    avatar_url: contact.avatarUrl || null,
                 })
                 .select()
                 .single();
@@ -172,11 +199,20 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 role: data.role || "",
                 category: data.category || "other",
                 phone: data.phone,
+                phoneCountryCode: data.phone_country_code,
                 email: data.email,
                 address: data.address,
+                addressStreet: data.address_street,
+                addressCity: data.address_city,
+                addressState: data.address_state,
+                addressZip: data.address_zip,
+                addressCountry: data.address_country,
+                addressLat: data.address_lat,
+                addressLng: data.address_lng,
                 notes: data.notes,
                 isFavorite: data.is_favorite || false,
                 connectedWith: data.connected_with,
+                avatarUrl: data.avatar_url,
                 createdAt: data.created_at,
             };
             setContacts((prev) => [...prev, newContact]);
@@ -200,11 +236,20 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
             if (updates.role !== undefined) dbUpdates.role = updates.role;
             if (updates.category !== undefined) dbUpdates.category = updates.category;
             if (updates.phone !== undefined) dbUpdates.phone = updates.phone || null;
+            if (updates.phoneCountryCode !== undefined) dbUpdates.phone_country_code = updates.phoneCountryCode || null;
             if (updates.email !== undefined) dbUpdates.email = updates.email || null;
             if (updates.address !== undefined) dbUpdates.address = updates.address || null;
+            if (updates.addressStreet !== undefined) dbUpdates.address_street = updates.addressStreet || null;
+            if (updates.addressCity !== undefined) dbUpdates.address_city = updates.addressCity || null;
+            if (updates.addressState !== undefined) dbUpdates.address_state = updates.addressState || null;
+            if (updates.addressZip !== undefined) dbUpdates.address_zip = updates.addressZip || null;
+            if (updates.addressCountry !== undefined) dbUpdates.address_country = updates.addressCountry || null;
+            if (updates.addressLat !== undefined) dbUpdates.address_lat = updates.addressLat || null;
+            if (updates.addressLng !== undefined) dbUpdates.address_lng = updates.addressLng || null;
             if (updates.notes !== undefined) dbUpdates.notes = updates.notes || null;
             if (updates.isFavorite !== undefined) dbUpdates.is_favorite = updates.isFavorite;
             if (updates.connectedWith !== undefined) dbUpdates.connected_with = updates.connectedWith || null;
+            if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl || null;
 
             const { error } = await supabase
                 .from("contacts")

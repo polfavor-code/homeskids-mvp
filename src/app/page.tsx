@@ -280,6 +280,7 @@ export default function Home() {
                     activeHome={activeHome}
                     otherHomes={otherHomes}
                     child={child}
+                    caregivers={caregivers}
                     getItemsForHome={getItemsForHome}
                     getOwnerCaregiver={getOwnerCaregiver}
                     getValidCaregiverCount={getValidCaregiverCount}

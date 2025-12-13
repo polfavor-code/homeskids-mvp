@@ -519,7 +519,7 @@ export default function ItemDetailPage({
                         <div className="p-3 bg-gray-50 rounded-xl">
                             <div className="flex items-center justify-between">
                                 <span className="font-medium text-gray-900">
-                                    Add to packing checklist
+                                    Include in next packing list
                                 </span>
                                 <button
                                     onClick={() => {
@@ -537,11 +537,9 @@ export default function ItemDetailPage({
                                     />
                                 </button>
                             </div>
-                            {isRequested && (
-                                <p className="text-xs text-gray-500 mt-2">
-                                    This item will appear in the packing checklist.
-                                </p>
-                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                                This item will appear in the travel bag checklist for the next visit.
+                            </p>
                         </div>
                     </div>
                 ) : (

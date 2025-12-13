@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Contact - Design Variations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forest: '#2D4739',
+                        teal: '#5B9A8B',
+                        softGreen: '#E8F0ED',
+                        cream: '#FAF8F5',
+                        terracotta: '#C17B5D',
+                        border: '#E0DCD5',
+                        textSub: '#888899',
+                    },
+                    fontFamily: {
+                        dmSerif: ['DM Serif Display', 'serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f5f3f0; }
+        .font-dmSerif { font-family: 'DM Serif Display', serif; }
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .desktop-frame {
+            width: 900px;
+            height: 700px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="p-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center">Add Contact Page - Design Variations</h1>
+    <p class="text-gray-500 text-center mb-12">6 design variations with desktop and mobile views</p>
+
+    <!-- VERSION 1: Clean Card Sections -->
+    <section class="mb-20">
+        <h2 class="text-2xl font-bold text-gray-700 mb-2">Version 1: Clean Card Sections</h2>
+        <p class="text-gray-500 mb-6">Grouped sections in white cards, clear visual hierarchy</p>
+
+        <div class="flex gap-8 items-start flex-wrap">
+            <!-- Desktop -->
+            <div class="desktop-frame bg-cream overflow-y-auto scrollbar-hide">
+                <div class="p-8">
+                    <!-- Back Link -->
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub hover:text-forest mb-4">← Contacts</a>
+
+                    <h1 class="font-dmSerif text-2xl text-forest mb-6">Add New Contact</h1>
+
+                    <div class="flex gap-8">
+                        <!-- Left Column -->
+                        <div class="flex-1 space-y-6">
+                            <!-- Identity Card -->
+                            <div class="bg-white rounded-2xl p-6 border border-border">
+                                <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">Contact Identity</h3>
+                                <div class="flex gap-4">
+                                    <div class="w-20 h-20 rounded-full bg-softGreen flex items-center justify-center border-2 border-dashed border-border cursor-pointer hover:border-teal">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                            <circle cx="12" cy="13" r="4"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 space-y-3">
+                                        <div>
+                                            <label class="block text-sm font-semibold text-forest mb-1">Name <span class="text-terracotta">*</span></label>
+                                            <input type="text" placeholder="Contact name" class="w-full h-11 px-4 border border-border rounded-xl text-sm focus:outline-none focus:border-forest">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-forest mb-1">Role</label>
+                                            <input type="text" placeholder="e.g., Pediatrician" class="w-full h-11 px-4 border border-border rounded-xl text-sm focus:outline-none focus:border-forest">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Category Card -->
+                            <div class="bg-white rounded-2xl p-6 border border-border">
+                                <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">Category</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <button class="px-4 py-2 rounded-full text-sm font-medium bg-forest text-white">🏥 Medical</button>
+                                    <button class="px-4 py-2 rounded-full text-sm font-medium bg-white border border-border text-forest hover:border-forest">🏫 School</button>
+                                    <button class="px-4 py-2 rounded-full text-sm font-medium bg-white border border-border text-forest hover:border-forest">👨‍👩‍👧 Family</button>
+                                    <button class="px-4 py-2 rounded-full text-sm font-medium bg-white border border-border text-forest hover:border-forest">⚽ Activities</button>
+                                    <button class="px-4 py-2 rounded-full text-sm font-medium bg-white border border-border text-forest hover:border-forest">👋 Friends</button>
+                                    <button class="px-4 py-2 rounded-full text-sm font-medium bg-white border border-border text-forest hover:border-forest">📋 Other</button>
+                                </div>
+                            </div>
+
+                            <!-- Caregiver Card -->
+                            <div class="bg-white rounded-2xl p-6 border border-border">
+                                <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">Connected With</h3>
+                                <select class="w-full h-11 px-4 border border-border rounded-xl text-sm focus:outline-none focus:border-forest bg-white">
+                                    <option>Select caregiver...</option>
+                                    <option>Mom's side</option>
+                                    <option>Dad's side</option>
+                                    <option>Both sides</option>
+                                </select>
+                                <p class="text-xs text-textSub mt-2">Who usually communicates with this contact?</p>
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="flex-1 space-y-6">
+                            <!-- Contact Info Card -->
+                            <div class="bg-white rounded-2xl p-6 border border-border">
+                                <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">Contact Information</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-forest mb-1">Phone</label>
+                                        <div class="flex border border-border rounded-xl overflow-hidden">
+                                            <button class="flex items-center gap-1 px-3 bg-cream/50 border-r border-border">
+                                                <span>🇺🇸</span>
+                                                <span class="text-sm">+1</span>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                                            </button>
+                                            <input type="tel" placeholder="Phone number" class="flex-1 h-11 px-3 text-sm focus:outline-none">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-forest mb-1">Email</label>
+                                        <input type="email" placeholder="email@example.com" class="w-full h-11 px-4 border border-border rounded-xl text-sm focus:outline-none focus:border-forest">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Address Card -->
+                            <div class="bg-white rounded-2xl p-6 border border-border">
+                                <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">Address</h3>
+                                <div class="border border-border rounded-xl overflow-hidden">
+                                    <div class="flex items-center gap-2 px-4 py-3 border-b border-border bg-white">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                        <input type="text" placeholder="Search address..." class="flex-1 text-sm focus:outline-none">
+                                    </div>
+                                    <div class="h-28 bg-gradient-to-br from-teal/10 to-teal/5 flex items-center justify-center">
+                                        <div class="text-center">
+                                            <span class="text-2xl">📍</span>
+                                            <p class="text-xs text-textSub">Map preview</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 p-3 bg-cream/50">
+                                        <input type="text" placeholder="Street" class="col-span-2 px-3 py-2 text-xs border border-border rounded-lg bg-white">
+                                        <input type="text" placeholder="City" class="px-3 py-2 text-xs border border-border rounded-lg bg-white">
+                                        <input type="text" placeholder="State" class="px-3 py-2 text-xs border border-border rounded-lg bg-white">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Section -->
+                    <div class="mt-6 space-y-4">
+                        <div class="bg-white rounded-2xl p-6 border border-border">
+                            <label class="block text-sm font-semibold text-forest mb-2">Notes</label>
+                            <textarea placeholder="Additional information..." rows="2" class="w-full px-4 py-3 border border-border rounded-xl text-sm resize-none focus:outline-none focus:border-forest"></textarea>
+                        </div>
+
+                        <div class="flex items-center justify-between px-4 py-3 bg-amber-50 rounded-xl">
+                            <span class="text-sm font-semibold text-forest flex items-center gap-2">⭐ Mark as favorite</span>
+                            <div class="w-11 h-6 bg-gray-300 rounded-full relative cursor-pointer">
+                                <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow"></div>
+                            </div>
+                        </div>
+
+                        <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm hover:bg-forest/90">Add Contact</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile -->
+            <div class="phone-frame bg-cream overflow-y-auto scrollbar-hide">
+                <div class="p-4 pb-24">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub mb-3">← Contacts</a>
+                    <h1 class="font-dmSerif text-xl text-forest mb-5">Add New Contact</h1>
+
+                    <!-- Identity Card -->
+                    <div class="bg-white rounded-2xl p-4 border border-border mb-4">
+                        <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-3">Contact Identity</h3>
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-16 h-16 rounded-full bg-softGreen flex items-center justify-center border-2 border-dashed border-border">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                    <circle cx="12" cy="13" r="4"/>
+                                </svg>
+                            </div>
+                            <div class="w-full space-y-3">
+                                <div>
+                                    <label class="block text-sm font-semibold text-forest mb-1">Name <span class="text-terracotta">*</span></label>
+                                    <input type="text" placeholder="Contact name" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-forest mb-1">Role</label>
+                                    <input type="text" placeholder="e.g., Pediatrician" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category -->
+                    <div class="bg-white rounded-2xl p-4 border border-border mb-4">
+                        <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-3">Category</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="px-3 py-2 rounded-full text-xs font-medium bg-forest text-white">🏥 Medical</button>
+                            <button class="px-3 py-2 rounded-full text-xs font-medium bg-white border border-border text-forest">🏫 School</button>
+                            <button class="px-3 py-2 rounded-full text-xs font-medium bg-white border border-border text-forest">👨‍👩‍👧 Family</button>
+                            <button class="px-3 py-2 rounded-full text-xs font-medium bg-white border border-border text-forest">⚽ Activities</button>
+                            <button class="px-3 py-2 rounded-full text-xs font-medium bg-white border border-border text-forest">👋 Friends</button>
+                            <button class="px-3 py-2 rounded-full text-xs font-medium bg-white border border-border text-forest">📋 Other</button>
+                        </div>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="bg-white rounded-2xl p-4 border border-border mb-4">
+                        <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-3">Contact Info</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Phone</label>
+                                <div class="flex border border-border rounded-xl overflow-hidden">
+                                    <button class="flex items-center gap-1 px-3 bg-cream/50 border-r border-border">
+                                        <span>🇺🇸</span><span class="text-xs">+1</span>
+                                    </button>
+                                    <input type="tel" placeholder="Phone number" class="flex-1 h-11 px-3 text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Email</label>
+                                <input type="email" placeholder="email@example.com" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Caregiver</label>
+                                <select class="w-full h-11 px-4 border border-border rounded-xl text-sm bg-white">
+                                    <option>Select caregiver...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="bg-white rounded-2xl p-4 border border-border mb-4">
+                        <h3 class="text-xs font-semibold text-textSub uppercase tracking-wider mb-3">Address</h3>
+                        <div class="border border-border rounded-xl overflow-hidden">
+                            <div class="flex items-center gap-2 px-3 py-2.5 border-b border-border">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <input type="text" placeholder="Search address..." class="flex-1 text-sm">
+                            </div>
+                            <div class="h-24 bg-gradient-to-br from-teal/10 to-teal/5 flex items-center justify-center">
+                                <span class="text-xl">📍</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes & Actions -->
+                    <div class="bg-white rounded-2xl p-4 border border-border mb-4">
+                        <label class="block text-sm font-semibold text-forest mb-2">Notes</label>
+                        <textarea placeholder="Additional info..." rows="2" class="w-full px-3 py-2 border border-border rounded-xl text-sm resize-none"></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-between px-4 py-3 bg-amber-50 rounded-xl mb-4">
+                        <span class="text-sm font-semibold text-forest">⭐ Favorite</span>
+                        <div class="w-10 h-5 bg-gray-300 rounded-full relative">
+                            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm">Add Contact</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VERSION 2: Minimal Flat -->
+    <section class="mb-20">
+        <h2 class="text-2xl font-bold text-gray-700 mb-2">Version 2: Minimal Flat</h2>
+        <p class="text-gray-500 mb-6">No cards, clean separators, maximum content density</p>
+
+        <div class="flex gap-8 items-start flex-wrap">
+            <!-- Desktop -->
+            <div class="desktop-frame bg-white overflow-y-auto scrollbar-hide">
+                <div class="p-8">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub hover:text-forest mb-4">← Contacts</a>
+
+                    <div class="flex gap-12">
+                        <!-- Left -->
+                        <div class="flex-1">
+                            <!-- Header with avatar -->
+                            <div class="flex items-start gap-5 mb-8">
+                                <div class="w-24 h-24 rounded-2xl bg-softGreen flex items-center justify-center border-2 border-dashed border-border cursor-pointer hover:border-teal">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-textSub">
+                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                        <circle cx="12" cy="13" r="4"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 pt-1">
+                                    <input type="text" placeholder="Contact name *" class="w-full text-2xl font-bold text-forest outline-none border-b-2 border-transparent focus:border-forest pb-2 placeholder:text-gray-300 placeholder:font-normal">
+                                    <input type="text" placeholder="Role / Relationship" class="w-full text-base text-textSub outline-none mt-2 placeholder:text-gray-300">
+                                </div>
+                            </div>
+
+                            <!-- Categories -->
+                            <div class="mb-8">
+                                <label class="block text-xs font-semibold text-textSub uppercase tracking-wider mb-3">Category</label>
+                                <div class="flex flex-wrap gap-2">
+                                    <button class="px-5 py-2.5 rounded-full text-sm font-medium bg-forest text-white">🏥 Medical</button>
+                                    <button class="px-5 py-2.5 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">🏫 School</button>
+                                    <button class="px-5 py-2.5 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">👨‍👩‍👧 Family</button>
+                                    <button class="px-5 py-2.5 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">⚽ Activities</button>
+                                    <button class="px-5 py-2.5 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">👋 Friends</button>
+                                    <button class="px-5 py-2.5 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">📋 Other</button>
+                                </div>
+                            </div>
+
+                            <hr class="border-border mb-8">
+
+                            <!-- Form fields -->
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="block text-xs font-semibold text-textSub uppercase tracking-wider mb-2">Connected with</label>
+                                    <select class="w-full h-12 px-4 border border-border rounded-xl text-sm bg-white">
+                                        <option>Select caregiver...</option>
+                                    </select>
+                                    <p class="text-xs text-textSub mt-1">Who usually communicates with this contact?</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-textSub uppercase tracking-wider mb-2">Phone</label>
+                                    <div class="flex border border-border rounded-xl overflow-hidden">
+                                        <button class="flex items-center gap-2 px-4 bg-gray-50 border-r border-border">
+                                            <span>🇺🇸</span><span class="text-sm font-medium">+1</span>
+                                        </button>
+                                        <input type="tel" placeholder="Phone number" class="flex-1 h-12 px-4 text-sm">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-textSub uppercase tracking-wider mb-2">Email</label>
+                                    <input type="email" placeholder="email@example.com" class="w-full h-12 px-4 border border-border rounded-xl text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right -->
+                        <div class="flex-1">
+                            <div class="mb-6">
+                                <label class="block text-xs font-semibold text-textSub uppercase tracking-wider mb-2">Address</label>
+                                <div class="border border-border rounded-xl overflow-hidden">
+                                    <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-border">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                        <input type="text" placeholder="Search address..." class="flex-1 text-sm bg-transparent">
+                                    </div>
+                                    <div class="h-40 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                                        <div class="text-center">
+                                            <div class="w-10 h-10 rounded-full bg-teal flex items-center justify-center text-white mx-auto mb-1">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                            </div>
+                                            <span class="text-xs text-textSub">Map preview</span>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 p-3">
+                                        <input type="text" placeholder="Street" class="col-span-2 px-3 py-2.5 text-sm border border-border rounded-lg">
+                                        <input type="text" placeholder="City" class="px-3 py-2.5 text-sm border border-border rounded-lg">
+                                        <input type="text" placeholder="State" class="px-3 py-2.5 text-sm border border-border rounded-lg">
+                                        <input type="text" placeholder="ZIP" class="px-3 py-2.5 text-sm border border-border rounded-lg">
+                                        <input type="text" placeholder="Country" class="px-3 py-2.5 text-sm border border-border rounded-lg">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-xs font-semibold text-textSub uppercase tracking-wider mb-2">Notes</label>
+                                <textarea placeholder="Additional information..." rows="4" class="w-full px-4 py-3 border border-border rounded-xl text-sm resize-none"></textarea>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-amber-50/50 rounded-xl mb-6">
+                                <span class="text-sm font-medium text-forest">⭐ Mark as favorite</span>
+                                <div class="w-11 h-6 bg-gray-300 rounded-full relative cursor-pointer">
+                                    <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow"></div>
+                                </div>
+                            </div>
+
+                            <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm">Add Contact</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile -->
+            <div class="phone-frame bg-white overflow-y-auto scrollbar-hide">
+                <div class="p-4 pb-24">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub mb-4">← Contacts</a>
+
+                    <!-- Header -->
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-16 h-16 rounded-xl bg-softGreen flex items-center justify-center border-2 border-dashed border-border">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" placeholder="Contact name *" class="w-full text-lg font-bold text-forest outline-none placeholder:text-gray-300 placeholder:font-normal">
+                            <input type="text" placeholder="Role" class="w-full text-sm text-textSub outline-none mt-1 placeholder:text-gray-300">
+                        </div>
+                    </div>
+
+                    <!-- Categories horizontal scroll -->
+                    <div class="flex gap-2 overflow-x-auto pb-3 mb-5 -mx-4 px-4 scrollbar-hide">
+                        <button class="px-4 py-2 rounded-full text-xs font-medium bg-forest text-white whitespace-nowrap flex-shrink-0">🏥 Medical</button>
+                        <button class="px-4 py-2 rounded-full text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">🏫 School</button>
+                        <button class="px-4 py-2 rounded-full text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">👨‍👩‍👧 Family</button>
+                        <button class="px-4 py-2 rounded-full text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">⚽ Activities</button>
+                        <button class="px-4 py-2 rounded-full text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">👋 Friends</button>
+                    </div>
+
+                    <hr class="border-border mb-5">
+
+                    <!-- Fields -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub uppercase mb-1.5">Connected with</label>
+                            <select class="w-full h-11 px-4 border border-border rounded-xl text-sm bg-white">
+                                <option>Select caregiver...</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub uppercase mb-1.5">Phone</label>
+                            <div class="flex border border-border rounded-xl overflow-hidden">
+                                <button class="flex items-center gap-1 px-3 bg-gray-50 border-r border-border">
+                                    <span>🇺🇸</span><span class="text-xs">+1</span>
+                                </button>
+                                <input type="tel" placeholder="Phone number" class="flex-1 h-11 px-3 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub uppercase mb-1.5">Email</label>
+                            <input type="email" placeholder="email@example.com" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub uppercase mb-1.5">Address</label>
+                            <div class="border border-border rounded-xl overflow-hidden">
+                                <div class="flex items-center gap-2 px-3 py-2.5 border-b border-border bg-gray-50">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input type="text" placeholder="Search..." class="flex-1 text-sm bg-transparent">
+                                </div>
+                                <div class="h-20 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                                    <span class="text-lg">📍</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub uppercase mb-1.5">Notes</label>
+                            <textarea placeholder="Additional info..." rows="2" class="w-full px-4 py-3 border border-border rounded-xl text-sm resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-amber-50/50 rounded-xl my-5">
+                        <span class="text-sm font-medium text-forest">⭐ Favorite</span>
+                        <div class="w-10 h-5 bg-gray-300 rounded-full relative">
+                            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm">Add Contact</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VERSION 3: Stepped Wizard -->
+    <section class="mb-20">
+        <h2 class="text-2xl font-bold text-gray-700 mb-2">Version 3: Stepped Wizard</h2>
+        <p class="text-gray-500 mb-6">Progressive disclosure with clear step indicators</p>
+
+        <div class="flex gap-8 items-start flex-wrap">
+            <!-- Desktop -->
+            <div class="desktop-frame bg-cream overflow-y-auto scrollbar-hide">
+                <div class="p-8">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub hover:text-forest mb-4">← Contacts</a>
+
+                    <!-- Progress Steps -->
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-forest text-white flex items-center justify-center text-sm font-bold">1</div>
+                            <span class="text-sm font-semibold text-forest">Identity</span>
+                        </div>
+                        <div class="flex-1 h-0.5 bg-forest"></div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-forest text-white flex items-center justify-center text-sm font-bold">2</div>
+                            <span class="text-sm font-semibold text-forest">Details</span>
+                        </div>
+                        <div class="flex-1 h-0.5 bg-border"></div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-border text-textSub flex items-center justify-center text-sm font-bold">3</div>
+                            <span class="text-sm text-textSub">Location</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-8 border border-border">
+                        <h2 class="font-dmSerif text-2xl text-forest mb-6">Contact Details</h2>
+
+                        <div class="grid grid-cols-2 gap-8">
+                            <!-- Left -->
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="block text-sm font-semibold text-forest mb-2">Connected with caregiver</label>
+                                    <select class="w-full h-12 px-4 border border-border rounded-xl text-sm bg-white">
+                                        <option>Select caregiver...</option>
+                                        <option>Mom's side</option>
+                                        <option>Dad's side</option>
+                                        <option>Both sides</option>
+                                    </select>
+                                    <p class="text-xs text-textSub mt-1.5">Who usually communicates with this contact?</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-forest mb-2">Phone</label>
+                                    <div class="flex border border-border rounded-xl overflow-hidden">
+                                        <button class="flex items-center gap-2 px-4 bg-cream border-r border-border">
+                                            <span>🇺🇸</span><span class="text-sm font-medium">+1</span>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                                        </button>
+                                        <input type="tel" placeholder="Phone number" class="flex-1 h-12 px-4 text-sm">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-forest mb-2">Email</label>
+                                    <input type="email" placeholder="email@example.com" class="w-full h-12 px-4 border border-border rounded-xl text-sm">
+                                </div>
+                            </div>
+
+                            <!-- Right -->
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="block text-sm font-semibold text-forest mb-2">Notes</label>
+                                    <textarea placeholder="Additional information about this contact..." rows="5" class="w-full px-4 py-3 border border-border rounded-xl text-sm resize-none"></textarea>
+                                </div>
+
+                                <div class="flex items-center justify-between p-4 bg-amber-50 rounded-xl">
+                                    <span class="text-sm font-semibold text-forest">⭐ Mark as favorite</span>
+                                    <div class="w-11 h-6 bg-terracotta rounded-full relative cursor-pointer">
+                                        <div class="absolute top-0.5 right-0.5 w-5 h-5 bg-white rounded-full shadow"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Navigation -->
+                        <div class="flex justify-between mt-8 pt-6 border-t border-border">
+                            <button class="px-6 py-3 border border-border rounded-xl text-sm font-semibold text-forest hover:bg-cream">← Back</button>
+                            <button class="px-8 py-3 bg-forest text-white rounded-xl text-sm font-bold">Continue →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile -->
+            <div class="phone-frame bg-cream overflow-y-auto scrollbar-hide">
+                <div class="p-4 pb-24">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub mb-4">← Contacts</a>
+
+                    <!-- Progress dots -->
+                    <div class="flex items-center justify-center gap-2 mb-6">
+                        <div class="w-2 h-2 rounded-full bg-forest"></div>
+                        <div class="w-8 h-2 rounded-full bg-forest"></div>
+                        <div class="w-2 h-2 rounded-full bg-border"></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-5 border border-border">
+                        <div class="text-center mb-6">
+                            <span class="text-xs font-semibold text-teal uppercase tracking-wider">Step 2 of 3</span>
+                            <h2 class="font-dmSerif text-xl text-forest mt-1">Contact Details</h2>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Connected with</label>
+                                <select class="w-full h-11 px-4 border border-border rounded-xl text-sm bg-white">
+                                    <option>Select caregiver...</option>
+                                </select>
+                                <p class="text-xs text-textSub mt-1">Who communicates with this contact?</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Phone</label>
+                                <div class="flex border border-border rounded-xl overflow-hidden">
+                                    <button class="flex items-center gap-1 px-3 bg-cream border-r border-border">
+                                        <span>🇺🇸</span><span class="text-xs">+1</span>
+                                    </button>
+                                    <input type="tel" placeholder="Phone number" class="flex-1 h-11 px-3 text-sm">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Email</label>
+                                <input type="email" placeholder="email@example.com" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Notes</label>
+                                <textarea placeholder="Additional info..." rows="3" class="w-full px-4 py-3 border border-border rounded-xl text-sm resize-none"></textarea>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-amber-50 rounded-xl">
+                                <span class="text-sm font-medium text-forest">⭐ Favorite</span>
+                                <div class="w-10 h-5 bg-terracotta rounded-full relative">
+                                    <div class="absolute top-0.5 right-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Navigation -->
+                        <div class="flex gap-3 mt-6 pt-5 border-t border-border">
+                            <button class="flex-1 py-3 border border-border rounded-xl text-sm font-semibold text-forest">← Back</button>
+                            <button class="flex-1 py-3 bg-forest text-white rounded-xl text-sm font-bold">Next →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VERSION 4: Compact Inline -->
+    <section class="mb-20">
+        <h2 class="text-2xl font-bold text-gray-700 mb-2">Version 4: Compact Inline</h2>
+        <p class="text-gray-500 mb-6">Everything visible at once, dense but organized</p>
+
+        <div class="flex gap-8 items-start flex-wrap">
+            <!-- Desktop -->
+            <div class="desktop-frame bg-white overflow-y-auto scrollbar-hide">
+                <div class="max-w-3xl mx-auto p-8">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub hover:text-forest mb-4">← Contacts</a>
+
+                    <h1 class="font-dmSerif text-2xl text-forest mb-6">Add New Contact</h1>
+
+                    <!-- Identity row -->
+                    <div class="flex items-center gap-6 pb-6 border-b border-border mb-6">
+                        <div class="w-20 h-20 rounded-full bg-softGreen flex items-center justify-center border-2 border-dashed border-border cursor-pointer hover:border-teal flex-shrink-0">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-textSub mb-1">NAME *</label>
+                                <input type="text" placeholder="Contact name" class="w-full h-11 px-4 border border-border rounded-lg text-sm font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-textSub mb-1">ROLE</label>
+                                <input type="text" placeholder="e.g., Pediatrician" class="w-full h-11 px-4 border border-border rounded-lg text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category row -->
+                    <div class="pb-6 border-b border-border mb-6">
+                        <label class="block text-xs font-semibold text-textSub mb-2">CATEGORY</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="px-4 py-2 rounded-lg text-sm font-medium bg-forest text-white">🏥 Medical</button>
+                            <button class="px-4 py-2 rounded-lg text-sm font-medium border border-border text-forest hover:border-forest">🏫 School</button>
+                            <button class="px-4 py-2 rounded-lg text-sm font-medium border border-border text-forest hover:border-forest">👨‍👩‍👧 Family</button>
+                            <button class="px-4 py-2 rounded-lg text-sm font-medium border border-border text-forest hover:border-forest">⚽ Activities</button>
+                            <button class="px-4 py-2 rounded-lg text-sm font-medium border border-border text-forest hover:border-forest">👋 Friends</button>
+                            <button class="px-4 py-2 rounded-lg text-sm font-medium border border-border text-forest hover:border-forest">📋 Other</button>
+                        </div>
+                    </div>
+
+                    <!-- 3 column grid -->
+                    <div class="grid grid-cols-3 gap-4 pb-6 border-b border-border mb-6">
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub mb-1">CAREGIVER</label>
+                            <select class="w-full h-11 px-3 border border-border rounded-lg text-sm bg-white">
+                                <option>Select...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub mb-1">PHONE</label>
+                            <div class="flex border border-border rounded-lg overflow-hidden">
+                                <span class="flex items-center px-2 bg-gray-50 border-r border-border text-sm">🇺🇸+1</span>
+                                <input type="tel" placeholder="Number" class="flex-1 h-11 px-2 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-textSub mb-1">EMAIL</label>
+                            <input type="email" placeholder="email@example.com" class="w-full h-11 px-3 border border-border rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="pb-6 border-b border-border mb-6">
+                        <label class="block text-xs font-semibold text-textSub mb-2">ADDRESS</label>
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 px-3 py-2.5 border border-border rounded-lg mb-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input type="text" placeholder="Search address..." class="flex-1 text-sm">
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" placeholder="Street" class="col-span-2 px-3 py-2 text-sm border border-border rounded-lg">
+                                    <input type="text" placeholder="City" class="px-3 py-2 text-sm border border-border rounded-lg">
+                                    <input type="text" placeholder="State" class="px-3 py-2 text-sm border border-border rounded-lg">
+                                </div>
+                            </div>
+                            <div class="w-40 h-32 bg-gradient-to-br from-teal/10 to-teal/5 rounded-lg flex items-center justify-center">
+                                <span class="text-2xl">📍</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes & favorite row -->
+                    <div class="flex gap-4 mb-6">
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-textSub mb-1">NOTES</label>
+                            <textarea placeholder="Additional information..." rows="2" class="w-full px-3 py-2 border border-border rounded-lg text-sm resize-none"></textarea>
+                        </div>
+                        <div class="w-48 flex items-center justify-between p-4 bg-amber-50 rounded-lg">
+                            <span class="text-sm font-medium text-forest">⭐ Favorite</span>
+                            <div class="w-10 h-5 bg-gray-300 rounded-full relative">
+                                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm">Add Contact</button>
+                </div>
+            </div>
+
+            <!-- Mobile -->
+            <div class="phone-frame bg-white overflow-y-auto scrollbar-hide">
+                <div class="p-4 pb-24">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub mb-3">← Contacts</a>
+                    <h1 class="font-dmSerif text-xl text-forest mb-4">Add Contact</h1>
+
+                    <!-- Identity -->
+                    <div class="flex items-center gap-3 pb-4 border-b border-border mb-4">
+                        <div class="w-14 h-14 rounded-full bg-softGreen flex items-center justify-center border-2 border-dashed border-border flex-shrink-0">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <input type="text" placeholder="Name *" class="w-full h-10 px-3 border border-border rounded-lg text-sm font-medium">
+                            <input type="text" placeholder="Role" class="w-full h-10 px-3 border border-border rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Categories scroll -->
+                    <div class="flex gap-2 overflow-x-auto pb-4 mb-4 -mx-4 px-4 scrollbar-hide border-b border-border">
+                        <button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-forest text-white whitespace-nowrap flex-shrink-0">🏥 Medical</button>
+                        <button class="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">🏫 School</button>
+                        <button class="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">👨‍👩‍👧 Family</button>
+                        <button class="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">⚽ Activities</button>
+                    </div>
+
+                    <!-- Fields in 2-col where possible -->
+                    <div class="space-y-3 pb-4 border-b border-border mb-4">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-semibold text-textSub mb-1">CAREGIVER</label>
+                                <select class="w-full h-10 px-2 border border-border rounded-lg text-xs bg-white">
+                                    <option>Select...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-textSub mb-1">PHONE</label>
+                                <input type="tel" placeholder="+1 Number" class="w-full h-10 px-2 border border-border rounded-lg text-xs">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-textSub mb-1">EMAIL</label>
+                            <input type="email" placeholder="email@example.com" class="w-full h-10 px-3 border border-border rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Address compact -->
+                    <div class="pb-4 border-b border-border mb-4">
+                        <label class="block text-[10px] font-semibold text-textSub mb-1">ADDRESS</label>
+                        <div class="flex items-center gap-2 px-3 py-2 border border-border rounded-lg mb-2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            <input type="text" placeholder="Search..." class="flex-1 text-xs">
+                            <span class="text-sm">📍</span>
+                        </div>
+                    </div>
+
+                    <!-- Notes & favorite -->
+                    <div class="space-y-3 mb-4">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-textSub mb-1">NOTES</label>
+                            <textarea placeholder="Additional info..." rows="2" class="w-full px-3 py-2 border border-border rounded-lg text-xs resize-none"></textarea>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+                            <span class="text-xs font-medium text-forest">⭐ Favorite</span>
+                            <div class="w-9 h-5 bg-gray-300 rounded-full relative">
+                                <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-3.5 bg-forest text-white rounded-xl font-bold text-sm">Add Contact</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VERSION 5: Split Panel -->
+    <section class="mb-20">
+        <h2 class="text-2xl font-bold text-gray-700 mb-2">Version 5: Split Panel</h2>
+        <p class="text-gray-500 mb-6">Fixed left panel with preview, scrollable right form</p>
+
+        <div class="flex gap-8 items-start flex-wrap">
+            <!-- Desktop -->
+            <div class="desktop-frame bg-white overflow-hidden flex">
+                <!-- Left Fixed Panel -->
+                <div class="w-80 bg-forest p-8 flex flex-col">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-white/70 hover:text-white mb-8">← Contacts</a>
+
+                    <div class="flex-1 flex flex-col items-center justify-center text-center">
+                        <div class="w-28 h-28 rounded-full bg-white/10 flex items-center justify-center border-2 border-dashed border-white/30 cursor-pointer hover:border-white/50 mb-4">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-white/50">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-dmSerif text-white mb-1">New Contact</h2>
+                        <p class="text-white/60 text-sm">Add photo to personalize</p>
+                    </div>
+
+                    <!-- Category selection -->
+                    <div class="mt-auto">
+                        <p class="text-xs text-white/50 uppercase tracking-wider mb-3">Category</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-white text-forest">🏥 Medical</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white hover:bg-white/20">🏫 School</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white hover:bg-white/20">👨‍👩‍👧 Family</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white hover:bg-white/20">⚽ Activities</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white hover:bg-white/20">👋 Friends</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 text-white hover:bg-white/20">📋 Other</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Scrollable Form -->
+                <div class="flex-1 p-8 overflow-y-auto">
+                    <h2 class="font-dmSerif text-2xl text-forest mb-6">Contact Details</h2>
+
+                    <div class="space-y-5">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Name <span class="text-terracotta">*</span></label>
+                                <input type="text" placeholder="Contact name" class="w-full h-12 px-4 border border-border rounded-xl text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Role</label>
+                                <input type="text" placeholder="e.g., Pediatrician" class="w-full h-12 px-4 border border-border rounded-xl text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-forest mb-1.5">Connected with</label>
+                            <select class="w-full h-12 px-4 border border-border rounded-xl text-sm bg-white">
+                                <option>Select caregiver...</option>
+                            </select>
+                            <p class="text-xs text-textSub mt-1">Who usually communicates with this contact?</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Phone</label>
+                                <div class="flex border border-border rounded-xl overflow-hidden">
+                                    <button class="flex items-center gap-1 px-3 bg-cream border-r border-border">
+                                        <span>🇺🇸</span><span class="text-sm">+1</span>
+                                    </button>
+                                    <input type="tel" placeholder="Number" class="flex-1 h-12 px-3 text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1.5">Email</label>
+                                <input type="email" placeholder="email@example.com" class="w-full h-12 px-4 border border-border rounded-xl text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-forest mb-1.5">Address</label>
+                            <div class="border border-border rounded-xl overflow-hidden">
+                                <div class="flex items-center gap-2 px-4 py-3 border-b border-border">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input type="text" placeholder="Search address..." class="flex-1 text-sm">
+                                </div>
+                                <div class="h-32 bg-gradient-to-br from-teal/10 to-teal/5 flex items-center justify-center">
+                                    <div class="text-center">
+                                        <div class="w-10 h-10 rounded-full bg-teal flex items-center justify-center text-white mx-auto mb-1">📍</div>
+                                        <span class="text-xs text-textSub">Interactive map</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-forest mb-1.5">Notes</label>
+                            <textarea placeholder="Additional information..." rows="3" class="w-full px-4 py-3 border border-border rounded-xl text-sm resize-none"></textarea>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 bg-amber-50 rounded-xl">
+                            <span class="text-sm font-semibold text-forest">⭐ Mark as favorite</span>
+                            <div class="w-11 h-6 bg-gray-300 rounded-full relative cursor-pointer">
+                                <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow"></div>
+                            </div>
+                        </div>
+
+                        <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm">Add Contact</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile -->
+            <div class="phone-frame bg-cream overflow-y-auto scrollbar-hide">
+                <div class="pb-24">
+                    <!-- Hero header -->
+                    <div class="bg-forest p-5 pb-12 text-center">
+                        <a href="#" class="inline-flex items-center gap-1 text-sm text-white/70 mb-4">← Contacts</a>
+                        <div class="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center border-2 border-dashed border-white/30 mx-auto mb-3">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/50">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </div>
+                        <h1 class="text-xl font-dmSerif text-white">New Contact</h1>
+                    </div>
+
+                    <!-- Form card overlapping -->
+                    <div class="bg-white rounded-t-3xl -mt-6 p-5">
+                        <!-- Categories -->
+                        <div class="flex gap-2 overflow-x-auto pb-4 mb-4 -mx-5 px-5 scrollbar-hide">
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-forest text-white whitespace-nowrap flex-shrink-0">🏥 Medical</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">🏫 School</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">👨‍👩‍👧 Family</button>
+                            <button class="px-3 py-1.5 rounded-full text-xs font-medium border border-border text-forest whitespace-nowrap flex-shrink-0">⚽ Activities</button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Name <span class="text-terracotta">*</span></label>
+                                <input type="text" placeholder="Contact name" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Role</label>
+                                <input type="text" placeholder="e.g., Pediatrician" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Caregiver</label>
+                                <select class="w-full h-11 px-4 border border-border rounded-xl text-sm bg-white">
+                                    <option>Select...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Phone</label>
+                                <div class="flex border border-border rounded-xl overflow-hidden">
+                                    <button class="flex items-center gap-1 px-3 bg-cream border-r border-border">
+                                        <span>🇺🇸</span><span class="text-xs">+1</span>
+                                    </button>
+                                    <input type="tel" placeholder="Number" class="flex-1 h-11 px-3 text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Email</label>
+                                <input type="email" placeholder="email@example.com" class="w-full h-11 px-4 border border-border rounded-xl text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Address</label>
+                                <div class="flex items-center gap-2 px-4 py-3 border border-border rounded-xl">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    <input type="text" placeholder="Search address..." class="flex-1 text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-forest mb-1">Notes</label>
+                                <textarea placeholder="Additional info..." rows="2" class="w-full px-4 py-3 border border-border rounded-xl text-sm resize-none"></textarea>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-amber-50 rounded-xl">
+                                <span class="text-sm font-medium text-forest">⭐ Favorite</span>
+                                <div class="w-10 h-5 bg-gray-300 rounded-full relative">
+                                    <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+                                </div>
+                            </div>
+
+                            <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm">Add Contact</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VERSION 6: Modern Accordion -->
+    <section class="mb-20">
+        <h2 class="text-2xl font-bold text-gray-700 mb-2">Version 6: Modern Accordion</h2>
+        <p class="text-gray-500 mb-6">Expandable sections, focus on one area at a time</p>
+
+        <div class="flex gap-8 items-start flex-wrap">
+            <!-- Desktop -->
+            <div class="desktop-frame bg-cream overflow-y-auto scrollbar-hide">
+                <div class="max-w-2xl mx-auto p-8">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub hover:text-forest mb-4">← Contacts</a>
+
+                    <h1 class="font-dmSerif text-2xl text-forest mb-6">Add New Contact</h1>
+
+                    <!-- Accordion Sections -->
+                    <div class="space-y-3">
+                        <!-- Section 1: Identity - Expanded -->
+                        <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-cream/50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-forest text-white flex items-center justify-center text-sm font-bold">1</div>
+                                    <span class="font-semibold text-forest">Contact Identity</span>
+                                </div>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-forest rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                            <div class="px-5 pb-5 border-t border-border">
+                                <div class="flex gap-5 pt-5">
+                                    <div class="w-20 h-20 rounded-full bg-softGreen flex items-center justify-center border-2 border-dashed border-border cursor-pointer hover:border-teal flex-shrink-0">
+                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                            <circle cx="12" cy="13" r="4"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-semibold text-forest mb-1.5">Name <span class="text-terracotta">*</span></label>
+                                            <input type="text" placeholder="Contact name" class="w-full h-12 px-4 border border-border rounded-xl text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-forest mb-1.5">Role / Relationship</label>
+                                            <input type="text" placeholder="e.g., Pediatrician, Grandma" class="w-full h-12 px-4 border border-border rounded-xl text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-5">
+                                    <label class="block text-sm font-semibold text-forest mb-2">Category</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button class="px-4 py-2 rounded-full text-sm font-medium bg-forest text-white">🏥 Medical</button>
+                                        <button class="px-4 py-2 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">🏫 School</button>
+                                        <button class="px-4 py-2 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">👨‍👩‍👧 Family</button>
+                                        <button class="px-4 py-2 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">⚽ Activities</button>
+                                        <button class="px-4 py-2 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">👋 Friends</button>
+                                        <button class="px-4 py-2 rounded-full text-sm font-medium border border-border text-forest hover:border-forest">📋 Other</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Contact Info - Collapsed preview -->
+                        <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-cream/50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-softGreen text-forest flex items-center justify-center text-sm font-bold">2</div>
+                                    <span class="font-semibold text-forest">Contact Information</span>
+                                    <span class="text-xs text-textSub">Phone, Email, Caregiver</span>
+                                </div>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Address - Collapsed -->
+                        <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-cream/50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-softGreen text-forest flex items-center justify-center text-sm font-bold">3</div>
+                                    <span class="font-semibold text-forest">Address</span>
+                                    <span class="text-xs text-textSub">Location & Map</span>
+                                </div>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Section 4: Notes - Collapsed -->
+                        <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-cream/50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-softGreen text-forest flex items-center justify-center text-sm font-bold">4</div>
+                                    <span class="font-semibold text-forest">Additional</span>
+                                    <span class="text-xs text-textSub">Notes & Preferences</span>
+                                </div>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm mt-6">Add Contact</button>
+                </div>
+            </div>
+
+            <!-- Mobile -->
+            <div class="phone-frame bg-cream overflow-y-auto scrollbar-hide">
+                <div class="p-4 pb-24">
+                    <a href="#" class="inline-flex items-center gap-1 text-sm text-textSub mb-3">← Contacts</a>
+                    <h1 class="font-dmSerif text-xl text-forest mb-4">Add Contact</h1>
+
+                    <!-- Accordion Sections -->
+                    <div class="space-y-2">
+                        <!-- Section 1: Identity - Expanded -->
+                        <div class="bg-white rounded-xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-forest text-white flex items-center justify-center text-xs font-bold">1</div>
+                                    <span class="text-sm font-semibold text-forest">Identity</span>
+                                </div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-forest rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                            <div class="px-4 pb-4 border-t border-border">
+                                <div class="flex flex-col items-center gap-3 pt-4">
+                                    <div class="w-16 h-16 rounded-full bg-softGreen flex items-center justify-center border-2 border-dashed border-border">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                            <circle cx="12" cy="13" r="4"/>
+                                        </svg>
+                                    </div>
+                                    <div class="w-full space-y-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-forest mb-1">Name <span class="text-terracotta">*</span></label>
+                                            <input type="text" placeholder="Contact name" class="w-full h-10 px-3 border border-border rounded-lg text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-forest mb-1">Role</label>
+                                            <input type="text" placeholder="e.g., Pediatrician" class="w-full h-10 px-3 border border-border rounded-lg text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <label class="block text-xs font-semibold text-forest mb-2">Category</label>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <button class="px-3 py-1.5 rounded-full text-xs font-medium bg-forest text-white">🏥 Medical</button>
+                                        <button class="px-3 py-1.5 rounded-full text-xs font-medium border border-border text-forest">🏫 School</button>
+                                        <button class="px-3 py-1.5 rounded-full text-xs font-medium border border-border text-forest">👨‍👩‍👧 Family</button>
+                                        <button class="px-3 py-1.5 rounded-full text-xs font-medium border border-border text-forest">⚽ Activities</button>
+                                        <button class="px-3 py-1.5 rounded-full text-xs font-medium border border-border text-forest">👋 Friends</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Contact - Collapsed -->
+                        <div class="bg-white rounded-xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-softGreen text-forest flex items-center justify-center text-xs font-bold">2</div>
+                                    <span class="text-sm font-semibold text-forest">Contact Info</span>
+                                </div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Address - Collapsed -->
+                        <div class="bg-white rounded-xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-softGreen text-forest flex items-center justify-center text-xs font-bold">3</div>
+                                    <span class="text-sm font-semibold text-forest">Address</span>
+                                </div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Section 4: Additional - Collapsed -->
+                        <div class="bg-white rounded-xl border border-border overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-softGreen text-forest flex items-center justify-center text-xs font-bold">4</div>
+                                    <span class="text-sm font-semibold text-forest">Additional</span>
+                                </div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-4 bg-forest text-white rounded-xl font-bold text-sm mt-5">Add Contact</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Summary -->
+    <section class="bg-white rounded-2xl p-8 max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold text-gray-700 mb-4">Design Summary</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <h3 class="font-semibold text-forest mb-1">V1: Clean Cards</h3>
+                <p class="text-sm text-gray-600">Grouped sections, clear hierarchy</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <h3 class="font-semibold text-forest mb-1">V2: Minimal Flat</h3>
+                <p class="text-sm text-gray-600">No cards, max density</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <h3 class="font-semibold text-forest mb-1">V3: Stepped Wizard</h3>
+                <p class="text-sm text-gray-600">Progressive disclosure</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <h3 class="font-semibold text-forest mb-1">V4: Compact Inline</h3>
+                <p class="text-sm text-gray-600">Everything visible, dense</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <h3 class="font-semibold text-forest mb-1">V5: Split Panel</h3>
+                <p class="text-sm text-gray-600">Fixed preview, scroll form</p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <h3 class="font-semibold text-forest mb-1">V6: Accordion</h3>
+                <p class="text-sm text-gray-600">Expandable sections</p>
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>

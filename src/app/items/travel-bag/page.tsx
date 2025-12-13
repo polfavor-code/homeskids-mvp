@@ -101,10 +101,13 @@ function TravelBagCheckPageContent() {
     const isAtOrigin = (item: Item) => {
         if (!originHome) return false;
 
-        // Primary: check if item's home matches origin home
-        if (item.locationHomeId === originHome.id) return true;
+        // If item has a locationHomeId set, use that exclusively
+        if (item.locationHomeId) {
+            return item.locationHomeId === originHome.id;
+        }
 
-        // Fallback: check if item's caregiver is the origin home's owner
+        // Fallback for legacy items without locationHomeId:
+        // Check if item's caregiver is the origin home's owner
         if (originHome.ownerCaregiverId && item.locationCaregiverId === originHome.ownerCaregiverId) return true;
 
         // Fallback: check if item's caregiver has access to origin home
@@ -216,13 +219,15 @@ function TravelBagCheckPageContent() {
                     <TravelBagIcon size={16} />
                     Travel bag
                 </Link>
-                <Link
-                    href="/items/missing"
-                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
-                >
-                    <SearchIcon size={16} />
-                    Missing ({missingItemsCount})
-                </Link>
+                {missingItemsCount > 0 && (
+                    <Link
+                        href="/items/missing"
+                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
+                    >
+                        <SearchIcon size={16} />
+                        Missing ({missingItemsCount})
+                    </Link>
+                )}
             </div>
 
             {/* Travel Bag Internal Tabs - no card wrapper */}
@@ -271,6 +276,8 @@ function TravelBagCheckPageContent() {
                             onRequestItem={handleRequestItem}
                             onUnrequestItem={handleUnrequestItem}
                             childId={child?.id}
+                            caregivers={caregivers}
+                            currentUserCaregiver={currentUserCaregiver}
                         />
                     ) : (
                         /* REQUESTER VIEW */
@@ -288,6 +295,8 @@ function TravelBagCheckPageContent() {
                             onRequestItem={handleRequestItem}
                             onUnrequestItem={handleUnrequestItem}
                             childId={child?.id}
+                            caregivers={caregivers}
+                            currentUserCaregiver={currentUserCaregiver}
                         />
                     )}
                 </div>
@@ -395,6 +404,8 @@ function PackerView({
     onRequestItem,
     onUnrequestItem,
     childId,
+    caregivers,
+    currentUserCaregiver,
 }: {
     child: ChildProfile | null;
     originHome: { name: string } | undefined;
@@ -414,9 +425,39 @@ function PackerView({
     onRequestItem: (item: Item) => void;
     onUnrequestItem: (item: Item) => void;
     childId: string | undefined;
+    caregivers: { id: string; name: string; isCurrentUser?: boolean }[];
+    currentUserCaregiver: { id: string; name: string } | undefined;
 }) {
     // State for showing/hiding missing items
     const [showMissingItems, setShowMissingItems] = React.useState(false);
+
+    // Helper to get role-aware "Requested by" label
+    const getRequestedLabel = (requestedById: string | null | undefined) => {
+        if (!requestedById) return undefined;
+        if (currentUserCaregiver && requestedById === currentUserCaregiver.id) {
+            return "Requested by you";
+        }
+        const requester = caregivers.find(c => c.id === requestedById);
+        if (requester) {
+            const firstName = requester.name.split(" ")[0];
+            return `Requested by ${firstName}`;
+        }
+        return undefined;
+    };
+
+    // Helper to get role-aware "Packed by" label
+    const getPackedLabel = (packedById: string | null | undefined) => {
+        if (!packedById) return undefined;
+        if (currentUserCaregiver && packedById === currentUserCaregiver.id) {
+            return "Packed by you";
+        }
+        const packer = caregivers.find(c => c.id === packedById);
+        if (packer) {
+            const firstName = packer.name.split(" ")[0];
+            return `Packed by ${firstName}`;
+        }
+        return undefined;
+    };
 
     return (
         <div className="space-y-4">
@@ -511,6 +552,8 @@ function PackerView({
                                     isPacked={false}
                                     onTogglePacked={() => onTogglePacked(item.id)}
                                     onRemove={() => onUnrequestItem(item)}
+                                    requestedLabel={getRequestedLabel(item.requestedBy)}
+                                    packedLabel={getPackedLabel(item.packedBy)}
                                 />
                             ))}
                             {/* Packed items */}
@@ -521,6 +564,8 @@ function PackerView({
                                     isPacked={true}
                                     onTogglePacked={() => onTogglePacked(item.id)}
                                     onRemove={() => onUnrequestItem(item)}
+                                    requestedLabel={getRequestedLabel(item.requestedBy)}
+                                    packedLabel={getPackedLabel(item.packedBy)}
                                 />
                             ))}
                         </div>
@@ -609,6 +654,8 @@ function PackerView({
                                     isInBag={isInBag}
                                     isPacked={isPacked}
                                     onAdd={() => onRequestItem(item)}
+                                    requestedLabel={getRequestedLabel(item.requestedBy)}
+                                    packedLabel={getPackedLabel(item.packedBy)}
                                 />
                             );
                         })}
@@ -636,6 +683,8 @@ function RequesterView({
     onRequestItem,
     onUnrequestItem,
     childId,
+    caregivers,
+    currentUserCaregiver,
 }: {
     child: ChildProfile | null;
     originHome: { name: string } | undefined;
@@ -650,7 +699,37 @@ function RequesterView({
     onRequestItem: (item: Item) => void;
     onUnrequestItem: (item: Item) => void;
     childId: string | undefined;
+    caregivers: { id: string; name: string; isCurrentUser?: boolean }[];
+    currentUserCaregiver: { id: string; name: string } | undefined;
 }) {
+    // Helper to get role-aware "Requested by" label
+    const getRequestedLabel = (requestedById: string | null | undefined) => {
+        if (!requestedById) return undefined;
+        if (currentUserCaregiver && requestedById === currentUserCaregiver.id) {
+            return "Requested by you";
+        }
+        const requester = caregivers.find(c => c.id === requestedById);
+        if (requester) {
+            const firstName = requester.name.split(" ")[0];
+            return `Requested by ${firstName}`;
+        }
+        return undefined;
+    };
+
+    // Helper to get role-aware "Packed by" label
+    const getPackedLabel = (packedById: string | null | undefined) => {
+        if (!packedById) return undefined;
+        if (currentUserCaregiver && packedById === currentUserCaregiver.id) {
+            return "Packed by you";
+        }
+        const packer = caregivers.find(c => c.id === packedById);
+        if (packer) {
+            const firstName = packer.name.split(" ")[0];
+            return `Packed by ${firstName}`;
+        }
+        return undefined;
+    };
+
     return (
         <div className="space-y-6">
             {/* Section Title with flow info */}
@@ -744,6 +823,8 @@ function RequesterView({
                                     item={item}
                                     isPacked={false}
                                     onUnrequest={() => onUnrequestItem(item)}
+                                    requestedLabel={getRequestedLabel(item.requestedBy)}
+                                    packedLabel={getPackedLabel(item.packedBy)}
                                 />
                             ))}
                             {toPackPacked.map((item) => (
@@ -752,6 +833,8 @@ function RequesterView({
                                     item={item}
                                     isPacked={true}
                                     onUnrequest={() => onUnrequestItem(item)}
+                                    requestedLabel={getRequestedLabel(item.requestedBy)}
+                                    packedLabel={getPackedLabel(item.packedBy)}
                                 />
                             ))}
                         </div>
@@ -781,6 +864,8 @@ function RequesterView({
                                     isInBag={isInBag}
                                     isPacked={isPacked}
                                     onAdd={() => onRequestItem(item)}
+                                    requestedLabel={getRequestedLabel(item.requestedBy)}
+                                    packedLabel={getPackedLabel(item.packedBy)}
                                 />
                             );
                         })}
@@ -811,11 +896,15 @@ function PackerItemRow({
     isPacked,
     onTogglePacked,
     onRemove,
+    packedLabel,
+    requestedLabel,
 }: {
     item: Item;
     isPacked: boolean;
     onTogglePacked: () => void;
     onRemove: () => void;
+    packedLabel?: string;
+    requestedLabel?: string;
 }) {
     return (
         <div
@@ -848,7 +937,7 @@ function PackerItemRow({
                     {item.name}
                 </h3>
                 <p className="text-xs text-textSub">
-                    {isPacked ? "Packed ✓" : "To pack"}
+                    {isPacked ? (packedLabel || "Packed") + " ✓" : requestedLabel ? `${requestedLabel} · To pack` : "To pack"}
                 </p>
             </button>
 
@@ -890,10 +979,14 @@ function RequesterItemRow({
     item,
     isPacked,
     onUnrequest,
+    packedLabel,
+    requestedLabel,
 }: {
     item: Item;
     isPacked: boolean;
     onUnrequest: () => void;
+    packedLabel?: string;
+    requestedLabel?: string;
 }) {
     return (
         <div
@@ -922,7 +1015,7 @@ function RequesterItemRow({
                     {item.name}
                 </h3>
                 <p className={`text-xs ${isPacked ? "text-teal font-medium" : "text-textSub"}`}>
-                    {isPacked ? "Packed ✓" : "Waiting to be packed"}
+                    {isPacked ? (packedLabel || "Packed") + " ✓" : requestedLabel ? `${requestedLabel} · Waiting to be packed` : "Waiting to be packed"}
                 </p>
             </div>
 
@@ -1005,19 +1098,23 @@ function AllItemsRow({
     isInBag,
     isPacked,
     onAdd,
+    packedLabel,
+    requestedLabel,
 }: {
     item: Item;
     isInBag: boolean;
     isPacked: boolean;
     onAdd: () => void;
+    packedLabel?: string;
+    requestedLabel?: string;
 }) {
     // If in bag, show greyed out / disabled state with appropriate status
     if (isInBag) {
-        const statusText = isPacked ? "Packed in bag ✓" : "Waiting to be packed";
+        const statusText = isPacked ? (packedLabel || "Packed") + " ✓" : requestedLabel ? `${requestedLabel} · Waiting` : "Waiting to be packed";
         return (
-            <div className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 opacity-50">
+            <div className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
                 {/* Thumbnail */}
-                <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-lg bg-white border border-gray-200 flex-shrink-0 flex items-center justify-center text-xl grayscale">
+                <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-lg bg-white border border-gray-200 flex-shrink-0 flex items-center justify-center text-xl grayscale opacity-50">
                     {item.photoUrl ? (
                         <ItemPhoto
                             photoPath={item.photoUrl}
@@ -1030,7 +1127,7 @@ function AllItemsRow({
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 opacity-50">
                     <h3 className="font-medium text-sm text-gray-400">
                         {item.name}
                     </h3>
@@ -1039,8 +1136,17 @@ function AllItemsRow({
                     </p>
                 </div>
 
+                {/* View button - stays clickable */}
+                <Link
+                    href={`/items/${item.id}`}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-textSub/50 hover:text-teal hover:bg-teal/10 transition-colors"
+                    title="View item"
+                >
+                    <ViewIcon size={16} />
+                </Link>
+
                 {/* Status indicator */}
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm opacity-50 ${
                     isPacked ? "bg-gray-300 text-gray-500" : "bg-gray-200 text-gray-400"
                 }`}>
                     {isPacked ? "✓" : "⏳"}
