@@ -7,13 +7,6 @@ interface BagEssentialsSectionProps {
     childId: string | null | undefined;
 }
 
-// Helper to format preview text for collapsed state - first 4 items max
-function getPreviewText(essentials: BagEssential[]): string {
-    if (essentials.length === 0) return "";
-    const firstFour = essentials.slice(0, 4);
-    return firstFour.map(e => e.label).join(", ");
-}
-
 export default function BagEssentialsSection({ childId }: BagEssentialsSectionProps) {
     const {
         essentials,
@@ -25,7 +18,6 @@ export default function BagEssentialsSection({ childId }: BagEssentialsSectionPr
         hasEssentials,
     } = useBagEssentials(childId);
 
-    const [isExpanded, setIsExpanded] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [newLabel, setNewLabel] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,54 +72,15 @@ export default function BagEssentialsSection({ childId }: BagEssentialsSectionPr
         );
     }
 
-    const previewText = getPreviewText(essentials);
-    const hasMoreThanFour = essentials.length > 4;
-
     return (
         <div>
-            {/* Title row */}
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between text-left"
-            >
-                <span className="text-sm font-medium text-forest">
-                    Essentials that always go in the bag
-                </span>
-                <svg
-                    className={`w-4 h-4 text-textSub/50 transition-transform duration-200 flex-shrink-0 ml-2 ${isExpanded ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
+            {/* Title */}
+            <div className="text-sm font-medium text-forest mb-3">
+                Essentials that always go in the bag
+            </div>
 
-            {/* Collapsed state: preview with fade mask on 4th item when 5+ items */}
-            {!isExpanded && (
-                <div className="mt-1.5">
-                    {hasEssentials ? (
-                        <p
-                            className="text-xs text-forest/60 whitespace-nowrap overflow-hidden"
-                            style={hasMoreThanFour ? {
-                                maskImage: "linear-gradient(to right, black 0%, black 70%, transparent 100%)",
-                                WebkitMaskImage: "linear-gradient(to right, black 0%, black 70%, transparent 100%)",
-                            } : undefined}
-                        >
-                            {previewText}
-                        </p>
-                    ) : (
-                        <p className="text-xs text-textSub/50">No essentials added yet</p>
-                    )}
-                </div>
-            )}
-
-            {/* Expanded state */}
-            <div
-                className={`overflow-hidden transition-all duration-200 ease-out ${
-                    isExpanded ? "max-h-[500px] opacity-100 mt-3" : "max-h-0 opacity-0"
-                }`}
-            >
+            {/* Content - always visible */}
+            <div>
                 {/* Pills container */}
                 <div className="flex flex-wrap gap-2">
                     {/* Essential pills */}
@@ -254,7 +207,7 @@ export default function BagEssentialsSection({ childId }: BagEssentialsSectionPr
                     </div>
                 )}
 
-                {/* Explanatory text - only in expanded state */}
+                {/* Explanatory text */}
                 <p className="mt-3 text-xs text-textSub/60 leading-relaxed">
                     Essentials are the simple things you always pack and don't need to tick off. You and other caregivers can add, edit, or remove items in this shared list.
                 </p>
