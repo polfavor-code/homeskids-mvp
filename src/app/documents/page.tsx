@@ -320,10 +320,10 @@ export default function DocumentsPage() {
                                 return (
                                     <div
                                         key={doc.id}
-                                        className={`flex items-center gap-3 p-3 rounded-xl bg-cream/50 border border-border/30 ${doc.filePath ? "cursor-pointer hover:bg-cream/80 transition-colors" : ""}`}
+                                        className={`flex items-center gap-2 p-3 rounded-xl bg-cream/50 border border-border/30 min-w-0 ${doc.filePath ? "cursor-pointer hover:bg-cream/80 transition-colors" : ""}`}
                                         onClick={() => doc.filePath && handleOpenFile(doc)}
                                     >
-                                        <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center ${colors.text}`}>
+                                        <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center ${colors.text} flex-shrink-0`}>
                                             {doc.fileType?.startsWith("image/") ? (
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -339,17 +339,17 @@ export default function DocumentsPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-semibold text-forest text-sm truncate">{doc.name}</h3>
-                                            <p className="text-xs text-textSub">
+                                            <p className="text-xs text-textSub truncate">
                                                 {getFileTypeLabel(doc.fileType) && <span className="mr-1">{getFileTypeLabel(doc.fileType)} •</span>}
                                                 {doc.description || (doc.expiryDate ? `Expires ${formatDate(doc.expiryDate)}` : "No expiry")}
                                             </p>
                                         </div>
-                                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${colors.badge}`}>
+                                        <span className={`hidden sm:inline-flex px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${colors.badge}`}>
                                             {categoryLabels[doc.category] || doc.category}
                                         </span>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleTogglePin(doc); }}
-                                            className="text-amber-500 hover:text-amber-600 transition-colors p-1"
+                                            className="text-amber-500 hover:text-amber-600 transition-colors p-1 flex-shrink-0"
                                             title="Unpin document"
                                         >
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1">
@@ -358,7 +358,7 @@ export default function DocumentsPage() {
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
-                                            className="text-textSub/50 hover:text-red-500 transition-colors p-1"
+                                            className="text-textSub/50 hover:text-red-500 transition-colors p-1 flex-shrink-0"
                                             title="Delete document"
                                         >
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -384,10 +384,10 @@ export default function DocumentsPage() {
                                 return (
                                     <div
                                         key={doc.id}
-                                        className={`flex items-center gap-3 p-3 rounded-xl bg-cream/50 border border-border/30 ${doc.filePath ? "cursor-pointer hover:bg-cream/80 transition-colors" : ""}`}
+                                        className={`flex items-center gap-2 p-3 rounded-xl bg-cream/50 border border-border/30 min-w-0 ${doc.filePath ? "cursor-pointer hover:bg-cream/80 transition-colors" : ""}`}
                                         onClick={() => doc.filePath && handleOpenFile(doc)}
                                     >
-                                        <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center ${colors.text}`}>
+                                        <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center ${colors.text} flex-shrink-0`}>
                                             {doc.fileType?.startsWith("image/") ? (
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -403,17 +403,17 @@ export default function DocumentsPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-semibold text-forest text-sm truncate">{doc.name}</h3>
-                                            <p className="text-xs text-textSub">
+                                            <p className="text-xs text-textSub truncate">
                                                 {getFileTypeLabel(doc.fileType) && <span className="mr-1">{getFileTypeLabel(doc.fileType)} •</span>}
                                                 {doc.description || (doc.expiryDate ? `Expires ${formatDate(doc.expiryDate)}` : "No expiry")}
                                             </p>
                                         </div>
-                                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${colors.badge}`}>
+                                        <span className={`hidden sm:inline-flex px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${colors.badge}`}>
                                             {categoryLabels[doc.category] || doc.category}
                                         </span>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleTogglePin(doc); }}
-                                            className="text-textSub/30 hover:text-amber-500 transition-colors p-1"
+                                            className="text-textSub/30 hover:text-amber-500 transition-colors p-1 flex-shrink-0"
                                             title="Pin document"
                                         >
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -422,7 +422,7 @@ export default function DocumentsPage() {
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
-                                            className="text-textSub/50 hover:text-red-500 transition-colors p-1"
+                                            className="text-textSub/50 hover:text-red-500 transition-colors p-1 flex-shrink-0"
                                             title="Delete document"
                                         >
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
