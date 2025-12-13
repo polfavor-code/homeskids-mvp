@@ -50,14 +50,15 @@ export default function InvitePage() {
 
                 console.log("Child data fetch:", { childData, childError, family_id: data.family_id });
 
-                // Get signed URL for avatar if it exists
+                // Get public URL for avatar if it exists
+                // Use getPublicUrl since the invite page is viewed by unauthenticated users
                 let childAvatarUrl = null;
                 if (childData?.avatar_url) {
-                    const { data: urlData } = await supabase.storage
+                    const { data: urlData } = supabase.storage
                         .from("avatars")
-                        .createSignedUrl(childData.avatar_url, 3600);
-                    if (urlData) {
-                        childAvatarUrl = urlData.signedUrl;
+                        .getPublicUrl(childData.avatar_url);
+                    if (urlData?.publicUrl) {
+                        childAvatarUrl = urlData.publicUrl;
                     }
                 }
 
