@@ -709,36 +709,71 @@ export default function ItemDetailPage({
                         </div>
                     ))}
 
-                    {/* Mocked history entries */}
-                    <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
-                            <div className="w-0.5 flex-1 bg-gray-100 my-1" />
-                        </div>
-                        <div className="pb-2">
-                            <p className="text-sm text-gray-900">Requested for next visit</p>
-                            <p className="text-xs text-gray-400">Today</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
-                            <div className="w-0.5 flex-1 bg-gray-100 my-1" />
-                        </div>
-                        <div className="pb-2">
-                            <p className="text-sm text-gray-900">
-                                Location changed to {locationLabel}
-                            </p>
-                            <p className="text-xs text-gray-400">1 day ago</p>
-                        </div>
-                    </div>
+                    {/* Added to packing list - only show if requested AND someone else requested it */}
+                    {item.isRequestedForNextVisit && item.requestedBy && (() => {
+                        const currentUserCaregiver = caregivers.find(c => c.isCurrentUser);
+                        const requester = caregivers.find(c => c.id === item.requestedBy);
+                        const requesterName = requester?.label || requester?.name;
+
+                        // Only show "Requested by" if someone else requested it
+                        if (currentUserCaregiver && item.requestedBy !== currentUserCaregiver.id && requesterName) {
+                            return (
+                                <div className="flex gap-3">
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
+                                        <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                                    </div>
+                                    <div className="pb-2">
+                                        <p className="text-sm text-gray-900">
+                                            Requested by {requesterName}
+                                        </p>
+                                        <p className="text-xs text-gray-400">Recently</p>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        // If current user added it to their own packing list, show "Added to packing list"
+                        if (currentUserCaregiver && item.requestedBy === currentUserCaregiver.id) {
+                            return (
+                                <div className="flex gap-3">
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
+                                        <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                                    </div>
+                                    <div className="pb-2">
+                                        <p className="text-sm text-gray-900">
+                                            Added to packing list
+                                        </p>
+                                        <p className="text-xs text-gray-400">Recently</p>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
+
+                    {/* Item created */}
                     <div className="flex gap-3">
                         <div className="flex flex-col items-center">
                             <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-900">Item created</p>
-                            <p className="text-xs text-gray-400">2 days ago</p>
+                            <p className="text-sm text-gray-900">
+                                Item created
+                                {(item as any).createdBy && (() => {
+                                    const creator = caregivers.find(c => c.id === (item as any).createdBy);
+                                    return creator ? ` by ${creator.label || creator.name}` : "";
+                                })()}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                                {(item as any).createdAt
+                                    ? new Date((item as any).createdAt).toLocaleDateString(undefined, {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: new Date((item as any).createdAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                      })
+                                    : "Unknown date"}
+                            </p>
                         </div>
                     </div>
                 </div>

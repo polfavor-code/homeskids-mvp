@@ -95,7 +95,7 @@ function ContactsPageContent() {
                             {child?.name || "Child"}&apos;s Contacts
                         </h1>
                         <p className="text-sm text-textSub mt-1">
-                            Important people shared between both homes.
+                            Shared contacts for {child?.name || "your child"}.
                         </p>
                     </div>
                     <Link
@@ -130,24 +130,22 @@ function ContactsPageContent() {
                 {sortedContacts.map((contact) => (
                     <div
                         key={contact.id}
-                        className="bg-white rounded-xl p-3 shadow-sm border border-border hover:border-forest/20 transition-colors"
+                        className="bg-white rounded-xl p-3 shadow-sm border border-border hover:border-forest/20 transition-colors overflow-hidden"
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                             {/* Avatar / Initial - Clickable */}
                             <Link href={`/contacts/${contact.id}`} className="w-10 h-10 rounded-full bg-cream flex items-center justify-center text-forest font-bold text-sm flex-shrink-0 hover:bg-forest hover:text-white transition-colors">
                                 {contact.name.charAt(0).toUpperCase()}
                             </Link>
 
                             {/* Info - Clickable */}
-                            <Link href={`/contacts/${contact.id}`} className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-forest truncate hover:text-teal transition-colors">
-                                        {contact.name}
-                                    </h3>
+                            <Link href={`/contacts/${contact.id}`} className="flex-1 min-w-0 overflow-hidden">
+                                <h3 className="font-medium text-forest truncate hover:text-teal transition-colors">
+                                    {contact.name}
                                     {contact.isFavorite && (
-                                        <span className="text-yellow-500 text-sm">★</span>
+                                        <span className="text-yellow-500 text-sm ml-1">★</span>
                                     )}
-                                </div>
+                                </h3>
                                 <p className="text-xs text-textSub truncate">
                                     {contact.role}
                                     {getConnectedWithLabel(contact) && (
@@ -158,7 +156,7 @@ function ContactsPageContent() {
 
                             {/* Category Badge */}
                             <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${getCategoryColor(
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize flex-shrink-0 whitespace-nowrap ${getCategoryColor(
                                     contact.category
                                 )}`}
                             >
@@ -170,7 +168,7 @@ function ContactsPageContent() {
                                 {contact.phone && (
                                     <a
                                         href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
-                                        className="w-8 h-8 rounded-full bg-softGreen flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors"
+                                        className="w-8 h-8 rounded-full bg-softGreen flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors flex-shrink-0"
                                         title="Call"
                                     >
                                         <PhoneIcon />
@@ -179,7 +177,7 @@ function ContactsPageContent() {
                                 {contact.email && (
                                     <a
                                         href={`mailto:${contact.email}`}
-                                        className="w-8 h-8 rounded-full bg-cream flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors"
+                                        className="w-8 h-8 rounded-full bg-cream flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors flex-shrink-0"
                                         title="Email"
                                     >
                                         <EmailIcon />
