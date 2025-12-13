@@ -100,18 +100,23 @@ export default function GooglePlacesAutocomplete({
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
         if (!apiKey) {
-            console.warn("Google Maps API key not found");
+            console.error("Google Maps API key not found in environment variables");
             return;
         }
 
         const initServices = () => {
             if (window.google?.maps?.places) {
-                autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-                const dummyDiv = document.createElement("div");
-                placesServiceRef.current = new window.google.maps.places.PlacesService(dummyDiv);
-                geocoderRef.current = new window.google.maps.Geocoder();
-                sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
-                setIsLoaded(true);
+                try {
+                    autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+                    const dummyDiv = document.createElement("div");
+                    placesServiceRef.current = new window.google.maps.places.PlacesService(dummyDiv);
+                    geocoderRef.current = new window.google.maps.Geocoder();
+                    sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+                    setIsLoaded(true);
+                    console.log("Google Maps services initialized successfully");
+                } catch (err) {
+                    console.error("Error initializing Google Maps services:", err);
+                }
             }
         };
 
@@ -132,12 +137,25 @@ export default function GooglePlacesAutocomplete({
         }
 
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&v=weekly`;
+        // Changed to use marker library without v=weekly for better mobile compatibility
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&loading=async`;
         script.async = true;
         script.defer = true;
-        script.onload = () => setTimeout(initServices, 100);
-        script.onerror = () => console.error("Failed to load Google Maps");
+        script.onload = () => {
+            console.log("Google Maps script loaded");
+            setTimeout(initServices, 100);
+        };
+        script.onerror = (error) => {
+            console.error("Failed to load Google Maps script:", error);
+        };
         document.head.appendChild(script);
+
+        return () => {
+            // Cleanup script if component unmounts during loading
+            if (!window.google?.maps?.places) {
+                script.remove();
+            }
+        };
     }, []);
 
     // Initialize map when loaded
@@ -146,54 +164,79 @@ export default function GooglePlacesAutocomplete({
 
         const defaultCenter = mapCenter || { lat: 52.3676, lng: 4.9041 }; // Amsterdam default
 
-        mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
-            center: defaultCenter,
-            zoom: mapCenter ? 16 : 4,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: true,
-            zoomControl: true,
-            gestureHandling: "greedy",
-            mapId: "address-picker-map", // Required for AdvancedMarkerElement
-        });
+        try {
+            mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
+                center: defaultCenter,
+                zoom: mapCenter ? 16 : 4,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false, // Disabled for better mobile UX
+                zoomControl: true,
+                gestureHandling: "greedy", // Better for mobile - allows single-finger pan
+                mapId: "address-picker-map", // Required for AdvancedMarkerElement
+                // Mobile-friendly options
+                clickableIcons: false,
+                disableDoubleClickZoom: false,
+                draggable: true,
+            });
 
-        // Add marker if we have initial coordinates
-        if (mapCenter) {
-            createMarker(mapCenter.lat, mapCenter.lng, false);
+            console.log("Map initialized successfully");
+
+            // Add marker if we have initial coordinates
+            if (mapCenter) {
+                // Delay marker creation slightly to ensure map is fully ready
+                setTimeout(() => {
+                    createMarker(mapCenter.lat, mapCenter.lng, false);
+                }, 100);
+            }
+
+            // Allow clicking on map to set location - capture listener for cleanup
+            const clickListener = mapRef.current.addListener("click", (e: any) => {
+                if (e.latLng) {
+                    const lat = e.latLng.lat();
+                    const lng = e.latLng.lng();
+                    updateMarkerPosition(lat, lng);
+                    reverseGeocode(lat, lng);
+                }
+            });
+
+            // Cleanup function to remove listeners and prevent memory leaks
+            return () => {
+                // Remove the click listener
+                if (clickListener) {
+                    try {
+                        clickListener.remove();
+                    } catch (err) {
+                        console.warn("Error removing click listener:", err);
+                    }
+                }
+
+                // Clear all instance listeners on the map
+                if (mapRef.current && window.google?.maps?.event?.clearInstanceListeners) {
+                    try {
+                        window.google.maps.event.clearInstanceListeners(mapRef.current);
+                    } catch (err) {
+                        console.warn("Error clearing map listeners:", err);
+                    }
+                }
+
+                // Clean up marker
+                if (markerRef.current) {
+                    try {
+                        markerRef.current.map = null;
+                        markerRef.current = null;
+                    } catch (err) {
+                        console.warn("Error cleaning up marker:", err);
+                    }
+                }
+
+                // Clean up map reference
+                mapRef.current = null;
+            };
+        } catch (err) {
+            console.error("Error initializing map:", err);
         }
-
-        // Allow clicking on map to set location - capture listener for cleanup
-        const clickListener = mapRef.current.addListener("click", (e: any) => {
-            if (e.latLng) {
-                const lat = e.latLng.lat();
-                const lng = e.latLng.lng();
-                updateMarkerPosition(lat, lng);
-                reverseGeocode(lat, lng);
-            }
-        });
-
-        // Cleanup function to remove listeners and prevent memory leaks
-        return () => {
-            // Remove the click listener
-            if (clickListener) {
-                clickListener.remove();
-            }
-
-            // Clear all instance listeners on the map
-            if (mapRef.current && window.google?.maps?.event?.clearInstanceListeners) {
-                window.google.maps.event.clearInstanceListeners(mapRef.current);
-            }
-
-            // Clean up marker
-            if (markerRef.current) {
-                markerRef.current.map = null;
-                markerRef.current = null;
-            }
-
-            // Clean up map reference
-            mapRef.current = null;
-        };
-    }, [isLoaded]);
+    }, [isLoaded, mapCenter]);
 
     // Create marker element for AdvancedMarkerElement
     const createMarkerElement = (animate: boolean = true) => {
@@ -228,45 +271,88 @@ export default function GooglePlacesAutocomplete({
 
     // Create or update marker using AdvancedMarkerElement (new API)
     const createMarker = (lat: number, lng: number, animate: boolean = true) => {
-        if (!mapRef.current || !window.google?.maps?.marker?.AdvancedMarkerElement) {
-            console.warn("AdvancedMarkerElement not available yet");
+        // Check if we have the required API available
+        if (!mapRef.current) {
+            console.warn("Map not ready yet");
             return;
         }
 
+        // Fallback to standard marker if AdvancedMarkerElement is not available (mobile browsers may not support it yet)
+        const hasAdvancedMarker = window.google?.maps?.marker?.AdvancedMarkerElement;
+
         // Remove existing marker from map
         if (markerRef.current) {
-            markerRef.current.map = null;
-            markerRef.current = null;
+            try {
+                if (hasAdvancedMarker) {
+                    markerRef.current.map = null;
+                } else {
+                    markerRef.current.setMap(null);
+                }
+                markerRef.current = null;
+            } catch (err) {
+                console.warn("Error removing old marker:", err);
+            }
         }
 
-        // Create marker content element with optional drop animation
-        const markerContent = createMarkerElement(animate);
+        try {
+            if (hasAdvancedMarker) {
+                // Use AdvancedMarkerElement (modern browsers)
+                const markerContent = createMarkerElement(animate);
 
-        // Create new AdvancedMarkerElement
-        markerRef.current = new window.google.maps.marker.AdvancedMarkerElement({
-            position: { lat, lng },
-            map: mapRef.current,
-            content: markerContent,
-            gmpDraggable: true,
-        });
+                markerRef.current = new window.google.maps.marker.AdvancedMarkerElement({
+                    position: { lat, lng },
+                    map: mapRef.current,
+                    content: markerContent,
+                    gmpDraggable: true,
+                });
 
-        // Attach dragend listener to update address when marker is dragged
-        markerRef.current.addListener("dragend", () => {
-            const pos = markerRef.current.position;
-            if (pos) {
-                // Handle both LatLng object styles (function vs property)
-                const newLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
-                const newLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
-                reverseGeocode(newLat, newLng);
-                setMapCenter({ lat: newLat, lng: newLng });
+                // Attach dragend listener
+                markerRef.current.addListener("dragend", () => {
+                    const pos = markerRef.current.position;
+                    if (pos) {
+                        const newLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
+                        const newLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
+                        reverseGeocode(newLat, newLng);
+                        setMapCenter({ lat: newLat, lng: newLng });
+                    }
+                });
+
+                if (animate) {
+                    setTimeout(() => {
+                        markerContent.classList.remove("marker-drop-animation");
+                    }, 500);
+                }
+            } else {
+                // Fallback to standard Marker for mobile browsers
+                console.log("Using standard Marker for compatibility");
+                markerRef.current = new window.google.maps.Marker({
+                    position: { lat, lng },
+                    map: mapRef.current,
+                    draggable: true,
+                    animation: animate ? window.google.maps.Animation.DROP : null,
+                    icon: {
+                        path: window.google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: "#EA4335",
+                        fillOpacity: 1,
+                        strokeColor: "#ffffff",
+                        strokeWeight: 3,
+                    },
+                });
+
+                // Attach dragend listener for standard marker
+                markerRef.current.addListener("dragend", (e: any) => {
+                    if (e.latLng) {
+                        const newLat = e.latLng.lat();
+                        const newLng = e.latLng.lng();
+                        reverseGeocode(newLat, newLng);
+                        setMapCenter({ lat: newLat, lng: newLng });
+                    }
+                });
             }
-        });
-
-        // Remove animation class after animation completes
-        if (animate) {
-            setTimeout(() => {
-                markerContent.classList.remove("marker-drop-animation");
-            }, 500);
+            console.log("Marker created successfully");
+        } catch (err) {
+            console.error("Error creating marker:", err);
         }
     };
 
@@ -282,7 +368,10 @@ export default function GooglePlacesAutocomplete({
 
     // Reverse geocode coordinates to address
     const reverseGeocode = useCallback((lat: number, lng: number) => {
-        if (!geocoderRef.current) return;
+        if (!geocoderRef.current) {
+            console.warn("Geocoder not ready");
+            return;
+        }
 
         geocoderRef.current.geocode(
             { location: { lat, lng } },
@@ -307,6 +396,8 @@ export default function GooglePlacesAutocomplete({
                         lng,
                         formattedAddress,
                     });
+                } else {
+                    console.warn("Reverse geocoding failed:", status);
                 }
             }
         );
@@ -350,6 +441,7 @@ export default function GooglePlacesAutocomplete({
                     setPredictions(results);
                     setShowDropdown(true);
                 } else {
+                    console.log("Places autocomplete status:", status);
                     setPredictions([]);
                     setShowDropdown(false);
                 }
@@ -373,7 +465,10 @@ export default function GooglePlacesAutocomplete({
 
     // Geocode an address string directly
     const geocodeAddress = useCallback((address: string) => {
-        if (!isLoaded || !geocoderRef.current) return;
+        if (!isLoaded || !geocoderRef.current) {
+            console.warn("Geocoder not ready");
+            return;
+        }
 
         setIsSearching(true);
 
@@ -406,7 +501,9 @@ export default function GooglePlacesAutocomplete({
                     formattedAddress,
                 });
             } else {
-                console.log("Geocode failed:", status);
+                console.warn("Geocode failed:", status);
+                // Still close dropdown even if geocoding failed
+                setShowDropdown(false);
             }
         });
     }, [isLoaded]);
@@ -429,7 +526,10 @@ export default function GooglePlacesAutocomplete({
 
     // Handle prediction selection
     const handleSelectPrediction = (prediction: Prediction) => {
-        if (!placesServiceRef.current) return;
+        if (!placesServiceRef.current) {
+            console.warn("Places service not ready");
+            return;
+        }
 
         setShowDropdown(false);
         setSearchValue(prediction.description);
@@ -443,7 +543,11 @@ export default function GooglePlacesAutocomplete({
             },
             (place: any, status: string) => {
                 setIsSearching(false);
-                sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+                
+                // Always create a new session token after getting place details
+                if (sessionTokenRef.current && window.google?.maps?.places?.AutocompleteSessionToken) {
+                    sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+                }
 
                 if (status === "OK" && place) {
                     const addressComponents = parseAddressComponents(place);
@@ -468,6 +572,8 @@ export default function GooglePlacesAutocomplete({
                         lng,
                         formattedAddress,
                     });
+                } else {
+                    console.warn("Place details failed:", status);
                 }
             }
         );
@@ -545,6 +651,7 @@ export default function GooglePlacesAutocomplete({
                             autoCapitalize="off"
                             spellCheck={false}
                             enterKeyHint="search"
+                            inputMode="search"
                         />
                         {isSearching ? (
                             <div className="w-5 h-5 border-2 border-forest/30 border-t-forest rounded-full animate-spin flex-shrink-0" />
@@ -584,11 +691,20 @@ export default function GooglePlacesAutocomplete({
                                     key={prediction.place_id}
                                     type="button"
                                     onClick={() => handleSelectPrediction(prediction)}
+                                    onTouchStart={(e) => {
+                                        // Prevent iOS Safari from firing click event
+                                        e.currentTarget.style.backgroundColor = "rgba(20, 184, 166, 0.1)";
+                                    }}
                                     onTouchEnd={(e) => {
                                         e.preventDefault();
+                                        e.stopPropagation();
+                                        e.currentTarget.style.backgroundColor = "";
                                         handleSelectPrediction(prediction);
                                     }}
-                                    className="w-full px-4 py-3 text-left hover:bg-softGreen/50 active:bg-softGreen transition-colors border-b border-border/50 last:border-b-0"
+                                    onTouchCancel={(e) => {
+                                        e.currentTarget.style.backgroundColor = "";
+                                    }}
+                                    className="w-full px-4 py-3 text-left hover:bg-softGreen/50 active:bg-softGreen transition-colors border-b border-border/50 last:border-b-0 touch-manipulation"
                                 >
                                     <div className="text-sm font-medium text-forest">
                                         {prediction.structured_formatting.main_text}
@@ -615,7 +731,8 @@ export default function GooglePlacesAutocomplete({
                 <div className="relative">
                     <div
                         ref={mapContainerRef}
-                        className="h-48 w-full bg-gray-100"
+                        className="h-48 w-full bg-gray-100 touch-none"
+                        style={{ WebkitUserSelect: "none", userSelect: "none" }}
                     />
                     {!isLoaded && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -629,6 +746,19 @@ export default function GooglePlacesAutocomplete({
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="bg-white/90 px-4 py-2 rounded-lg text-sm text-forest shadow">
                                 Search or tap map to set location
+                            </div>
+                        </div>
+                    )}
+                    {/* Error overlay for API issues */}
+                    {!isLoaded && !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-red-50">
+                            <div className="flex flex-col items-center gap-2 text-red-600 text-center p-4">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                <span className="text-xs font-medium">Maps API key not configured</span>
                             </div>
                         </div>
                     )}
