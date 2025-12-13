@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { supabase } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState("");
@@ -19,12 +20,22 @@ export default function ForgotPasswordPage() {
         setError("");
         setLoading(true);
 
-        // TODO: Implement real password reset email
-        // For now, just show success message after a brief delay
-        setTimeout(() => {
+        try {
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+            });
+
+            if (resetError) {
+                throw resetError;
+            }
+
             setSubmitted(true);
+        } catch (err: any) {
+            console.error("Password reset error:", err);
+            setError(err.message || "Failed to send reset email. Please try again.");
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
     };
 
     if (submitted) {

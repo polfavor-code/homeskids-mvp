@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import MobileSelect from "@/components/MobileSelect";
+import MobileMultiSelect from "@/components/MobileMultiSelect";
 import { useContacts, Contact, ContactCategory } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -40,19 +40,55 @@ export default function ContactDetailPage() {
     const [email, setEmail] = useState("");
     const [address, setAddress] = useState("");
     const [notes, setNotes] = useState("");
-    const [connectedWith, setConnectedWith] = useState("");
+    const [connectedWith, setConnectedWith] = useState<string[]>([]);
 
-    // Determine the multi-side option label
-    const multiSideLabel = caregivers.length > 2 ? "All caregivers" : "Both sides";
-    const multiSideValue = caregivers.length > 2 ? "all" : "both";
+    // Caregiver options for MobileMultiSelect
+    const caregiverOptions = caregivers.map((caregiver) => ({
+        value: caregiver.id,
+        label: caregiver.label || caregiver.name,
+    }));
 
-    // Helper to get the connected with display text
+    // "All caregivers" option
+    const allOption = {
+        value: "all",
+        label: caregivers.length > 2 ? "All caregivers" : "Both sides",
+    };
+
+    // Helper to parse stored connectedWith string to array
+    const parseConnectedWith = (value?: string): string[] => {
+        if (!value) return [];
+        // Handle legacy "both" and "all" values by converting to all caregiver IDs
+        if (value === "both" || value === "all") {
+            return caregivers.map(c => c.id);
+        }
+        // Handle comma-separated IDs
+        return value.split(",").filter(Boolean);
+    };
+
+    // Helper to get the connected with display text for view mode
     const getConnectedWithLabel = (value?: string): string | null => {
         if (!value) return null;
+        // Handle legacy values
         if (value === "both") return "Both sides";
         if (value === "all") return "All caregivers";
-        const caregiver = caregivers.find(c => c.id === value);
-        return caregiver ? (caregiver.label || caregiver.name) : null;
+        // Handle comma-separated IDs
+        const ids = value.split(",").filter(Boolean);
+        if (ids.length === 0) return null;
+        // Check if all caregivers are selected
+        const allIds = caregivers.map(c => c.id);
+        if (allIds.every(id => ids.includes(id))) {
+            return caregivers.length > 2 ? "All caregivers" : "Both sides";
+        }
+        // Get names for selected caregivers
+        const names = ids
+            .map(id => {
+                const caregiver = caregivers.find(c => c.id === id);
+                return caregiver ? (caregiver.label || caregiver.name) : null;
+            })
+            .filter(Boolean);
+        if (names.length === 0) return null;
+        if (names.length <= 2) return names.join(", ");
+        return `${names.length} caregivers`;
     };
 
     const contact = contacts.find((c) => c.id === contactId);
@@ -67,9 +103,9 @@ export default function ContactDetailPage() {
             setEmail(contact.email || "");
             setAddress(contact.address || "");
             setNotes(contact.notes || "");
-            setConnectedWith(contact.connectedWith || "");
+            setConnectedWith(parseConnectedWith(contact.connectedWith));
         }
-    }, [contact]);
+    }, [contact, caregivers]);
 
     const handleSave = async () => {
         if (!name.trim()) {
@@ -88,7 +124,7 @@ export default function ContactDetailPage() {
             email: email.trim() || undefined,
             address: address.trim() || undefined,
             notes: notes.trim() || undefined,
-            connectedWith: connectedWith || undefined,
+            connectedWith: connectedWith.length > 0 ? connectedWith.join(",") : undefined,
         });
 
         if (result.success) {
@@ -268,7 +304,7 @@ export default function ContactDetailPage() {
                                     setEmail(contact.email || "");
                                     setAddress(contact.address || "");
                                     setNotes(contact.notes || "");
-                                    setConnectedWith(contact.connectedWith || "");
+                                    setConnectedWith(parseConnectedWith(contact.connectedWith));
                                 }}
                                 className="px-3 py-1.5 text-sm font-medium text-textSub hover:bg-cream rounded-lg transition-colors"
                             >
@@ -390,17 +426,12 @@ export default function ContactDetailPage() {
                 <div className="p-4">
                     <label className="block text-xs text-textSub mb-1">Connected with</label>
                     {isEditing ? (
-                        <MobileSelect
-                            value={connectedWith}
+                        <MobileMultiSelect
+                            values={connectedWith}
                             onChange={setConnectedWith}
-                            options={[
-                                ...caregivers.map((caregiver) => ({
-                                    value: caregiver.id,
-                                    label: caregiver.label || caregiver.name
-                                })),
-                                { value: multiSideValue, label: multiSideLabel }
-                            ]}
-                            placeholder="Select caregiver..."
+                            options={caregiverOptions}
+                            allOption={allOption}
+                            placeholder="Select caregivers..."
                             title="Connected with"
                         />
                     ) : (

@@ -18,7 +18,6 @@ const injectPacContainerStyles = () => {
             margin-top: 4px !important;
             font-family: inherit !important;
             background: white !important;
-            /* Ensure pointer events work on mobile */
             pointer-events: auto !important;
             -webkit-overflow-scrolling: touch !important;
         }
@@ -27,7 +26,6 @@ const injectPacContainerStyles = () => {
             font-size: 15px !important;
             cursor: pointer !important;
             border-top: 1px solid #f3f4f6 !important;
-            /* Ensure tappable on mobile */
             -webkit-tap-highlight-color: rgba(0,0,0,0.1) !important;
             touch-action: manipulation !important;
         }
@@ -47,22 +45,18 @@ const injectPacContainerStyles = () => {
         .pac-icon {
             margin-right: 12px !important;
         }
-        /* Mobile specific - ensure dropdown is visible above keyboard */
-        @media (max-width: 640px) {
+        /* Mobile specific styles */
+        @media (max-width: 768px) {
             .pac-container {
-                position: fixed !important;
+                max-width: calc(100vw - 16px) !important;
                 left: 8px !important;
                 right: 8px !important;
-                width: auto !important;
-                max-height: 50vh !important;
-                overflow-y: auto !important;
-                top: auto !important;
-                bottom: 50% !important;
-                transform: translateY(50%) !important;
             }
             .pac-item {
                 padding: 16px !important;
-                min-height: 48px !important;
+                min-height: 52px !important;
+                display: flex !important;
+                align-items: center !important;
             }
         }
     `;
@@ -139,7 +133,6 @@ export default function GooglePlacesAutocomplete({
     const inputRef = useRef<HTMLInputElement>(null);
     const autocompleteRef = useRef<any>(null);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [searchValue, setSearchValue] = useState(initialAddress?.formattedAddress || "");
     const [addressFields, setAddressFields] = useState<Partial<AddressComponents>>({
         street: initialAddress?.street || "",
         city: initialAddress?.city || "",
@@ -153,6 +146,7 @@ export default function GooglePlacesAutocomplete({
             ? { lat: initialAddress.lat, lng: initialAddress.lng }
             : null
     );
+    const [displayAddress, setDisplayAddress] = useState(initialAddress?.formattedAddress || "");
 
     // Load Google Maps script
     useEffect(() => {
@@ -172,7 +166,14 @@ export default function GooglePlacesAutocomplete({
         // Check if script is already being loaded
         const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
         if (existingScript) {
-            existingScript.addEventListener("load", () => setIsLoaded(true));
+            const checkLoaded = () => {
+                if (window.google?.maps?.places) {
+                    setIsLoaded(true);
+                } else {
+                    setTimeout(checkLoaded, 100);
+                }
+            };
+            checkLoaded();
             return;
         }
 
@@ -181,7 +182,10 @@ export default function GooglePlacesAutocomplete({
         script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
         script.async = true;
         script.defer = true;
-        script.onload = () => setIsLoaded(true);
+        script.onload = () => {
+            // Small delay to ensure Places library is fully initialized
+            setTimeout(() => setIsLoaded(true), 100);
+        };
         script.onerror = () => console.error("Failed to load Google Maps");
         document.head.appendChild(script);
 
@@ -196,31 +200,37 @@ export default function GooglePlacesAutocomplete({
 
     // Initialize autocomplete when script is loaded
     useEffect(() => {
-        if (!isLoaded || !inputRef.current || autocompleteRef.current) return;
+        if (!isLoaded || !inputRef.current) return;
+
+        // If already initialized, don't reinitialize
+        if (autocompleteRef.current) return;
 
         // Inject styles for the dropdown
         injectPacContainerStyles();
 
-        let observer: MutationObserver | null = null;
-
         try {
+            // Create autocomplete instance
             autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
                 types: ["address"],
                 fields: ["address_components", "geometry", "formatted_address"],
             });
 
+            // Handle place selection
             autocompleteRef.current.addListener("place_changed", () => {
                 const place = autocompleteRef.current.getPlace();
 
                 if (!place.geometry) {
+                    console.log("No geometry for place");
                     return;
                 }
 
                 const addressComponents = parseAddressComponents(place);
                 const lat = place.geometry.location.lat();
                 const lng = place.geometry.location.lng();
+                const formattedAddress = place.formatted_address || "";
 
-                setSearchValue(place.formatted_address || "");
+                // Update all state
+                setDisplayAddress(formattedAddress);
                 setAddressFields({
                     street: addressComponents.street,
                     city: addressComponents.city,
@@ -232,66 +242,28 @@ export default function GooglePlacesAutocomplete({
                 setShowMap(true);
 
                 // Blur input to dismiss keyboard on mobile
-                inputRef.current?.blur();
+                if (inputRef.current) {
+                    inputRef.current.blur();
+                }
 
+                // Notify parent
                 onAddressSelectRef.current({
                     ...addressComponents,
                     lat,
                     lng,
-                    formattedAddress: place.formatted_address || "",
+                    formattedAddress,
                 });
             });
 
-            // Fix for mobile: ensure pac-container touch events work
-            // Google's autocomplete can have issues with touch on mobile/iOS
-            const fixMobileTouchEvents = () => {
-                const pacContainers = document.querySelectorAll('.pac-container');
-                pacContainers.forEach(container => {
-                    const el = container as HTMLElement;
-                    // Ensure touch events work
-                    el.style.pointerEvents = 'auto';
-
-                    // Add touch event handlers for iOS
-                    el.addEventListener('touchstart', () => {}, { passive: true });
-                    el.addEventListener('touchend', (e) => {
-                        // Find the pac-item that was tapped
-                        const target = e.target as HTMLElement;
-                        const pacItem = target.closest('.pac-item');
-                        if (pacItem) {
-                            // Trigger a click on the item
-                            (pacItem as HTMLElement).click();
-                        }
-                    }, { passive: false });
-                });
-            };
-
-            // Use MutationObserver to catch when pac-container is added to DOM
-            observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node instanceof HTMLElement && node.classList.contains('pac-container')) {
-                            fixMobileTouchEvents();
-                        }
-                    });
-                });
-            });
-
-            observer.observe(document.body, { childList: true, subtree: true });
-
-            // Also run immediately in case container already exists
-            setTimeout(fixMobileTouchEvents, 300);
+            // Set initial value if provided
+            if (initialAddress?.formattedAddress && inputRef.current) {
+                inputRef.current.value = initialAddress.formattedAddress;
+            }
 
         } catch (error) {
             console.error("Error initializing autocomplete:", error);
         }
-
-        // Cleanup observer on unmount
-        return () => {
-            if (observer) {
-                observer.disconnect();
-            }
-        };
-    }, [isLoaded]);
+    }, [isLoaded, initialAddress?.formattedAddress]);
 
     // Parse Google address components into our format
     const parseAddressComponents = (place: any): Omit<AddressComponents, "lat" | "lng" | "formattedAddress"> => {
@@ -345,9 +317,14 @@ export default function GooglePlacesAutocomplete({
             country: newFields.country || "",
             lat: mapCenter?.lat || 0,
             lng: mapCenter?.lng || 0,
-            formattedAddress: searchValue,
+            formattedAddress: displayAddress,
         });
-    }, [addressFields, mapCenter, searchValue]);
+    }, [addressFields, mapCenter, displayAddress]);
+
+    // Handle input change - update display address for manual typing
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDisplayAddress(e.target.value);
+    };
 
     return (
         <div className="space-y-0">
@@ -370,15 +347,14 @@ export default function GooglePlacesAutocomplete({
                     <input
                         ref={inputRef}
                         type="text"
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
+                        defaultValue={initialAddress?.formattedAddress || ""}
+                        onChange={handleInputChange}
                         placeholder={placeholder}
                         className="flex-1 text-sm outline-none bg-transparent text-forest"
                         autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="off"
-                        spellCheck="false"
-                        enterKeyHint="search"
+                        spellCheck={false}
                     />
                     {/* Google Logo */}
                     <svg height="14" viewBox="0 0 24 24" className="opacity-40 flex-shrink-0">
@@ -408,35 +384,35 @@ export default function GooglePlacesAutocomplete({
                         placeholder="Street"
                         value={addressFields.street || ""}
                         onChange={(e) => handleFieldChange("street", e.target.value)}
-                        className="col-span-2 px-3 py-2 text-xs border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                        className="col-span-2 px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                     />
                     <input
                         type="text"
                         placeholder="City"
                         value={addressFields.city || ""}
                         onChange={(e) => handleFieldChange("city", e.target.value)}
-                        className="px-3 py-2 text-xs border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                        className="px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                     />
                     <input
                         type="text"
                         placeholder="State"
                         value={addressFields.state || ""}
                         onChange={(e) => handleFieldChange("state", e.target.value)}
-                        className="px-3 py-2 text-xs border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                        className="px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                     />
                     <input
                         type="text"
                         placeholder="ZIP"
                         value={addressFields.zip || ""}
                         onChange={(e) => handleFieldChange("zip", e.target.value)}
-                        className="px-3 py-2 text-xs border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                        className="px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                     />
                     <input
                         type="text"
                         placeholder="Country"
                         value={addressFields.country || ""}
                         onChange={(e) => handleFieldChange("country", e.target.value)}
-                        className="px-3 py-2 text-xs border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
+                        className="px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-teal"
                     />
                 </div>
             </div>
