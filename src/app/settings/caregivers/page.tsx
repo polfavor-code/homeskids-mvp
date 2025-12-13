@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
+import MobileSelect from "@/components/MobileSelect";
 import InviteCaregiverPanel from "@/components/InviteCaregiverPanel";
 import CaregiverStatusPill from "@/components/caregivers/CaregiverStatusPill";
 import CaregiverConfirmDialog, { CaregiverAction } from "@/components/caregivers/CaregiverConfirmDialog";
@@ -531,18 +532,13 @@ export default function CaregiversPage() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-forest mb-1.5">Role</label>
-                                    <select
+                                    <MobileSelect
                                         value={formData.relationship}
-                                        onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                                    >
-                                        <option value="">Select role...</option>
-                                        {ROLE_OPTIONS.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={(value) => setFormData({ ...formData, relationship: value })}
+                                        options={ROLE_OPTIONS}
+                                        placeholder="Select role..."
+                                        title="Select role"
+                                    />
                                 </div>
 
                                 <div>
@@ -631,22 +627,20 @@ export default function CaregiversPage() {
                                         {/* Add to Home Dropdown */}
                                         {availableHomes.length > 0 && !caregiver.isCurrentUser && (
                                             <div className="pt-1">
-                                                <select
-                                                    className="w-full px-3 py-2 rounded-lg border border-border bg-white text-sm text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                                <MobileSelect
                                                     value=""
-                                                    onChange={(e) => {
-                                                        if (e.target.value) {
-                                                            handleAddToHome(caregiver.id, e.target.value);
+                                                    onChange={(value) => {
+                                                        if (value) {
+                                                            handleAddToHome(caregiver.id, value);
                                                         }
                                                     }}
-                                                >
-                                                    <option value="">+ Connect to a home</option>
-                                                    {availableHomes.map((home) => (
-                                                        <option key={home.id} value={home.id}>
-                                                            {home.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    options={availableHomes.map((home) => ({
+                                                        value: home.id,
+                                                        label: home.name
+                                                    }))}
+                                                    placeholder="+ Connect to a home"
+                                                    title="Connect to a home"
+                                                />
                                             </div>
                                         )}
                                     </div>
@@ -847,7 +841,7 @@ export default function CaregiversPage() {
                                             <div className="bg-white p-3 rounded-xl border border-border">
                                                 <QRCodeSVG
                                                     value={getInviteLink(caregiver.inviteToken)}
-                                                    size={120}
+                                                    size={200}
                                                     level="M"
                                                     includeMargin={false}
                                                 />

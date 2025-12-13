@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import MobileSelect from "@/components/MobileSelect";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { processImageForUpload, generateImagePaths } from "@/lib/imageUtils";
@@ -120,7 +121,7 @@ export default function AddItemPage() {
                 }
             }
 
-            const isMissing = location === "To be found";
+            const isMissing = location === "Missing";
             // Use home-based location - find the selected home from ALL homes (in case item is at hidden home)
             const selectedHome = homes.find((h) => h.id === location);
             const locationHomeId = isMissing ? null : (selectedHome?.id || null);
@@ -244,23 +245,14 @@ export default function AddItemPage() {
                     <label className="block text-xs font-semibold text-forest mb-1.5">
                         Category <span className="text-terracotta">*</span>
                     </label>
-                    <select
+                    <MobileSelect
                         value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:border-forest bg-white appearance-none"
-                        style={{
-                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                            backgroundRepeat: 'no-repeat',
-                            backgroundPosition: 'right 12px center'
-                        }}
-                    >
-                        <option value="">Select category</option>
-                        {CATEGORIES.map((cat) => (
-                            <option key={cat} value={cat}>
-                                {cat}
-                            </option>
-                        ))}
-                    </select>
+                        onChange={setCategory}
+                        options={CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+                        placeholder="Select category"
+                        title="Select category"
+                        required
+                    />
                 </div>
 
                 {/* Location */}
@@ -268,24 +260,31 @@ export default function AddItemPage() {
                     <label className="block text-xs font-semibold text-forest mb-1.5">
                         Location <span className="text-terracotta">*</span>
                     </label>
-                    <select
+                    <MobileSelect
                         value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:border-forest bg-white appearance-none"
-                        style={{
-                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                            backgroundRepeat: 'no-repeat',
-                            backgroundPosition: 'right 12px center'
-                        }}
-                    >
-                        <option value="">Select home</option>
-                        {activeHomes.map((home) => (
-                            <option key={home.id} value={home.id}>
-                                {home.name}
-                            </option>
-                        ))}
-                        <option value="To be found">To be found</option>
-                    </select>
+                        onChange={setLocation}
+                        options={[
+                            ...activeHomes.map((home) => ({ value: home.id, label: home.name })),
+                            { value: "Missing", label: "Missing" }
+                        ]}
+                        placeholder="Select home"
+                        title="Select home"
+                        required
+                    />
+                </div>
+
+                {/* Notes */}
+                <div>
+                    <label className="block text-xs font-semibold text-forest mb-1.5">
+                        Notes
+                    </label>
+                    <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add any notes about this item..."
+                        rows={3}
+                        className="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:border-forest bg-white placeholder:text-gray-400 resize-none"
+                    />
                 </div>
 
                 {error && <p className="text-sm text-terracotta">{error}</p>}

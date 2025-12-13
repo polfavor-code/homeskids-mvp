@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import MobileSelect from "@/components/MobileSelect";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -220,7 +221,7 @@ export default function ItemDetailPage({
         (c) => c.id === item.locationCaregiverId
     );
     const locationLabel = item.isMissing
-        ? "To be found"
+        ? "Missing"
         : itemHome
             ? itemHome.name
             : caregiver
@@ -232,7 +233,7 @@ export default function ItemDetailPage({
     if (item.isMissing) {
         statusPill = (
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                To be found
+                Missing
             </span>
         );
     } else if (isRequested) {
@@ -247,9 +248,9 @@ export default function ItemDetailPage({
     const handleLocationChange = (value: string) => {
         if (value === "TO_BE_FOUND") {
             updateItemLocation(item.id, { toBeFound: true });
-            setUpdateMessage("Marked as 'To be found'.");
+            setUpdateMessage("Marked as 'Missing'.");
             setExtraHistoryEntries((prev) => [
-                { text: "Marked as 'To be found'", time: "Just now" },
+                { text: "Marked as 'Missing'", time: "Just now" },
                 ...prev,
             ]);
         } else {
@@ -399,16 +400,14 @@ export default function ItemDetailPage({
                     {/* Editable Category */}
                     {isEditingCategory ? (
                         <div className="flex items-center justify-center gap-2">
-                            <select
-                                value={editedCategory}
-                                onChange={(e) => setEditedCategory(e.target.value)}
-                                className="px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                autoFocus
-                            >
-                                {CATEGORIES.map((cat) => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
+                            <div className="w-40">
+                                <MobileSelect
+                                    value={editedCategory}
+                                    onChange={setEditedCategory}
+                                    options={CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+                                    title="Select category"
+                                />
+                            </div>
                             <button
                                 onClick={handleSaveCategory}
                                 className="p-1 text-green-600 hover:text-green-700 bg-green-50 rounded-full w-6 h-6 flex items-center justify-center text-sm"
@@ -446,18 +445,15 @@ export default function ItemDetailPage({
             {/* Current Home Section */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
                 <h3 className="font-bold text-gray-900 mb-3">Current home</h3>
-                <select
-                    value={item.isMissing ? "TO_BE_FOUND" : (item.locationHomeId ?? item.locationCaregiverId ?? undefined)}
-                    onChange={(e) => handleLocationChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white"
-                >
-                    {homes.map((home) => (
-                        <option key={home.id} value={home.id}>
-                            {home.name}
-                        </option>
-                    ))}
-                    <option value="TO_BE_FOUND">To be found</option>
-                </select>
+                <MobileSelect
+                    value={item.isMissing ? "TO_BE_FOUND" : (item.locationHomeId ?? item.locationCaregiverId ?? "")}
+                    onChange={handleLocationChange}
+                    options={[
+                        ...homes.map((home) => ({ value: home.id, label: home.name })),
+                        { value: "TO_BE_FOUND", label: "Missing" }
+                    ]}
+                    title="Select home"
+                />
                 {updateMessage && (
                     <p className="text-xs text-gray-500 mt-2">{updateMessage}</p>
                 )}
@@ -551,7 +547,7 @@ export default function ItemDetailPage({
                 ) : (
                     <div className="text-center p-4 bg-gray-50 rounded-xl">
                         <p className="text-gray-600 font-medium">
-                            This item is currently in &apos;To be found&apos;.
+                            This item is currently marked as &apos;Missing&apos;.
                         </p>
                     </div>
                 )}

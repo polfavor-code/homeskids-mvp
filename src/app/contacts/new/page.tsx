@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import MobileSelect from "@/components/MobileSelect";
 import { useContacts, ContactCategory } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -150,19 +151,19 @@ export default function NewContactPage() {
                     <label className="block text-sm font-medium text-forest mb-2">
                         Connected with
                     </label>
-                    <select
+                    <MobileSelect
                         value={connectedWith}
-                        onChange={(e) => setConnectedWith(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
-                    >
-                        <option value="">Select caregiver...</option>
-                        {caregivers.map((caregiver) => (
-                            <option key={caregiver.id} value={caregiver.id}>
-                                {caregiver.label || caregiver.name}
-                            </option>
-                        ))}
-                        <option value={multiSideValue}>{multiSideLabel}</option>
-                    </select>
+                        onChange={setConnectedWith}
+                        options={[
+                            ...caregivers.map((caregiver) => ({
+                                value: caregiver.id,
+                                label: caregiver.label || caregiver.name
+                            })),
+                            { value: multiSideValue, label: multiSideLabel }
+                        ]}
+                        placeholder="Select caregiver..."
+                        title="Connected with"
+                    />
                     <p className="text-xs text-textSub mt-1.5">
                         Which caregiver is this contact primarily connected with?
                     </p>

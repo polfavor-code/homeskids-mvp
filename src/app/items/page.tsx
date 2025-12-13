@@ -38,7 +38,7 @@ function ItemsPageContent() {
 
     // Helper to get location label - prefers home, falls back to caregiver
     const getLocationLabel = (item: { locationHomeId: string | null; locationCaregiverId: string | null; isMissing: boolean }) => {
-        if (item.isMissing) return "To be found";
+        if (item.isMissing) return "Missing";
         if (item.locationHomeId) {
             const home = homes.find((h) => h.id === item.locationHomeId);
             if (home) return home.name;
@@ -148,13 +148,15 @@ function ItemsPageContent() {
                     <TravelBagIcon size={16} />
                     Travel bag
                 </Link>
-                <Link
-                    href="/items/to-be-found"
-                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
-                >
-                    <SearchIcon size={16} />
-                    To be found ({missingCount})
-                </Link>
+                {missingCount > 0 && (
+                    <Link
+                        href="/items/missing"
+                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
+                    >
+                        <SearchIcon size={16} />
+                        Missing ({missingCount})
+                    </Link>
+                )}
             </div>
 
             {/* Home Filter Dropdown - Chip Style */}
@@ -289,7 +291,7 @@ function ItemsPageContent() {
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                     {item.isMissing ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            To be found
+                                            Missing
                                         </span>
                                     ) : item.isRequestedForNextVisit ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

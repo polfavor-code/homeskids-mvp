@@ -9,7 +9,7 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 
-export default function ToBeFoundPage() {
+export default function MissingItemsPage() {
     useEnsureOnboarding();
 
     const { items } = useItems();
@@ -65,11 +65,11 @@ export default function ToBeFoundPage() {
                     Travel bag
                 </Link>
                 <Link
-                    href="/items/to-be-found"
+                    href="/items/missing"
                     className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-forest text-white border border-forest"
                 >
                     <SearchIcon size={16} />
-                    To be found ({missingCount})
+                    Missing ({missingCount})
                 </Link>
             </div>
 
@@ -107,7 +107,7 @@ export default function ToBeFoundPage() {
 
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                        To be found
+                                        Missing
                                     </span>
                                 </div>
                             </div>

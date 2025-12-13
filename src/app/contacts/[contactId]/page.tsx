@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import MobileSelect from "@/components/MobileSelect";
 import { useContacts, Contact, ContactCategory } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -385,19 +386,19 @@ export default function ContactDetailPage() {
                 <div className="p-4">
                     <label className="block text-xs text-textSub mb-1">Connected with</label>
                     {isEditing ? (
-                        <select
+                        <MobileSelect
                             value={connectedWith}
-                            onChange={(e) => setConnectedWith(e.target.value)}
-                            className="w-full text-sm text-forest focus:outline-none bg-transparent"
-                        >
-                            <option value="">Select caregiver...</option>
-                            {caregivers.map((caregiver) => (
-                                <option key={caregiver.id} value={caregiver.id}>
-                                    {caregiver.label || caregiver.name}
-                                </option>
-                            ))}
-                            <option value={multiSideValue}>{multiSideLabel}</option>
-                        </select>
+                            onChange={setConnectedWith}
+                            options={[
+                                ...caregivers.map((caregiver) => ({
+                                    value: caregiver.id,
+                                    label: caregiver.label || caregiver.name
+                                })),
+                                { value: multiSideValue, label: multiSideLabel }
+                            ]}
+                            placeholder="Select caregiver..."
+                            title="Connected with"
+                        />
                     ) : (
                         <p className="text-sm text-forest">
                             {getConnectedWithLabel(contact.connectedWith) || <span className="text-textSub/50">Not specified</span>}

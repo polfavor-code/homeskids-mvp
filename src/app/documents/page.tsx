@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import MobileSelect from "@/components/MobileSelect";
 import { useAppState } from "@/lib/AppStateContext";
 import { useDocuments, Document } from "@/lib/DocumentsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -234,18 +235,19 @@ export default function DocumentsPage() {
                                     <label className="block text-sm font-semibold text-forest mb-1.5">
                                         Category
                                     </label>
-                                    <select
+                                    <MobileSelect
                                         value={newDocument.category}
-                                        onChange={(e) => setNewDocument({ ...newDocument, category: e.target.value as Document["category"] })}
-                                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                                    >
-                                        <option value="id">ID & Identity</option>
-                                        <option value="school">School</option>
-                                        <option value="health">Health</option>
-                                        <option value="travel">Travel</option>
-                                        <option value="legal">Legal</option>
-                                        <option value="other">Other</option>
-                                    </select>
+                                        onChange={(value) => setNewDocument({ ...newDocument, category: value as Document["category"] })}
+                                        options={[
+                                            { value: "id", label: "ID & Identity" },
+                                            { value: "school", label: "School" },
+                                            { value: "health", label: "Health" },
+                                            { value: "travel", label: "Travel" },
+                                            { value: "legal", label: "Legal" },
+                                            { value: "other", label: "Other" },
+                                        ]}
+                                        title="Select category"
+                                    />
                                 </div>
 
                                 <div>
