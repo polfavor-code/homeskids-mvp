@@ -95,7 +95,7 @@ function ContactsPageContent() {
                             {child?.name || "Child"}&apos;s Contacts
                         </h1>
                         <p className="text-sm text-textSub mt-1">
-                            Important people shared between both homes.
+                            Share important contacts.
                         </p>
                     </div>
                     <Link
@@ -126,22 +126,22 @@ function ContactsPageContent() {
             </div>
 
             {/* Contact List */}
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-hidden">
                 {sortedContacts.map((contact) => (
                     <div
                         key={contact.id}
-                        className="bg-white rounded-xl p-3 shadow-sm border border-border hover:border-forest/20 transition-colors overflow-hidden"
+                        className="bg-white rounded-xl p-3 shadow-sm border border-border hover:border-forest/20 transition-colors"
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
                             {/* Avatar / Initial - Clickable */}
                             <Link href={`/contacts/${contact.id}`} className="w-10 h-10 rounded-full bg-cream flex items-center justify-center text-forest font-bold text-sm flex-shrink-0 hover:bg-forest hover:text-white transition-colors">
                                 {contact.name.charAt(0).toUpperCase()}
                             </Link>
 
                             {/* Info - Clickable */}
-                            <Link href={`/contacts/${contact.id}`} className="flex-1 min-w-0 overflow-hidden">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <h3 className="font-medium text-forest truncate hover:text-teal transition-colors min-w-0">
+                            <Link href={`/contacts/${contact.id}`} className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <h3 className="font-medium text-forest truncate hover:text-teal transition-colors flex-1 min-w-0">
                                         {contact.name}
                                     </h3>
                                     {contact.isFavorite && (
@@ -156,9 +156,9 @@ function ContactsPageContent() {
                                 </p>
                             </Link>
 
-                            {/* Category Badge */}
+                            {/* Category Badge - Hidden on mobile if needed */}
                             <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize flex-shrink-0 ${getCategoryColor(
+                                className={`hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium capitalize flex-shrink-0 ${getCategoryColor(
                                     contact.category
                                 )}`}
                             >
