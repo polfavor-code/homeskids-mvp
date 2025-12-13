@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import AvatarUploader from "@/components/AvatarUploader";
@@ -129,44 +130,31 @@ export default function MyAccountPage() {
         setSavingEmail(true);
 
         try {
-            // Check if email is already in use
-            const { data: existing } = await supabase
-                .from("profiles")
-                .select("id")
-                .eq("email", newEmail)
-                .neq("id", user?.id)
-                .maybeSingle();
-
-            if (existing) {
-                setEmailError("This email is already in use");
-                setSavingEmail(false);
-                return;
-            }
-
-            // Update Supabase Auth email
-            const { error: authError } = await supabase.auth.updateUser({
-                email: newEmail
+            // Use server-side API to update email (bypasses verification requirement)
+            const response = await fetch("/api/update-email", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userId: user?.id,
+                    newEmail: newEmail,
+                }),
             });
 
-            if (authError) {
-                setEmailError(authError.message);
+            const result = await response.json();
+
+            if (!response.ok) {
+                setEmailError(result.error || "Failed to update email");
                 setSavingEmail(false);
                 return;
             }
 
-            // Update profiles table to keep in sync
-            const { error: profileError } = await supabase
-                .from("profiles")
-                .update({ email: newEmail })
-                .eq("id", user?.id);
-
-            if (profileError) {
-                console.error("Error updating profile email:", profileError);
-                // Don't fail - auth email was updated successfully
-            }
-
+            // Force refresh the auth session to get updated user data
+            await supabase.auth.refreshSession();
             await refreshData();
             setIsEditingEmail(false);
+            setEmail(newEmail);
             setSuccessMessage("Email updated successfully!");
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err: any) {
@@ -271,6 +259,14 @@ export default function MyAccountPage() {
 
     return (
         <AppShell>
+            {/* Back Link */}
+            <Link
+                href="/settings"
+                className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-4"
+            >
+                ← Settings
+            </Link>
+
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>

@@ -34,6 +34,14 @@ export default function MissingItemsPage() {
 
     return (
         <AppShell>
+            {/* Back Link */}
+            <Link
+                href="/items"
+                className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-4"
+            >
+                ← All items
+            </Link>
+
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
                 <div>

@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import MobileSelect from "@/components/MobileSelect";
+import MobileMultiSelect from "@/components/MobileMultiSelect";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContext";
@@ -667,6 +669,14 @@ export default function HomeSetupPage() {
 
     return (
         <AppShell>
+            {/* Back Link */}
+            <Link
+                href="/settings"
+                className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-4"
+            >
+                ← Settings
+            </Link>
+
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
@@ -984,6 +994,30 @@ function HomeForm({
                         className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
                         placeholder="Gate code, parking, pets, special instructions..."
                     />
+                </div>
+            </div>
+
+            {/* Connected Caregivers */}
+            <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-forest border-b border-border/30 pb-2">Connected with</h3>
+                <div>
+                    <MobileMultiSelect
+                        values={formData.accessibleCaregiverIds}
+                        onChange={(values) => setFormData({ ...formData, accessibleCaregiverIds: values })}
+                        options={caregivers.map((c) => ({
+                            value: c.id,
+                            label: c.label || c.name,
+                        }))}
+                        allOption={{
+                            value: "all",
+                            label: caregivers.length > 2 ? "All caregivers" : "Both sides",
+                        }}
+                        placeholder="Select caregivers..."
+                        title="Connected with"
+                    />
+                    <p className="text-xs text-textSub mt-2">
+                        Select which caregivers have access to this home.
+                    </p>
                 </div>
             </div>
 

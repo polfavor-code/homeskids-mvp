@@ -30,10 +30,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initSession();
 
         // Subscribe to auth changes for subsequent updates
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth event:", event);
             setSession(session);
             setUser(session?.user ?? null);
             setLoading(false);
+
+            // When user confirms email change, sync the new email to profiles table
+            if (event === "USER_UPDATED" && session?.user?.email) {
+                try {
+                    const { error } = await supabase
+                        .from("profiles")
+                        .update({ email: session.user.email.toLowerCase() })
+                        .eq("id", session.user.id);
+
+                    if (error) {
+                        console.error("Error syncing profile email:", error);
+                    } else {
+                        console.log("Profile email synced to:", session.user.email);
+                    }
+                } catch (err) {
+                    console.error("Failed to sync profile email:", err);
+                }
+            }
         });
 
         return () => subscription.unsubscribe();

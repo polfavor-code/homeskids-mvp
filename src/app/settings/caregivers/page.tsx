@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
@@ -716,6 +717,14 @@ export default function CaregiversPage() {
 
     return (
         <AppShell>
+            {/* Back Link */}
+            <Link
+                href="/settings"
+                className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-4"
+            >
+                ← Settings
+            </Link>
+
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>

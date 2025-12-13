@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import { useAppState } from "@/lib/AppStateContext";
 import { useDocuments, Document } from "@/lib/DocumentsContext";
@@ -151,6 +152,14 @@ export default function ImportantIDsPage() {
 
     return (
         <AppShell>
+            {/* Back Link */}
+            <Link
+                href="/documents"
+                className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-4"
+            >
+                ← Documents
+            </Link>
+
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>

@@ -130,7 +130,7 @@ function ContactsPageContent() {
                 {sortedContacts.map((contact) => (
                     <div
                         key={contact.id}
-                        className="bg-white rounded-xl p-3 shadow-sm border border-border hover:border-forest/20 transition-colors"
+                        className="bg-white rounded-xl p-3 shadow-sm border border-border hover:border-forest/20 transition-colors overflow-hidden"
                     >
                         <div className="flex items-center gap-3">
                             {/* Avatar / Initial - Clickable */}
@@ -139,13 +139,13 @@ function ContactsPageContent() {
                             </Link>
 
                             {/* Info - Clickable */}
-                            <Link href={`/contacts/${contact.id}`} className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-forest truncate hover:text-teal transition-colors">
+                            <Link href={`/contacts/${contact.id}`} className="flex-1 min-w-0 overflow-hidden">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <h3 className="font-medium text-forest truncate hover:text-teal transition-colors min-w-0">
                                         {contact.name}
                                     </h3>
                                     {contact.isFavorite && (
-                                        <span className="text-yellow-500 text-sm">★</span>
+                                        <span className="text-yellow-500 text-sm flex-shrink-0">★</span>
                                     )}
                                 </div>
                                 <p className="text-xs text-textSub truncate">
@@ -158,7 +158,7 @@ function ContactsPageContent() {
 
                             {/* Category Badge */}
                             <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${getCategoryColor(
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize flex-shrink-0 ${getCategoryColor(
                                     contact.category
                                 )}`}
                             >

@@ -46,7 +46,7 @@ export default function ItemDetailPage({
         deleteItem,
     } = useItems();
     const router = useRouter();
-    const { caregivers, homes, currentJuneCaregiverId, currentHomeId } = useAppState();
+    const { caregivers, homes, currentJuneCaregiverId, currentHomeId, child } = useAppState();
     const item = items.find((i) => i.id === params.itemId);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -554,31 +554,49 @@ export default function ItemDetailPage({
                 {!item.isMissing ? (
                     <div className="space-y-3">
                         {/* Request Toggle */}
-                        <div className="p-3 bg-gray-50 rounded-xl">
-                            <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-900">
-                                    Include in next packing list
-                                </span>
-                                <button
-                                    onClick={() => {
-                                        const newValue = !isRequested;
-                                        setIsRequested(newValue);
-                                        updateItemRequested(item.id, newValue);
-                                    }}
-                                    className={`w-12 h-7 rounded-full transition-colors relative ${isRequested ? "bg-primary" : "bg-gray-300"
-                                        }`}
-                                    aria-pressed={isRequested}
-                                >
-                                    <span
-                                        className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isRequested ? "translate-x-5" : "translate-x-0"
-                                            }`}
-                                    />
-                                </button>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                                This item will appear in the travel bag checklist for the next visit.
-                            </p>
-                        </div>
+                        {(() => {
+                            // Determine if item is at current home or another home
+                            const itemHome = homes.find(h => h.id === item.locationHomeId);
+                            const isAtCurrentHome = item.locationHomeId === currentHomeId;
+                            const itemHomeName = itemHome?.name || "another home";
+
+                            // Dynamic label and description
+                            const toggleLabel = isAtCurrentHome
+                                ? "Include in current packing list"
+                                : `Request from ${itemHomeName}`;
+
+                            const toggleDescription = isAtCurrentHome
+                                ? "This item will appear in the travel bag checklist."
+                                : `This item will be added to the packing list when ${child?.name || "your child"} moves to ${itemHomeName}.`;
+
+                            return (
+                                <div className="p-3 bg-gray-50 rounded-xl">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-medium text-gray-900">
+                                            {toggleLabel}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                const newValue = !isRequested;
+                                                setIsRequested(newValue);
+                                                updateItemRequested(item.id, newValue);
+                                            }}
+                                            className={`w-12 h-7 rounded-full transition-colors relative ${isRequested ? "bg-primary" : "bg-gray-300"
+                                                }`}
+                                            aria-pressed={isRequested}
+                                        >
+                                            <span
+                                                className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isRequested ? "translate-x-5" : "translate-x-0"
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        {toggleDescription}
+                                    </p>
+                                </div>
+                            );
+                        })()}
                     </div>
                 ) : (
                     <div className="text-center p-4 bg-gray-50 rounded-xl">
@@ -588,6 +606,19 @@ export default function ItemDetailPage({
                     </div>
                 )}
             </div>
+
+            {/* Pending Request Info Badge */}
+            {item.isRequestedForNextVisit && item.locationHomeId !== currentHomeId && !item.isMissing && (() => {
+                const itemHome = homes.find(h => h.id === item.locationHomeId);
+                const itemHomeName = itemHome?.name || "another home";
+                return (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+                        <p className="text-sm text-amber-800">
+                            <strong>Pending request:</strong> This item will appear in {itemHomeName}&apos;s packing list when {child?.name || "your child"} moves there.
+                        </p>
+                    </div>
+                );
+            })()}
 
             {/* Missing Conversation Card */}
             {item.isMissing && (
@@ -709,36 +740,48 @@ export default function ItemDetailPage({
                         </div>
                     ))}
 
-                    {/* Mocked history entries */}
-                    <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
-                            <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                    {/* Requested for next visit - only show if requested */}
+                    {item.isRequestedForNextVisit && (
+                        <div className="flex gap-3">
+                            <div className="flex flex-col items-center">
+                                <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
+                                <div className="w-0.5 flex-1 bg-gray-100 my-1" />
+                            </div>
+                            <div className="pb-2">
+                                <p className="text-sm text-gray-900">
+                                    Requested for next visit
+                                    {item.requestedBy && (() => {
+                                        const requester = caregivers.find(c => c.id === item.requestedBy);
+                                        return requester ? ` by ${requester.label || requester.name}` : "";
+                                    })()}
+                                </p>
+                                <p className="text-xs text-gray-400">Recently</p>
+                            </div>
                         </div>
-                        <div className="pb-2">
-                            <p className="text-sm text-gray-900">Requested for next visit</p>
-                            <p className="text-xs text-gray-400">Today</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
-                            <div className="w-0.5 flex-1 bg-gray-100 my-1" />
-                        </div>
-                        <div className="pb-2">
-                            <p className="text-sm text-gray-900">
-                                Location changed to {locationLabel}
-                            </p>
-                            <p className="text-xs text-gray-400">1 day ago</p>
-                        </div>
-                    </div>
+                    )}
+
+                    {/* Item created */}
                     <div className="flex gap-3">
                         <div className="flex flex-col items-center">
                             <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-900">Item created</p>
-                            <p className="text-xs text-gray-400">2 days ago</p>
+                            <p className="text-sm text-gray-900">
+                                Item created
+                                {item.createdBy && (() => {
+                                    const creator = caregivers.find(c => c.id === item.createdBy);
+                                    return creator ? ` by ${creator.label || creator.name}` : "";
+                                })()}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                                {item.createdAt
+                                    ? new Date(item.createdAt).toLocaleDateString(undefined, {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: new Date(item.createdAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                      })
+                                    : "Unknown date"}
+                            </p>
                         </div>
                     </div>
                 </div>
