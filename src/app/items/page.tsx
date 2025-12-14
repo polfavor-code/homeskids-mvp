@@ -37,8 +37,8 @@ function ItemsPageContent() {
     };
 
     // Helper to get location label - prefers home, falls back to caregiver
-    const getLocationLabel = (item: { locationHomeId: string | null; locationCaregiverId: string | null; isMissing: boolean }) => {
-        if (item.isMissing) return "Missing";
+    const getLocationLabel = (item: { locationHomeId?: string | null; locationCaregiverId?: string | null; isMissing?: boolean; status?: string }) => {
+        if (item.isMissing || item.status === "lost") return "Missing";
         if (item.locationHomeId) {
             const home = homes.find((h) => h.id === item.locationHomeId);
             if (home) return home.name;
@@ -123,7 +123,7 @@ function ItemsPageContent() {
     // Helper to get status label for requested items
     // - If YOU marked it → "To pack" (you're preparing to pack it)
     // - If SOMEONE ELSE requested it → "Requested by [Name]" (they asked you to pack it)
-    const getRequestedLabel = (item: { requestedBy?: string | null; locationHomeId: string | null }) => {
+    const getRequestedLabel = (item: { requestedBy?: string | null; locationHomeId?: string | null }) => {
         const requestedById = item.requestedBy;
         if (!requestedById) return "To pack";
 

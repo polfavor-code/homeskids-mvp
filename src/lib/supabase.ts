@@ -11,6 +11,11 @@ export const FEATURES = {
     CONTACTS: true,           // Table created
     HOME_ACCESS: true,        // Table created
     TRAVEL_BAGS: false,       // Set to true after creating travel_bags table
+
+    // V2 Permission Model - Child-centric permissions
+    // Uses new tables: children, homes, child_access, etc.
+    // V2 contexts are backward-compatible with V1 interfaces
+    V2_PERMISSIONS: true,     // Enabled - using new child-centric permission model
 };
 
 if (!supabaseUrl) {

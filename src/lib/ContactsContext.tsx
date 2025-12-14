@@ -3,17 +3,30 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase, FEATURES } from "@/lib/supabase";
 
+// ==============================================
+// V2 CONTACTS CONTEXT
+// ==============================================
+// In V2, there are two types of contacts:
+// 1. child_space_contacts: "People you can contact here" per home (linked to profiles)
+//    - NOT about legal responsibility, just reachability
+//    - Someone can be contactable even if they are not a caregiver
+//    - Being contactable does not grant any permissions
+// 2. contacts: General contacts like doctors, schools (legacy, per child)
+//
+// This context supports both for backward compatibility.
+
 export type ContactCategory = "medical" | "school" | "family" | "friends" | "activities" | "other";
 
+// Legacy contact type (general contacts like doctors, schools)
 export interface Contact {
     id: string;
     name: string;
-    role: string; // e.g., "Pediatrician", "Teacher", "Grandma"
+    role: string;
     category: ContactCategory;
     phone?: string;
-    phoneCountryCode?: string; // e.g., "+1", "+44"
+    phoneCountryCode?: string;
     email?: string;
-    address?: string; // Legacy full address field
+    address?: string;
     addressStreet?: string;
     addressCity?: string;
     addressState?: string;
@@ -23,34 +36,79 @@ export interface Contact {
     addressLng?: number;
     notes?: string;
     isFavorite: boolean;
-    connectedWith?: string; // caregiverId, "both", or "all"
-    avatarUrl?: string; // URL to contact's avatar image
+    connectedWith?: string;
+    avatarUrl?: string;
     createdAt: string;
 }
 
+// V2: Home contact - "People you can contact here" (linked to a profile)
+// Renamed from "ResponsibleAdult" to clarify this is about reachability, not responsibility
+export interface HomeContact {
+    id: string;
+    childSpaceId: string;
+    userId: string;
+    // Profile data
+    name: string;
+    phone?: string;
+    email?: string;
+    whatsapp?: string;
+    avatarUrl?: string;
+    avatarInitials?: string;
+    avatarColor?: string;
+    // Privacy controls
+    sharePhone: boolean;
+    shareEmail: boolean;
+    shareWhatsapp: boolean;
+    shareNote: boolean;
+    note?: string;
+    isActive: boolean;
+}
+
+// Backward compatibility alias
+export type ResponsibleAdult = HomeContact;
+
 interface ContactsContextType {
+    // Legacy contacts (doctors, schools, etc.)
     contacts: Contact[];
+    // V2: Home contacts - "People you can contact here" per home
+    homeContacts: HomeContact[];
+    // @deprecated - use homeContacts instead
+    responsibleAdults: HomeContact[];
     isLoaded: boolean;
+    // Legacy operations
     addContact: (contact: Omit<Contact, "id" | "createdAt">) => Promise<{ success: boolean; error?: string }>;
     updateContact: (id: string, updates: Partial<Contact>) => Promise<{ success: boolean; error?: string }>;
     deleteContact: (id: string) => Promise<{ success: boolean; error?: string }>;
     toggleFavorite: (id: string) => Promise<void>;
+    // V2 operations - new naming
+    getHomeContactsForChildSpace: (childSpaceId: string) => HomeContact[];
+    addHomeContact: (childSpaceId: string, userId: string, options?: { sharePhone?: boolean; shareEmail?: boolean; shareWhatsapp?: boolean; note?: string }) => Promise<{ success: boolean; error?: string }>;
+    updateHomeContact: (id: string, updates: Partial<Pick<HomeContact, "sharePhone" | "shareEmail" | "shareWhatsapp" | "shareNote" | "note" | "isActive">>) => Promise<{ success: boolean; error?: string }>;
+    removeHomeContact: (id: string) => Promise<{ success: boolean; error?: string }>;
+    // @deprecated - use new naming above
+    getResponsibleAdultsForChildSpace: (childSpaceId: string) => HomeContact[];
+    addResponsibleAdult: (childSpaceId: string, userId: string, options?: { sharePhone?: boolean; shareEmail?: boolean; shareWhatsapp?: boolean; note?: string }) => Promise<{ success: boolean; error?: string }>;
+    updateResponsibleAdult: (id: string, updates: Partial<Pick<HomeContact, "sharePhone" | "shareEmail" | "shareWhatsapp" | "shareNote" | "note" | "isActive">>) => Promise<{ success: boolean; error?: string }>;
+    removeResponsibleAdult: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const ContactsContext = createContext<ContactsContextType | undefined>(undefined);
 
 export function ContactsProvider({ children }: { children: ReactNode }) {
     const [contacts, setContacts] = useState<Contact[]>([]);
+    const [homeContacts, setHomeContacts] = useState<HomeContact[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [childId, setChildId] = useState<string | null>(null);
+    const [childSpaceIds, setChildSpaceIds] = useState<string[]>([]);
 
     useEffect(() => {
         let isMounted = true;
 
         const fetchContacts = async () => {
-            // Skip if contacts feature is disabled
             if (!FEATURES.CONTACTS) {
                 if (isMounted) {
                     setContacts([]);
+                    setHomeContacts([]);
                     setIsLoaded(true);
                 }
                 return;
@@ -63,37 +121,97 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 if (!user) {
                     if (isMounted) {
                         setContacts([]);
+                        setHomeContacts([]);
                         setIsLoaded(true);
                     }
                     return;
                 }
 
-                // Get user's family
-                const { data: familyMember, error: familyError } = await supabase
-                    .from("family_members")
-                    .select("family_id")
-                    .eq("user_id", user.id)
-                    .maybeSingle();
+                // V2: Get children this user has access to
+                const { data: childAccess } = await supabase
+                    .from("child_access")
+                    .select("child_id")
+                    .eq("user_id", user.id);
 
-                // Silently ignore family fetch errors (RLS or table issues)
-                if (familyError || !familyMember) {
+                if (!childAccess || childAccess.length === 0) {
                     if (isMounted) {
                         setContacts([]);
+                        setHomeContacts([]);
+                        setIsLoaded(true);
                     }
                     return;
                 }
 
-                const familyId = familyMember.family_id;
+                const childIds = childAccess.map(ca => ca.child_id);
+                setChildId(childIds[0]);
 
-                // Fetch contacts for this family
+                // Get child_spaces for these children
+                const { data: childSpaces } = await supabase
+                    .from("child_spaces")
+                    .select("id")
+                    .in("child_id", childIds);
+
+                if (childSpaces) {
+                    const csIds = childSpaces.map(cs => cs.id);
+                    setChildSpaceIds(csIds);
+
+                    // Fetch home contacts (child_space_contacts) - "People you can contact here"
+                    const { data: homeContactsData, error: hcError } = await supabase
+                        .from("child_space_contacts")
+                        .select(`
+                            id,
+                            child_space_id,
+                            user_id,
+                            is_active,
+                            share_phone,
+                            share_email,
+                            share_whatsapp,
+                            share_note,
+                            note,
+                            profiles (
+                                id,
+                                name,
+                                phone,
+                                email,
+                                whatsapp,
+                                avatar_url,
+                                avatar_initials,
+                                avatar_color
+                            )
+                        `)
+                        .in("child_space_id", csIds);
+
+                    if (!hcError && homeContactsData && isMounted) {
+                        const mappedHC: HomeContact[] = homeContactsData.map((hc: any) => ({
+                            id: hc.id,
+                            childSpaceId: hc.child_space_id,
+                            userId: hc.user_id,
+                            name: hc.profiles?.name || "Unknown",
+                            phone: hc.profiles?.phone,
+                            email: hc.profiles?.email,
+                            whatsapp: hc.profiles?.whatsapp,
+                            avatarUrl: hc.profiles?.avatar_url,
+                            avatarInitials: hc.profiles?.avatar_initials,
+                            avatarColor: hc.profiles?.avatar_color,
+                            sharePhone: hc.share_phone || false,
+                            shareEmail: hc.share_email || false,
+                            shareWhatsapp: hc.share_whatsapp || false,
+                            shareNote: hc.share_note || false,
+                            note: hc.note,
+                            isActive: hc.is_active !== false,
+                        }));
+                        setHomeContacts(mappedHC);
+                    }
+                }
+
+                // Fetch legacy contacts (doctors, schools, etc.) for this child
                 const { data: contactsData, error } = await supabase
                     .from("contacts")
                     .select("*")
-                    .eq("family_id", familyId)
+                    .eq("child_id", childIds[0])
                     .order("is_favorite", { ascending: false })
                     .order("name", { ascending: true });
 
-                // Silently handle errors - table might not exist yet
                 if (error) {
                     if (isMounted) {
                         setContacts([]);
@@ -134,7 +252,6 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
         fetchContacts();
 
-        // Subscribe to auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             if (isMounted) {
                 setIsLoaded(false);
@@ -148,23 +265,18 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
         };
     }, []);
 
+    // Legacy: Add contact (doctors, schools, etc.)
     const addContact = async (contact: Omit<Contact, "id" | "createdAt">): Promise<{ success: boolean; error?: string }> => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return { success: false, error: "Not authenticated" };
 
-            const { data: familyMember } = await supabase
-                .from("family_members")
-                .select("family_id")
-                .eq("user_id", user.id)
-                .single();
-
-            if (!familyMember) return { success: false, error: "No family found" };
+            if (!childId) return { success: false, error: "No child found" };
 
             const { data, error } = await supabase
                 .from("contacts")
                 .insert({
-                    family_id: familyMember.family_id,
+                    child_id: childId,
                     name: contact.name,
                     role: contact.role,
                     category: contact.category,
@@ -192,7 +304,6 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 return { success: false, error: error.message };
             }
 
-            // Optimistically update local state
             const newContact: Contact = {
                 id: data.id,
                 name: data.name,
@@ -225,7 +336,6 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
     };
 
     const updateContact = async (id: string, updates: Partial<Contact>): Promise<{ success: boolean; error?: string }> => {
-        // Optimistically update local state
         setContacts((prev) =>
             prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
         );
@@ -270,7 +380,6 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
     const deleteContact = async (id: string): Promise<{ success: boolean; error?: string }> => {
         const previousContacts = contacts;
-        // Optimistically remove from local state
         setContacts((prev) => prev.filter((c) => c.id !== id));
 
         try {
@@ -280,7 +389,6 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 .eq("id", id);
 
             if (error) {
-                // Rollback
                 setContacts(previousContacts);
                 console.error("Error deleting contact:", error);
                 return { success: false, error: error.message };
@@ -301,15 +409,174 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // V2: Get home contacts for a specific child_space - "People you can contact here"
+    const getHomeContactsForChildSpace = (childSpaceId: string): HomeContact[] => {
+        return homeContacts.filter(hc => hc.childSpaceId === childSpaceId && hc.isActive);
+    };
+    // @deprecated alias
+    const getResponsibleAdultsForChildSpace = getHomeContactsForChildSpace;
+
+    // V2: Add a home contact to a child_space
+    const addHomeContact = async (
+        childSpaceId: string,
+        userId: string,
+        options?: { sharePhone?: boolean; shareEmail?: boolean; shareWhatsapp?: boolean; note?: string }
+    ): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const { data, error } = await supabase
+                .from("child_space_contacts")
+                .insert({
+                    child_space_id: childSpaceId,
+                    user_id: userId,
+                    is_active: true,
+                    share_phone: options?.sharePhone || false,
+                    share_email: options?.shareEmail || false,
+                    share_whatsapp: options?.shareWhatsapp || false,
+                    share_note: !!options?.note,
+                    note: options?.note || null,
+                })
+                .select(`
+                    id,
+                    child_space_id,
+                    user_id,
+                    is_active,
+                    share_phone,
+                    share_email,
+                    share_whatsapp,
+                    share_note,
+                    note,
+                    profiles (
+                        id,
+                        name,
+                        phone,
+                        email,
+                        whatsapp,
+                        avatar_url,
+                        avatar_initials,
+                        avatar_color
+                    )
+                `)
+                .single();
+
+            if (error) {
+                console.error("Error adding home contact:", error);
+                return { success: false, error: error.message };
+            }
+
+            const newHC: HomeContact = {
+                id: data.id,
+                childSpaceId: data.child_space_id,
+                userId: data.user_id,
+                name: (data as any).profiles?.name || "Unknown",
+                phone: (data as any).profiles?.phone,
+                email: (data as any).profiles?.email,
+                whatsapp: (data as any).profiles?.whatsapp,
+                avatarUrl: (data as any).profiles?.avatar_url,
+                avatarInitials: (data as any).profiles?.avatar_initials,
+                avatarColor: (data as any).profiles?.avatar_color,
+                sharePhone: data.share_phone || false,
+                shareEmail: data.share_email || false,
+                shareWhatsapp: data.share_whatsapp || false,
+                shareNote: data.share_note || false,
+                note: data.note,
+                isActive: data.is_active !== false,
+            };
+
+            setHomeContacts(prev => [...prev, newHC]);
+            return { success: true };
+        } catch (error) {
+            console.error("Failed to add home contact:", error);
+            return { success: false, error: "Failed to add home contact" };
+        }
+    };
+    // @deprecated alias
+    const addResponsibleAdult = addHomeContact;
+
+    // V2: Update a home contact's sharing settings
+    const updateHomeContact = async (
+        id: string,
+        updates: Partial<Pick<HomeContact, "sharePhone" | "shareEmail" | "shareWhatsapp" | "shareNote" | "note" | "isActive">>
+    ): Promise<{ success: boolean; error?: string }> => {
+        setHomeContacts(prev =>
+            prev.map(hc => hc.id === id ? { ...hc, ...updates } : hc)
+        );
+
+        try {
+            const dbUpdates: any = {};
+            if (updates.sharePhone !== undefined) dbUpdates.share_phone = updates.sharePhone;
+            if (updates.shareEmail !== undefined) dbUpdates.share_email = updates.shareEmail;
+            if (updates.shareWhatsapp !== undefined) dbUpdates.share_whatsapp = updates.shareWhatsapp;
+            if (updates.shareNote !== undefined) dbUpdates.share_note = updates.shareNote;
+            if (updates.note !== undefined) dbUpdates.note = updates.note || null;
+            if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+
+            const { error } = await supabase
+                .from("child_space_contacts")
+                .update(dbUpdates)
+                .eq("id", id);
+
+            if (error) {
+                console.error("Error updating home contact:", error);
+                return { success: false, error: error.message };
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error("Failed to update home contact:", error);
+            return { success: false, error: "Failed to update home contact" };
+        }
+    };
+    // @deprecated alias
+    const updateResponsibleAdult = updateHomeContact;
+
+    // V2: Remove a home contact
+    const removeHomeContact = async (id: string): Promise<{ success: boolean; error?: string }> => {
+        const previousHC = homeContacts;
+        setHomeContacts(prev => prev.filter(hc => hc.id !== id));
+
+        try {
+            const { error } = await supabase
+                .from("child_space_contacts")
+                .delete()
+                .eq("id", id);
+
+            if (error) {
+                setHomeContacts(previousHC);
+                console.error("Error removing home contact:", error);
+                return { success: false, error: error.message };
+            }
+
+            return { success: true };
+        } catch (error) {
+            setHomeContacts(previousHC);
+            console.error("Failed to remove home contact:", error);
+            return { success: false, error: "Failed to remove home contact" };
+        }
+    };
+    // @deprecated alias
+    const removeResponsibleAdult = removeHomeContact;
+
     return (
         <ContactsContext.Provider
             value={{
                 contacts,
+                homeContacts,
+                responsibleAdults: homeContacts, // @deprecated alias
                 isLoaded,
                 addContact,
                 updateContact,
                 deleteContact,
                 toggleFavorite,
+                // New naming
+                getHomeContactsForChildSpace,
+                addHomeContact,
+                updateHomeContact,
+                removeHomeContact,
+                // @deprecated aliases
+                getResponsibleAdultsForChildSpace,
+                addResponsibleAdult,
+                updateResponsibleAdult,
+                removeResponsibleAdult,
             }}
         >
             {children}

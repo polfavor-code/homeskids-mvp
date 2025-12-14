@@ -42,17 +42,17 @@ export default function ChildSetupPage() {
         if (!child) return;
 
         try {
-            // Get full child data including birthdate
+            // Get full child data including birthdate from children
+            // Note: gender column may not exist yet if migration hasn't been run
             const { data, error } = await supabase
                 .from("children")
-                .select("*")
+                .select("id, name, dob, avatar_url, notes, created_by, created_at, updated_at")
                 .eq("id", child.id)
                 .single();
 
             if (data) {
-                console.log("Loaded child data - birthdate:", data.birthdate, "gender:", data.gender);
-                setBirthdate(data.birthdate || "");
-                setGender(data.gender || "");
+                console.log("Loaded child data - dob:", data.dob);
+                setBirthdate(data.dob || "");
                 if (data.avatar_url) {
                     const { data: urlData } = await supabase.storage
                         .from("avatars")
@@ -61,6 +61,21 @@ export default function ChildSetupPage() {
                         setAvatarUrl(urlData.signedUrl);
                     }
                 }
+            }
+
+            // Try to load gender separately (column may not exist)
+            try {
+                const { data: genderData } = await supabase
+                    .from("children")
+                    .select("gender")
+                    .eq("id", child.id)
+                    .single();
+                if (genderData?.gender) {
+                    setGender(genderData.gender);
+                }
+            } catch {
+                // Gender column doesn't exist yet - that's ok
+                console.log("Gender column not available yet");
             }
         } catch (err) {
             console.error("Error loading child data:", err);
@@ -191,26 +206,36 @@ export default function ChildSetupPage() {
             setSaving(true);
             setError("");
 
-            console.log("Saving child data - name:", name.trim(), "birthdate:", birthdate, "gender:", gender);
-            const { error: updateError, data: updateData } = await supabase
+            console.log("Saving child data - name:", name.trim(), "dob:", birthdate, "gender:", gender);
+            
+            // First update name and dob (these columns always exist)
+            const { error: updateError } = await supabase
                 .from("children")
                 .update({
                     name: name.trim(),
-                    birthdate: birthdate || null,
-                    gender: gender || null,
-                    avatar_initials: name.trim()[0].toUpperCase(),
+                    dob: birthdate || null,
                 })
-                .eq("id", child.id)
-                .select();
+                .eq("id", child.id);
 
-            console.log("Update result - error:", updateError, "data:", JSON.stringify(updateData));
             if (updateError) throw updateError;
+
+            // Try to update gender separately (column may not exist yet)
+            if (gender !== undefined) {
+                try {
+                    await supabase
+                        .from("children")
+                        .update({ gender: gender || null })
+                        .eq("id", child.id);
+                } catch {
+                    // Gender column doesn't exist yet - that's ok
+                    console.log("Gender column not available yet, skipping gender update");
+                }
+            }
 
             console.log("Calling refreshData...");
             await refreshData();
             console.log("Calling loadChildData...");
             await loadChildData();
-            console.log("Done loading, gender state is now:", gender);
             setSuccessMessage("Changes saved!");
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err: any) {

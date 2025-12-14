@@ -11,11 +11,10 @@ import BagEssentialsSection from "@/components/travel-bag/BagEssentialsSection";
 import PreviousTripTab from "@/components/travel-bag/PreviousTripTab";
 import BagHistoryTab from "@/components/travel-bag/BagHistoryTab";
 import TransferDetailModal from "@/components/travel-bag/TransferDetailModal";
-import { useItems } from "@/lib/ItemsContext";
+import { useItems, Item } from "@/lib/ItemsContext";
 import { useAppState, ChildProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useBagTransfers, BagTransfer } from "@/lib/useBagTransfers";
-import { Item } from "@/lib/mockData";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 
 // Shared tab type for the items section
@@ -625,12 +624,12 @@ function PackerView({
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            getItemEmoji(item.category)
+                                            getItemEmoji(item.category || "Other")
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-forest truncate">{item.name}</p>
-                                        <p className="text-xs text-textSub">{item.category}</p>
+                                        <p className="text-xs text-textSub">{item.category || "Other"}</p>
                                     </div>
                                     <Link
                                         href={`/items/${item.id}`}
@@ -653,8 +652,8 @@ function PackerView({
                     </p>
                     <div className="space-y-2">
                         {allItemsAtOrigin.map((item) => {
-                            const isInBag = item.isRequestedForNextVisit;
-                            const isPacked = item.isPacked;
+                            const isInBag = item.isRequestedForNextVisit || false;
+                            const isPacked = item.isPacked || false;
                             return (
                                 <AllItemsRow
                                     key={item.id}
@@ -863,8 +862,8 @@ function RequesterView({
                     </p>
                     <div className="space-y-2">
                         {allItemsAtOrigin.map((item) => {
-                            const isInBag = item.isRequestedForNextVisit;
-                            const isPacked = item.isPacked;
+                            const isInBag = item.isRequestedForNextVisit || false;
+                            const isPacked = item.isPacked || false;
                             return (
                                 <AllItemsRow
                                     key={item.id}
@@ -932,7 +931,7 @@ function PackerItemRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </Link>
 
@@ -1013,7 +1012,7 @@ function RequesterItemRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </Link>
 
@@ -1080,7 +1079,7 @@ function AvailableItemRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </div>
 
@@ -1130,7 +1129,7 @@ function AllItemsRow({
                             className="w-10 h-10 rounded-lg object-cover"
                         />
                     ) : (
-                        getItemEmoji(item.category)
+                        getItemEmoji(item.category || "Other")
                     )}
                 </div>
 
@@ -1178,7 +1177,7 @@ function AllItemsRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </Link>
 
@@ -1237,7 +1236,7 @@ function MissingItemBox({
                             />
                         </div>
                     ) : (
-                        getItemEmoji(item.category)
+                        getItemEmoji(item.category || "Other")
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1291,7 +1290,7 @@ function CanceledItemBox({
                     </div>
                 ) : (
                     <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                        {getItemEmoji(item.category)}
+                        {getItemEmoji(item.category || "Other")}
                     </div>
                 )}
             </div>

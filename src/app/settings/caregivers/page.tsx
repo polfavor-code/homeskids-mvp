@@ -430,12 +430,21 @@ export default function CaregiversPage() {
         try {
             setSaving(true);
 
-            const { error: deleteError } = await supabase
+            // Try invites first (V2 model), then fall back to invites (V1 model)
+            const { error: v2Error } = await supabase
                 .from("invites")
                 .delete()
                 .eq("id", inviteId);
 
-            if (deleteError) throw deleteError;
+            if (v2Error) {
+                // Try V1 table
+                const { error: v1Error } = await supabase
+                    .from("invites")
+                    .delete()
+                    .eq("id", inviteId);
+
+                if (v1Error) throw v1Error;
+            }
 
             await refreshData();
             setRevokeConfirmId(null);

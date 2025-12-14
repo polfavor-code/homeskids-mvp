@@ -23,7 +23,7 @@ export default function MissingItemsPage() {
     const totalCount = items.length;
 
     // Helper to get last known location
-    const getLastKnownLocation = (item: { locationHomeId: string | null; locationCaregiverId: string | null }) => {
+    const getLastKnownLocation = (item: { locationHomeId?: string | null; locationCaregiverId?: string | null }) => {
         if (item.locationHomeId) {
             const home = homes.find((h) => h.id === item.locationHomeId);
             if (home) return home.name;

@@ -1,763 +1,814 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
-import { Item, MOCK_ITEMS } from "@/lib/mockData";
 import { supabase } from "@/lib/supabase";
 
-export type MissingMessage = {
+// ==============================================
+// V2 ITEMS CONTEXT - Items per ChildSpace
+// ==============================================
+
+export type Item = {
+    id: string;
+    childSpaceId: string;
+    name: string;
+    category: string;  // Required for V1 compatibility
+    status: "at_home" | "in_bag" | "moved" | "lost";
+    photoUrl?: string;
+    notes?: string;
+    createdBy?: string;
+    createdAt?: string;
+    // Packing state (for travel)
+    isRequestedForNextVisit: boolean;  // Required for V1 compatibility
+    isPacked: boolean;  // Required for V1 compatibility
+    isRequestCanceled: boolean;  // Required for V1 compatibility
+    requestedBy?: string | null;
+    packedBy?: string | null;
+    requestedAt?: string;
+    // Item origin - who originally brought this item (NOT about ownership, just logistics)
+    // Items always belong to the child
+    originUserId?: string | null;
+    originHomeId?: string | null;
+    // V1 compatibility
+    locationCaregiverId: string | null;
+    locationHomeId: string | null;
+    isMissing: boolean;  // Required for V1 compatibility
+};
+
+// Transfer request - request to move an item to a different home
+export type TransferRequestStatus = "pending" | "accepted" | "completed" | "declined" | "canceled";
+
+export type ItemTransferRequest = {
     id: string;
     itemId: string;
-    authorCaregiverId: string; // or "system"
-    text: string;
-    createdAt: string; // ISO string
+    itemName?: string; // Derived from item
+    requestedBy: string;
+    requestedByName?: string; // Derived from profile
+    targetHomeId: string | null; // null = "bring to next handover"
+    targetHomeName?: string; // Derived from home
+    status: TransferRequestStatus;
+    message?: string;
+    requestedForDate?: string;
+    createdAt: string;
+    respondedAt?: string;
+    respondedBy?: string;
+    completedAt?: string;
+};
+
+// V1 compatible Item type for addItem
+type AddItemInput = {
+    // V2 format (preferred)
+    childSpaceId?: string;
+    name: string;
+    category?: string;
+    photoUrl?: string;
+    notes?: string;
+    // Origin is auto-set, not passed in
+    // V1 compatibility
+    id?: string;
+    locationCaregiverId?: string;
+    locationHomeId?: string | null;
+    isRequestedForNextVisit?: boolean;
+    isPacked?: boolean;
+    isMissing?: boolean;
+    isRequestCanceled?: boolean;
 };
 
 interface ItemsContextType {
     items: Item[];
     isLoaded: boolean;
-    addItem: (item: Omit<Item, "id">) => Promise<{ success: boolean; error?: string; item?: Item }>;
+
+    // CRUD operations - accepts both V1 and V2 formats
+    addItem: (item: AddItemInput) => Promise<{ success: boolean; error?: string; item?: Item }>;
+
+    updateItem: (itemId: string, updates: Partial<Item>) => Promise<void>;
+    deleteItem: (itemId: string) => Promise<{ success: boolean; error?: string }>;
+
+    // Location/status updates
+    updateItemStatus: (itemId: string, status: Item["status"]) => Promise<void>;
+    moveItemToChildSpace: (itemId: string, newChildSpaceId: string) => Promise<void>;
+
+    // Packing operations
+    requestItem: (itemId: string, requested: boolean) => Promise<void>;
+    packItem: (itemId: string, packed: boolean) => Promise<void>;
+    cancelItemRequest: (itemId: string) => Promise<void>;
+    confirmRemoveFromBag: (itemId: string) => Promise<void>;
+    keepInBag: (itemId: string) => Promise<void>;
+
+    // Filter items
+    getItemsByChildSpace: (childSpaceId: string) => Item[];
+    getItemsByStatus: (status: Item["status"]) => Item[];
+    getItemsOriginatedByUser: (userId: string) => Item[];
+
+    // Transfer requests
+    transferRequests: ItemTransferRequest[];
+    createTransferRequest: (itemId: string, options: { targetHomeId?: string | null; message?: string; requestedForDate?: string }) => Promise<{ success: boolean; error?: string }>;
+    respondToTransferRequest: (requestId: string, accept: boolean) => Promise<{ success: boolean; error?: string }>;
+    completeTransferRequest: (requestId: string) => Promise<{ success: boolean; error?: string }>;
+    cancelTransferRequest: (requestId: string) => Promise<{ success: boolean; error?: string }>;
+    getTransferRequestsForItem: (itemId: string) => ItemTransferRequest[];
+    getPendingTransferRequests: () => ItemTransferRequest[];
+
+    // V1 compatibility methods
     updateItemLocation: (
         itemId: string,
         newLocation: { caregiverId?: string; homeId?: string; toBeFound?: boolean }
     ) => void;
     updateItemRequested: (itemId: string, requested: boolean) => void;
     updateItemPacked: (itemId: string, packed: boolean) => void;
-    cancelItemRequest: (itemId: string) => void; // Requester cancels - keeps packed status, sets isRequestCanceled
-    confirmRemoveFromBag: (itemId: string) => void; // Packer confirms removal after cancel
-    keepInBag: (itemId: string) => void; // Packer keeps item in bag after cancel
     updateItemName: (itemId: string, newName: string) => Promise<void>;
     updateItemNotes: (itemId: string, notes: string) => Promise<void>;
     updateItemCategory: (itemId: string, category: string) => Promise<void>;
     updateItemPhoto: (itemId: string, photoUrl: string | null) => Promise<void>;
-    missingMessages: MissingMessage[];
-    addMissingMessage: (message: {
-        itemId: string;
-        authorCaregiverId: string;
-        text: string;
-    }) => void;
-    getMissingMessagesForItem: (itemId: string) => MissingMessage[];
     markItemFound: (itemId: string) => void;
-    deleteItem: (itemId: string) => Promise<{ success: boolean; error?: string }>;
+    missingMessages: any[];
+    addMissingMessage: (message: { itemId: string; authorCaregiverId: string; text: string }) => void;
+    getMissingMessagesForItem: (itemId: string) => any[];
 }
 
 const ItemsContext = createContext<ItemsContextType | undefined>(undefined);
 
 export function ItemsProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<Item[]>([]);
-    const [missingMessages, setMissingMessages] = useState<MissingMessage[]>([]);
+    const [transferRequests, setTransferRequests] = useState<ItemTransferRequest[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [currentChildId, setCurrentChildId] = useState<string | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const hasCompletedFetchRef = useRef(false);
 
-    // Store family ID for realtime subscription
-    const [familyId, setFamilyId] = useState<string | null>(null);
-
-    // Track if we've successfully loaded items with a valid authenticated user
-    // This prevents showing empty/welcome state before items are actually loaded
-    const hasCompletedAuthenticatedFetchRef = useRef(false);
-
-    // Fetch items from Supabase
+    // Fetch items for the user's accessible child_spaces
     const fetchItems = useCallback(async () => {
-        console.log("Items: fetchItems called");
         try {
-            // Use getSession for more reliable auth state on initial load
             const { data: { session } } = await supabase.auth.getSession();
             const user = session?.user;
 
-            console.log("Items: fetchItems - user:", user?.id, "hasCompletedFetch:", hasCompletedAuthenticatedFetchRef.current);
-
             if (!user) {
                 setItems([]);
-                setFamilyId(null);
-                // Only mark as loaded if we've previously completed an authenticated fetch
-                // This prevents showing welcome screen during initial auth when session isn't ready
-                if (hasCompletedAuthenticatedFetchRef.current) {
-                    console.log("Items: No user, but had previous authenticated fetch, marking loaded");
+                setCurrentUserId(null);
+                if (hasCompletedFetchRef.current) {
                     setIsLoaded(true);
-                } else {
-                    console.log("Items: No user and no previous fetch, NOT marking loaded (waiting for auth)");
                 }
                 return;
             }
 
-            // Get user's family
-            const { data: familyMember } = await supabase
-                .from("family_members")
-                .select("family_id")
-                .eq("user_id", user.id)
-                .limit(1);
+            setCurrentUserId(user.id);
 
-            if (familyMember && familyMember.length > 0) {
-                const fId = familyMember[0].family_id;
-                setFamilyId(fId);
+            // 1. Get children this user has access to
+            const { data: childAccess } = await supabase
+                .from("child_access")
+                .select("child_id")
+                .eq("user_id", user.id);
 
-                // Fetch items for this family
-                const { data: itemsData } = await supabase
-                    .from("items")
-                    .select("*")
-                    .eq("family_id", fId);
+            if (!childAccess || childAccess.length === 0) {
+                setItems([]);
+                hasCompletedFetchRef.current = true;
+                setIsLoaded(true);
+                return;
+            }
 
-                if (itemsData) {
-                    console.log("Items: Fetched", itemsData.length, "items for family", fId);
-                    const mappedItems: Item[] = itemsData.map((item: any) => ({
-                        id: item.id,
-                        name: item.name,
-                        category: item.category,
-                        locationCaregiverId: item.location_caregiver_id || (item.location_invite_id ? `pending-${item.location_invite_id}` : null),
-                        locationHomeId: item.location_home_id || null,
-                        isRequestedForNextVisit: item.is_requested_for_next_visit,
-                        isPacked: item.is_packed,
-                        isMissing: item.is_missing,
-                        isRequestCanceled: item.is_request_canceled || false,
-                        photoUrl: item.photo_url,
-                        notes: item.notes,
-                        requestedBy: item.requested_by || null,
-                        requestedAt: item.requested_at || null,
-                        packedBy: item.packed_by || null,
-                        createdBy: item.created_by || null,
-                        createdAt: item.created_at || null,
-                    }));
-                    setItems(mappedItems);
-                    // Mark that we've successfully completed an authenticated fetch
-                    hasCompletedAuthenticatedFetchRef.current = true;
+            const childIds = childAccess.map(ca => ca.child_id);
+            setCurrentChildId(childIds[0]); // Use first child for now
 
-                    // Self-healing: Check for items assigned to my invite and claim them
-                    const itemsToClaim = mappedItems.filter(i => i.locationCaregiverId && i.locationCaregiverId.startsWith("pending-"));
-                    if (itemsToClaim.length > 0) {
-                        (async () => {
-                            try {
-                                const { data: myProfile } = await supabase
-                                    .from("profiles")
-                                    .select("email")
-                                    .eq("id", user.id)
-                                    .single();
+            // 2. Get child_spaces for these children
+            const { data: childSpaces } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .in("child_id", childIds);
 
-                                if (myProfile?.email) {
-                                    const { data: myInvites } = await supabase
-                                        .from("invites")
-                                        .select("id")
-                                        .eq("email", myProfile.email);
+            if (!childSpaces || childSpaces.length === 0) {
+                setItems([]);
+                hasCompletedFetchRef.current = true;
+                setIsLoaded(true);
+                return;
+            }
 
-                                    if (myInvites && myInvites.length > 0) {
-                                        const myInviteIds = myInvites.map((inv: any) => inv.id);
-                                        const itemsToUpdate = itemsToClaim.filter(item => {
-                                            const inviteId = item.locationCaregiverId?.replace("pending-", "");
-                                            return inviteId && myInviteIds.includes(inviteId);
-                                        });
+            const childSpaceIds = childSpaces.map(cs => cs.id);
 
-                                        if (itemsToUpdate.length > 0) {
-                                            console.log("Found items to claim from invites:", itemsToUpdate.length);
-                                            const itemIds = itemsToUpdate.map(i => i.id);
-                                            await supabase
-                                                .from("items")
-                                                .update({
-                                                    location_caregiver_id: user.id,
-                                                    location_invite_id: null
-                                                })
-                                                .in("id", itemIds);
-                                            fetchItems();
-                                        }
-                                    }
-                                }
-                            } catch (err) {
-                                console.error("Error claiming items:", err);
-                            }
-                        })();
+            // 3. Fetch items for these child_spaces
+            const { data: itemsData } = await supabase
+                .from("items")
+                .select("*")
+                .in("child_space_id", childSpaceIds);
+
+            if (itemsData) {
+                // Get child_spaces to map child_space_id -> home_id
+                const childSpaceToHomeMap = new Map<string, string>();
+                for (const csId of childSpaceIds) {
+                    const cs = await supabase
+                        .from("child_spaces")
+                        .select("id, home_id")
+                        .eq("id", csId)
+                        .single();
+                    if (cs.data) {
+                        childSpaceToHomeMap.set(cs.data.id, cs.data.home_id);
                     }
                 }
-            } else {
-                setItems([]);
-                setFamilyId(null);
-                // Still mark as completed - user is authenticated but not in a family yet
-                hasCompletedAuthenticatedFetchRef.current = true;
+
+                const mappedItems: Item[] = itemsData.map((item: any) => ({
+                    id: item.id,
+                    childSpaceId: item.child_space_id,
+                    name: item.name,
+                    category: item.category || "Other",  // V1 compatibility: default category
+                    status: item.status || "at_home",
+                    photoUrl: item.photo_url,
+                    notes: item.notes,
+                    createdBy: item.created_by,
+                    createdAt: item.created_at,
+                    isRequestedForNextVisit: item.is_requested_for_next_visit || false,
+                    isPacked: item.is_packed || false,
+                    isRequestCanceled: item.is_request_canceled || false,
+                    requestedBy: item.requested_by || null,
+                    packedBy: item.packed_by || null,
+                    originUserId: item.origin_user_id || null,
+                    originHomeId: item.origin_home_id || null,
+                    // V1 compatibility: derive locationHomeId from child_space
+                    locationHomeId: childSpaceToHomeMap.get(item.child_space_id) || null,
+                    locationCaregiverId: null,  // V2 doesn't use caregiver-based location
+                    isMissing: item.status === "lost",
+                }));
+                setItems(mappedItems);
+
+                // Also fetch transfer requests for these items
+                const itemIds = mappedItems.map(i => i.id);
+                if (itemIds.length > 0) {
+                    const { data: requestsData } = await supabase
+                        .from("item_transfer_requests")
+                        .select("*")
+                        .in("item_id", itemIds);
+
+                    if (requestsData) {
+                        const mappedRequests: ItemTransferRequest[] = requestsData.map((req: any) => ({
+                            id: req.id,
+                            itemId: req.item_id,
+                            requestedBy: req.requested_by,
+                            targetHomeId: req.target_home_id,
+                            status: req.status,
+                            message: req.message,
+                            requestedForDate: req.requested_for_date,
+                            createdAt: req.created_at,
+                            respondedAt: req.responded_at,
+                            respondedBy: req.responded_by,
+                            completedAt: req.completed_at,
+                        }));
+                        setTransferRequests(mappedRequests);
+                    }
+                }
+
+                hasCompletedFetchRef.current = true;
             }
         } catch (error) {
             console.error("Failed to load items:", error);
-            // On error, still mark as loaded to prevent infinite loading
-            hasCompletedAuthenticatedFetchRef.current = true;
+            hasCompletedFetchRef.current = true;
         } finally {
-            console.log("Items: fetchItems complete, setting isLoaded=true");
             setIsLoaded(true);
         }
     }, []);
 
-    // Initial fetch and auth state listener
+    // Auth state listener
     useEffect(() => {
-        // Don't do initial fetch - wait for auth state to be determined
-        // This prevents the race condition where getSession() returns null
-        // before the session is restored from storage
-
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log("Items: Auth state changed:", event, "hasSession:", !!session, "userId:", session?.user?.id);
-
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === "INITIAL_SESSION") {
-                // This is the first auth event - session state is now known
                 if (!session) {
-                    // User is definitely not logged in - mark as loaded with empty items
-                    console.log("Items: No session on INITIAL_SESSION, marking loaded");
                     setItems([]);
-                    setFamilyId(null);
                     setIsLoaded(true);
                 } else {
-                    // User is logged in - fetch items
-                    console.log("Items: Session exists on INITIAL_SESSION, fetching items");
                     fetchItems();
                 }
             } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-                // User signed in or token refreshed - fetch items
-                console.log("Items: SIGNED_IN/TOKEN_REFRESHED, refetching items");
                 setIsLoaded(false);
                 fetchItems();
             } else if (event === "SIGNED_OUT") {
-                // User signed out - clear items
-                console.log("Items: SIGNED_OUT, clearing items");
                 setItems([]);
-                setFamilyId(null);
-                hasCompletedAuthenticatedFetchRef.current = false;
+                hasCompletedFetchRef.current = false;
                 setIsLoaded(true);
             }
         });
 
-        // Fallback: If no auth event fires within 3 seconds, try to fetch anyway
-        // This handles edge cases where auth events might not fire
         const fallbackTimeout = setTimeout(() => {
-            if (!hasCompletedAuthenticatedFetchRef.current) {
-                console.log("Items: Fallback fetch triggered");
+            if (!hasCompletedFetchRef.current) {
                 fetchItems();
             }
         }, 3000);
 
         return () => {
-            authSubscription.unsubscribe();
+            subscription.unsubscribe();
             clearTimeout(fallbackTimeout);
         };
     }, [fetchItems]);
 
-    // Separate effect for Realtime subscription - depends on familyId
+    // Realtime subscription for items
     useEffect(() => {
-        if (!familyId) {
-            return;
-        }
-
-        console.log("Setting up realtime subscription for family:", familyId);
-
-        // Create a unique channel name to avoid conflicts
-        const channelName = `items-realtime-${familyId}-${Date.now()}`;
+        if (!currentChildId) return;
 
         const channel = supabase
-            .channel(channelName)
+            .channel(`items-v2-${currentChildId}-${Date.now()}`)
             .on(
-                'postgres_changes',
+                "postgres_changes",
                 {
-                    event: '*',
-                    schema: 'public',
-                    table: 'items',
-                    filter: `family_id=eq.${familyId}`
+                    event: "*",
+                    schema: "public",
+                    table: "items",
                 },
-                (payload) => {
-                    console.log('Realtime change received:', payload);
-                    // Re-fetch all items to ensure consistency
+                () => {
                     fetchItems();
                 }
             )
-            .subscribe((status) => {
-                console.log("Realtime subscription status:", status);
-                if (status === 'SUBSCRIBED') {
-                    console.log("Successfully subscribed to items realtime updates");
-                }
-                if (status === 'CHANNEL_ERROR') {
-                    console.error("Realtime subscription error - retrying...");
-                    // Retry after a delay
-                    setTimeout(() => {
-                        channel.subscribe();
-                    }, 5000);
-                }
-            });
+            .subscribe();
 
-        // Cleanup: remove channel when familyId changes or component unmounts
         return () => {
-            console.log("Removing realtime channel:", channelName);
             supabase.removeChannel(channel);
         };
-    }, [familyId, fetchItems]);
+    }, [currentChildId, fetchItems]);
 
-    const addItem = async (item: Omit<Item, "id">): Promise<{ success: boolean; error?: string; item?: Item }> => {
+    // Add item - supports both V1 and V2 formats
+    const addItem = async (item: AddItemInput): Promise<{ success: boolean; error?: string; item?: Item }> => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-
             if (!user) {
-                const errorMsg = "No user found. Please log in.";
-                console.error(errorMsg);
-                return { success: false, error: errorMsg };
+                return { success: false, error: "Not authenticated" };
             }
 
-            // Get user's family
-            const { data: familyMember } = await supabase
-                .from("family_members")
-                .select("family_id")
-                .eq("user_id", user.id)
+            // Determine child_space_id - use V2 format if provided, otherwise derive from locationHomeId
+            let childSpaceId = item.childSpaceId;
+
+            if (!childSpaceId && item.locationHomeId) {
+                // V1 compatibility: look up child_space by home_id
+                // We need to find a child_space for this home
+                const { data: childSpaceData } = await supabase
+                    .from("child_spaces")
+                    .select("id")
+                    .eq("home_id", item.locationHomeId)
+                    .limit(1)
+                    .single();
+
+                if (childSpaceData) {
+                    childSpaceId = childSpaceData.id;
+                }
+            }
+
+            if (!childSpaceId && currentChildId) {
+                // Fallback: use the first child_space for the current child
+                const { data: childSpaceData } = await supabase
+                    .from("child_spaces")
+                    .select("id")
+                    .eq("child_id", currentChildId)
+                    .limit(1)
+                    .single();
+
+                if (childSpaceData) {
+                    childSpaceId = childSpaceData.id;
+                }
+            }
+
+            if (!childSpaceId) {
+                return { success: false, error: "No child space found. Please complete onboarding." };
+            }
+
+            const status = item.isMissing ? "lost" : "at_home";
+
+            // Get the home_id for this child_space to set origin_home_id
+            const { data: childSpaceData } = await supabase
+                .from("child_spaces")
+                .select("home_id")
+                .eq("id", childSpaceId)
                 .single();
-
-            if (!familyMember) {
-                const errorMsg = "User not in a family. Please complete onboarding.";
-                console.error(errorMsg);
-                return { success: false, error: errorMsg };
-            }
-
-            // Handle pending caregivers
-            let locationCaregiverId = item.locationCaregiverId;
-            let locationInviteId = null;
-
-            if (locationCaregiverId?.startsWith("pending-")) {
-                locationInviteId = locationCaregiverId.replace("pending-", "");
-                locationCaregiverId = null;
-            }
 
             const { data, error } = await supabase
                 .from("items")
                 .insert({
+                    child_space_id: childSpaceId,
                     name: item.name,
                     category: item.category,
-                    location_caregiver_id: locationCaregiverId,
-                    location_invite_id: locationInviteId,
-                    location_home_id: item.locationHomeId || null,
-                    notes: item.notes,
-                    family_id: familyMember.family_id,
                     photo_url: item.photoUrl,
-                    is_missing: item.isMissing,
-                    created_by: user.id, // Track who created this item for alerts
+                    notes: item.notes,
+                    status,
+                    created_by: user.id,
+                    // Auto-set origin to current user and current home (no UI prompt)
+                    origin_user_id: user.id,
+                    origin_home_id: childSpaceData?.home_id || null,
+                    is_requested_for_next_visit: item.isRequestedForNextVisit || false,
+                    is_packed: item.isPacked || false,
+                    is_request_canceled: item.isRequestCanceled || false,
                 })
                 .select()
                 .single();
 
             if (error) {
-                const errorMsg = `Failed to create item: ${error.message}`;
-                console.error("Error adding item:", error);
-                return { success: false, error: errorMsg };
-            }
-
-            if (!data) {
-                const errorMsg = "No data returned from server.";
-                console.error(errorMsg);
-                return { success: false, error: errorMsg };
+                return { success: false, error: error.message };
             }
 
             const newItem: Item = {
                 id: data.id,
+                childSpaceId: data.child_space_id,
                 name: data.name,
-                category: data.category,
-                locationCaregiverId: data.location_caregiver_id || (data.location_invite_id ? `pending-${data.location_invite_id}` : null),
-                locationHomeId: data.location_home_id || null,
-                notes: data.notes,
+                category: data.category || "Other",
+                status: data.status,
                 photoUrl: data.photo_url,
-                isRequestedForNextVisit: false,
-                isPacked: false,
-                isMissing: item.isMissing,
-                isRequestCanceled: false,
+                notes: data.notes,
+                createdBy: data.created_by,
+                createdAt: data.created_at,
+                isRequestedForNextVisit: data.is_requested_for_next_visit || false,
+                isPacked: data.is_packed || false,
+                isRequestCanceled: data.is_request_canceled || false,
+                requestedBy: null,
+                packedBy: null,
+                originUserId: data.origin_user_id || null,
+                originHomeId: data.origin_home_id || null,
+                // V1 compatibility
+                locationHomeId: item.locationHomeId || null,
+                locationCaregiverId: item.locationCaregiverId || null,
+                isMissing: item.isMissing || false,
             };
-            // Immediately update local state for instant feedback
-            setItems((prev) => [...prev, newItem]);
+
+            setItems(prev => [...prev, newItem]);
             return { success: true, item: newItem };
         } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : "Failed to add item. Please try again.";
-            console.error("Failed to add item:", error);
-            return { success: false, error: errorMsg };
+            return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
         }
     };
 
-    const updateItemLocation = async (
-        itemId: string,
-        newLocation: { caregiverId?: string; homeId?: string; toBeFound?: boolean }
-    ) => {
-        try {
-            const updates: any = {};
+    // Update item
+    const updateItem = async (itemId: string, updates: Partial<Item>) => {
+        setItems(prev => prev.map(item =>
+            item.id === itemId ? { ...item, ...updates } : item
+        ));
 
-            if (newLocation.toBeFound) {
-                updates.is_missing = true;
-                updates.is_requested_for_next_visit = false;
-                updates.is_packed = false;
-            } else if (newLocation.homeId) {
-                // NEW: home-based location (primary method)
-                updates.location_home_id = newLocation.homeId;
-                updates.is_missing = false;
-                updates.is_requested_for_next_visit = false;
-                updates.is_packed = false;
-                // Clear legacy caregiver location if setting home
-                if (newLocation.caregiverId) {
-                    updates.location_caregiver_id = newLocation.caregiverId;
-                }
-            } else if (newLocation.caregiverId) {
-                // Legacy: caregiver-based location (fallback)
-                updates.location_caregiver_id = newLocation.caregiverId;
-                updates.is_missing = false;
-                updates.is_requested_for_next_visit = false;
-                updates.is_packed = false;
-            }
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.category !== undefined) dbUpdates.category = updates.category;
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+        if (updates.photoUrl !== undefined) dbUpdates.photo_url = updates.photoUrl;
+        if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+        if (updates.originUserId !== undefined) dbUpdates.origin_user_id = updates.originUserId;
+        if (updates.originHomeId !== undefined) dbUpdates.origin_home_id = updates.originHomeId;
 
-            // Skip database update if no changes were specified
-            if (Object.keys(updates).length === 0) {
-                console.warn("updateItemLocation called with no valid changes");
-                return;
-            }
-
-            // Immediately update local state for instant feedback
-            setItems((prev) =>
-                prev.map((item) => {
-                    if (item.id !== itemId) return item;
-                    return {
-                        ...item,
-                        isMissing: newLocation.toBeFound || false,
-                        locationCaregiverId: newLocation.caregiverId || item.locationCaregiverId,
-                        locationHomeId: newLocation.homeId || item.locationHomeId,
-                        isRequestedForNextVisit: false,
-                        isPacked: false,
-                    };
-                })
-            );
-
-            const { error } = await supabase
-                .from("items")
-                .update(updates)
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to update item location:", error);
-        }
-    };
-
-    const updateItemRequested = async (itemId: string, requested: boolean) => {
-        // Get current user ID for tracking who requested
-        const { data: { user } } = await supabase.auth.getUser();
-        const requestedBy = requested ? (user?.id || null) : null;
-
-        // Immediately update local state
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId ? { ...item, isRequestedForNextVisit: requested, requestedBy } : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({
-                    is_requested_for_next_visit: requested,
-                    requested_by: requestedBy,
-                    requested_at: requested ? new Date().toISOString() : null,
-                })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to update item request status:", error);
-        }
-    };
-
-    const updateItemPacked = async (itemId: string, packed: boolean) => {
-        // Get current user ID for tracking who packed
-        const { data: { user } } = await supabase.auth.getUser();
-        const packedBy = packed ? (user?.id || null) : null;
-
-        // Immediately update local state
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId ? { ...item, isPacked: packed, packedBy } : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({
-                    is_packed: packed,
-                    packed_by: packedBy,
-                    packed_at: packed ? new Date().toISOString() : null,
-                })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to update item packed status:", error);
-        }
-    };
-
-    // Requester cancels request - if item is packed, set isRequestCanceled flag
-    // Packer will see modal to confirm removal
-    const cancelItemRequest = async (itemId: string) => {
-        const item = items.find((i) => i.id === itemId);
-        if (!item) return;
-
-        // If item is packed, set isRequestCanceled - packer must confirm removal
-        // If item is not packed, just unrequest normally
-        if (item.isPacked) {
-            // Optimistic update
-            setItems((prev) =>
-                prev.map((i) =>
-                    i.id === itemId
-                        ? { ...i, isRequestedForNextVisit: false, isRequestCanceled: true }
-                        : i
-                )
-            );
-
-            try {
-                const { error } = await supabase
-                    .from("items")
-                    .update({
-                        is_requested_for_next_visit: false,
-                        is_request_canceled: true,
-                    })
-                    .eq("id", itemId);
-
-                if (error) throw error;
-            } catch (error) {
-                console.error("Failed to cancel item request:", error);
-            }
-        } else {
-            // Not packed - just unrequest normally
-            setItems((prev) =>
-                prev.map((i) =>
-                    i.id === itemId
-                        ? { ...i, isRequestedForNextVisit: false }
-                        : i
-                )
-            );
-
-            try {
-                const { error } = await supabase
-                    .from("items")
-                    .update({ is_requested_for_next_visit: false })
-                    .eq("id", itemId);
-
-                if (error) throw error;
-            } catch (error) {
-                console.error("Failed to unrequest item:", error);
-            }
-        }
-    };
-
-    // Packer confirms removal from bag after requester canceled
-    const confirmRemoveFromBag = async (itemId: string) => {
-        // Optimistic update
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId
-                    ? { ...item, isPacked: false, isRequestCanceled: false }
-                    : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({
-                    is_packed: false,
-                    is_request_canceled: false,
-                })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to remove item from bag:", error);
-        }
-    };
-
-    // Packer keeps item in bag after requester canceled (clears the canceled flag)
-    const keepInBag = async (itemId: string) => {
-        // Optimistic update - keep packed, clear canceled flag
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId
-                    ? { ...item, isRequestCanceled: false }
-                    : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({ is_request_canceled: false })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to keep item in bag:", error);
-        }
-    };
-
-    const updateItemName = async (itemId: string, newName: string) => {
-        // Immediately update local state
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId ? { ...item, name: newName } : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({ name: newName })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to update item name:", error);
-            throw error;
-        }
-    };
-
-    const updateItemNotes = async (itemId: string, notes: string) => {
-        // Immediately update local state
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId ? { ...item, notes: notes || undefined } : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({ notes: notes || null })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to update item notes:", error);
-            throw error;
-        }
-    };
-
-    const updateItemCategory = async (itemId: string, category: string) => {
-        // Immediately update local state
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId ? { ...item, category } : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({ category })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to update item category:", error);
-            throw error;
-        }
-    };
-
-    const updateItemPhoto = async (itemId: string, photoUrl: string | null) => {
-        // Immediately update local state
-        setItems((prev) =>
-            prev.map((item) =>
-                item.id === itemId ? { ...item, photoUrl: photoUrl || undefined } : item
-            )
-        );
-
-        try {
-            const { error } = await supabase
-                .from("items")
-                .update({ photo_url: photoUrl })
-                .eq("id", itemId);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Failed to update item photo:", error);
-            throw error;
-        }
-    };
-
-    const addMissingMessage = (message: {
-        itemId: string;
-        authorCaregiverId: string;
-        text: string;
-    }) => {
-        const newMessage: MissingMessage = {
-            id: `msg-${Date.now()}-${Math.random()}`,
-            itemId: message.itemId,
-            authorCaregiverId: message.authorCaregiverId,
-            text: message.text,
-            createdAt: new Date().toISOString(),
-        };
-        setMissingMessages((prev) => [...prev, newMessage]);
-    };
-
-    const getMissingMessagesForItem = (itemId: string): MissingMessage[] => {
-        return missingMessages.filter((msg) => msg.itemId === itemId);
-    };
-
-    const markItemFound = async (itemId: string) => {
-        // Optimistic update - immediately update local state
-        setItems((prev) =>
-            prev.map((item) => {
-                if (item.id !== itemId) return item;
-                return {
-                    ...item,
-                    isMissing: false,
-                };
-            })
-        );
-
-        // Add system message
-        addMissingMessage({
-            itemId,
-            authorCaregiverId: "system",
-            text: "Marked as found",
-        });
-
-        // Update database
-        try {
+        if (Object.keys(dbUpdates).length > 0) {
             await supabase
                 .from("items")
-                .update({ is_missing: false })
+                .update(dbUpdates)
                 .eq("id", itemId);
-        } catch (error) {
-            console.error("Failed to mark item as found:", error);
         }
     };
 
+    // Delete item
     const deleteItem = async (itemId: string): Promise<{ success: boolean; error?: string }> => {
-        // Optimistically remove from local state
         const previousItems = items;
-        setItems((prev) => prev.filter((item) => item.id !== itemId));
+        setItems(prev => prev.filter(item => item.id !== itemId));
 
         try {
-            // 1. Delete associated missing messages first (cleanup) - silently ignore if table doesn't exist
-            try {
-                await supabase
-                    .from("missing_messages")
-                    .delete()
-                    .eq("item_id", itemId);
-            } catch (e) {
-                // Table may not exist - that's OK
-            }
-
-            // 2. Delete the item
-            const { error, count } = await supabase
+            const { error } = await supabase
                 .from("items")
-                .delete({ count: 'exact' })
+                .delete()
                 .eq("id", itemId);
 
-            if (error) throw error;
-
-            if (count === 0) {
-                // Rollback optimistic update
+            if (error) {
                 setItems(previousItems);
-                return {
-                    success: false,
-                    error: "Permission denied. Please run this SQL in Supabase: create policy \"Enable delete for family members\" on items for delete using (family_id in (select family_id from family_members where user_id = auth.uid()));"
-                };
+                return { success: false, error: error.message };
             }
+            return { success: true };
+        } catch (error) {
+            setItems(previousItems);
+            return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+        }
+    };
+
+    // Update status
+    const updateItemStatus = async (itemId: string, status: Item["status"]) => {
+        await updateItem(itemId, { status });
+    };
+
+    // Move to different child_space
+    const moveItemToChildSpace = async (itemId: string, newChildSpaceId: string) => {
+        setItems(prev => prev.map(item =>
+            item.id === itemId ? { ...item, childSpaceId: newChildSpaceId } : item
+        ));
+
+        await supabase
+            .from("items")
+            .update({ child_space_id: newChildSpaceId })
+            .eq("id", itemId);
+    };
+
+    // Request item for next visit
+    const requestItem = async (itemId: string, requested: boolean) => {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        setItems(prev => prev.map(item =>
+            item.id === itemId
+                ? { ...item, isRequestedForNextVisit: requested, requestedBy: requested ? user?.id : undefined }
+                : item
+        ));
+
+        await supabase
+            .from("items")
+            .update({
+                is_requested_for_next_visit: requested,
+                requested_by: requested ? user?.id : null,
+                requested_at: requested ? new Date().toISOString() : null,
+            })
+            .eq("id", itemId);
+    };
+
+    // Pack item
+    const packItem = async (itemId: string, packed: boolean) => {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        setItems(prev => prev.map(item =>
+            item.id === itemId
+                ? { ...item, isPacked: packed, packedBy: packed ? user?.id : undefined }
+                : item
+        ));
+
+        await supabase
+            .from("items")
+            .update({
+                is_packed: packed,
+                packed_by: packed ? user?.id : null,
+                packed_at: packed ? new Date().toISOString() : null,
+            })
+            .eq("id", itemId);
+    };
+
+    // Cancel request
+    const cancelItemRequest = async (itemId: string) => {
+        const item = items.find(i => i.id === itemId);
+        if (!item) return;
+
+        if (item.isPacked) {
+            setItems(prev => prev.map(i =>
+                i.id === itemId
+                    ? { ...i, isRequestedForNextVisit: false, isRequestCanceled: true }
+                    : i
+            ));
+
+            await supabase
+                .from("items")
+                .update({
+                    is_requested_for_next_visit: false,
+                    is_request_canceled: true,
+                })
+                .eq("id", itemId);
+        } else {
+            setItems(prev => prev.map(i =>
+                i.id === itemId ? { ...i, isRequestedForNextVisit: false } : i
+            ));
+
+            await supabase
+                .from("items")
+                .update({ is_requested_for_next_visit: false })
+                .eq("id", itemId);
+        }
+    };
+
+    // Confirm remove from bag
+    const confirmRemoveFromBag = async (itemId: string) => {
+        setItems(prev => prev.map(item =>
+            item.id === itemId
+                ? { ...item, isPacked: false, isRequestCanceled: false }
+                : item
+        ));
+
+        await supabase
+            .from("items")
+            .update({
+                is_packed: false,
+                is_request_canceled: false,
+            })
+            .eq("id", itemId);
+    };
+
+    // Keep in bag
+    const keepInBag = async (itemId: string) => {
+        setItems(prev => prev.map(item =>
+            item.id === itemId ? { ...item, isRequestCanceled: false } : item
+        ));
+
+        await supabase
+            .from("items")
+            .update({ is_request_canceled: false })
+            .eq("id", itemId);
+    };
+
+    // Filter helpers
+    const getItemsByChildSpace = (childSpaceId: string) =>
+        items.filter(item => item.childSpaceId === childSpaceId);
+
+    const getItemsByStatus = (status: Item["status"]) =>
+        items.filter(item => item.status === status);
+
+    // Get items originated by a specific user (can see these even if at another home)
+    const getItemsOriginatedByUser = (userId: string) =>
+        items.filter(item => item.originUserId === userId);
+
+    // ===== Transfer Request Methods =====
+
+    const createTransferRequest = async (
+        itemId: string,
+        options: { targetHomeId?: string | null; message?: string; requestedForDate?: string }
+    ): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return { success: false, error: "Not authenticated" };
+
+            const { data, error } = await supabase
+                .from("item_transfer_requests")
+                .insert({
+                    item_id: itemId,
+                    requested_by: user.id,
+                    target_home_id: options.targetHomeId || null,
+                    message: options.message || null,
+                    requested_for_date: options.requestedForDate || null,
+                    status: "pending",
+                })
+                .select()
+                .single();
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            const newRequest: ItemTransferRequest = {
+                id: data.id,
+                itemId: data.item_id,
+                requestedBy: data.requested_by,
+                targetHomeId: data.target_home_id,
+                status: data.status,
+                message: data.message,
+                requestedForDate: data.requested_for_date,
+                createdAt: data.created_at,
+            };
+
+            setTransferRequests(prev => [...prev, newRequest]);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+        }
+    };
+
+    const respondToTransferRequest = async (requestId: string, accept: boolean): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return { success: false, error: "Not authenticated" };
+
+            const newStatus = accept ? "accepted" : "declined";
+
+            const { error } = await supabase
+                .from("item_transfer_requests")
+                .update({
+                    status: newStatus,
+                    responded_at: new Date().toISOString(),
+                    responded_by: user.id,
+                })
+                .eq("id", requestId);
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            setTransferRequests(prev =>
+                prev.map(req => req.id === requestId
+                    ? { ...req, status: newStatus as TransferRequestStatus, respondedAt: new Date().toISOString(), respondedBy: user.id }
+                    : req
+                )
+            );
 
             return { success: true };
         } catch (error) {
-            // Rollback optimistic update
-            setItems(previousItems);
-            const errorMsg = error instanceof Error ? error.message : "Failed to delete item";
-            console.error("Failed to delete item:", error);
-            return { success: false, error: errorMsg };
+            return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
         }
     };
+
+    const completeTransferRequest = async (requestId: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const { error } = await supabase
+                .from("item_transfer_requests")
+                .update({
+                    status: "completed",
+                    completed_at: new Date().toISOString(),
+                })
+                .eq("id", requestId);
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            setTransferRequests(prev =>
+                prev.map(req => req.id === requestId
+                    ? { ...req, status: "completed" as TransferRequestStatus, completedAt: new Date().toISOString() }
+                    : req
+                )
+            );
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+        }
+    };
+
+    const cancelTransferRequest = async (requestId: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const { error } = await supabase
+                .from("item_transfer_requests")
+                .update({ status: "canceled" })
+                .eq("id", requestId);
+
+            if (error) {
+                return { success: false, error: error.message };
+            }
+
+            setTransferRequests(prev =>
+                prev.map(req => req.id === requestId
+                    ? { ...req, status: "canceled" as TransferRequestStatus }
+                    : req
+                )
+            );
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+        }
+    };
+
+    const getTransferRequestsForItem = (itemId: string) =>
+        transferRequests.filter(req => req.itemId === itemId);
+
+    const getPendingTransferRequests = () =>
+        transferRequests.filter(req => req.status === "pending");
+
+    // ===== V1 Compatibility Methods =====
+
+    // V1: updateItemLocation - maps to child_space in V2
+    const updateItemLocation = (
+        itemId: string,
+        newLocation: { caregiverId?: string; homeId?: string; toBeFound?: boolean }
+    ) => {
+        // In V2, we don't directly set caregiverId/homeId - items are tied to child_spaces
+        // This is a compatibility shim that updates the item's isMissing state
+        if (newLocation.toBeFound !== undefined) {
+            const isMissing = newLocation.toBeFound;
+            const status = isMissing ? "lost" as const : "at_home" as const;
+            setItems(prev => prev.map(item =>
+                item.id === itemId
+                    ? { ...item, isMissing, status }
+                    : item
+            ));
+
+            supabase
+                .from("items")
+                .update({ status: newLocation.toBeFound ? "lost" : "at_home" })
+                .eq("id", itemId);
+        }
+    };
+
+    // V1: updateItemRequested - maps to requestItem in V2
+    const updateItemRequested = (itemId: string, requested: boolean) => {
+        requestItem(itemId, requested);
+    };
+
+    // V1: updateItemPacked - maps to packItem in V2
+    const updateItemPacked = (itemId: string, packed: boolean) => {
+        packItem(itemId, packed);
+    };
+
+    // V1: updateItemName
+    const updateItemName = async (itemId: string, newName: string) => {
+        await updateItem(itemId, { name: newName });
+    };
+
+    // V1: updateItemNotes
+    const updateItemNotes = async (itemId: string, notes: string) => {
+        await updateItem(itemId, { notes });
+    };
+
+    // V1: updateItemCategory
+    const updateItemCategory = async (itemId: string, category: string) => {
+        await updateItem(itemId, { category });
+    };
+
+    // V1: updateItemPhoto
+    const updateItemPhoto = async (itemId: string, photoUrl: string | null) => {
+        await updateItem(itemId, { photoUrl: photoUrl || undefined });
+    };
+
+    // V1: markItemFound
+    const markItemFound = (itemId: string) => {
+        setItems(prev => prev.map(item =>
+            item.id === itemId
+                ? { ...item, isMissing: false, status: "at_home" as const }
+                : item
+        ));
+
+        supabase
+            .from("items")
+            .update({ status: "at_home" })
+            .eq("id", itemId);
+    };
+
+    // V1: missing messages (not used in V2, but needed for compatibility)
+    const missingMessages: any[] = [];
+    const addMissingMessage = (_message: { itemId: string; authorCaregiverId: string; text: string }) => {
+        // No-op in V2
+    };
+    const getMissingMessagesForItem = (_itemId: string) => [];
 
     return (
         <ItemsContext.Provider
@@ -765,21 +816,38 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 items,
                 isLoaded,
                 addItem,
-                updateItemLocation,
-                updateItemRequested,
-                updateItemPacked,
+                updateItem,
+                deleteItem,
+                updateItemStatus,
+                moveItemToChildSpace,
+                requestItem,
+                packItem,
                 cancelItemRequest,
                 confirmRemoveFromBag,
                 keepInBag,
+                getItemsByChildSpace,
+                getItemsByStatus,
+                getItemsOriginatedByUser,
+                // Transfer requests
+                transferRequests,
+                createTransferRequest,
+                respondToTransferRequest,
+                completeTransferRequest,
+                cancelTransferRequest,
+                getTransferRequestsForItem,
+                getPendingTransferRequests,
+                // V1 compatibility
+                updateItemLocation,
+                updateItemRequested,
+                updateItemPacked,
                 updateItemName,
                 updateItemNotes,
                 updateItemCategory,
                 updateItemPhoto,
+                markItemFound,
                 missingMessages,
                 addMissingMessage,
                 getMissingMessagesForItem,
-                markItemFound,
-                deleteItem,
             }}
         >
             {children}

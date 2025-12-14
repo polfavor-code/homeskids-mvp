@@ -23,11 +23,15 @@ function ContactsPageContent() {
     useEnsureOnboarding();
 
     const { contacts, isLoaded, toggleFavorite } = useContacts();
-    const { child, caregivers } = useAppState();
+    const { child, caregivers, children, currentChild, setCurrentChildId } = useAppState();
     const searchParams = useSearchParams();
     const [filter, setFilter] = useState<ContactCategory | "all">("all");
 
-    console.log("[ContactsPage] contacts:", contacts.length, "isLoaded:", isLoaded);
+    // If user has multiple children, show child selector
+    const hasMultipleChildren = children.length > 1;
+    const activeChild = currentChild || child;
+
+    console.log("[ContactsPage] contacts:", contacts.length, "isLoaded:", isLoaded, "children:", children.length);
 
     // Helper to get the connected with display text
     const getConnectedWithLabel = (contact: Contact): string | null => {
@@ -91,8 +95,25 @@ function ContactsPageContent() {
             <div className="mb-6">
                 <div className="flex items-center justify-between">
                     <div>
+                        {/* Child selector for users with multiple children */}
+                        {hasMultipleChildren ? (
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm text-textSub">Contacts for:</span>
+                                <select
+                                    value={activeChild?.id || ""}
+                                    onChange={(e) => setCurrentChildId(e.target.value)}
+                                    className="px-2 py-1 text-sm font-medium text-forest bg-softGreen border-none rounded-lg focus:ring-2 focus:ring-forest"
+                                >
+                                    {children.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : null}
                         <h1 className="font-dmSerif text-2xl text-forest mt-2">
-                            {child?.name || "Child"}&apos;s Contacts
+                            {activeChild?.name || "Child"}&apos;s Contacts
                         </h1>
                         <p className="text-sm text-textSub mt-1">
                             Share important contacts.
@@ -201,7 +222,7 @@ function ContactsPageContent() {
                                 : `No ${filter} contacts`}
                         </h3>
                         <p className="text-sm text-textSub max-w-xs mx-auto mb-4">
-                            Add teachers, doctors, family members and other important contacts for {child?.name || "your child"}.
+                            Add teachers, doctors, family members and other important contacts for {activeChild?.name || "your child"}.
                         </p>
                         <Link
                             href="/contacts/new"

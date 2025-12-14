@@ -4,6 +4,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 
+// ==============================================
+// V2 DOCUMENTS CONTEXT - Documents per child_v2
+// ==============================================
+
 // Types
 export interface Document {
     id: string;
@@ -40,7 +44,6 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [familyId, setFamilyId] = useState<string | null>(null);
     const [childId, setChildId] = useState<string | null>(null);
 
     const fetchData = async () => {
@@ -54,36 +57,26 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            // Get user's family
-            const { data: familyMember } = await supabase
-                .from("family_members")
-                .select("family_id")
-                .eq("user_id", user.id)
-                .single();
+            // V2: Get children this user has access to via child_access
+            const { data: childAccess } = await supabase
+                .from("child_access")
+                .select("child_id")
+                .eq("user_id", user.id);
 
-            if (!familyMember) {
+            if (!childAccess || childAccess.length === 0) {
                 setIsLoaded(true);
                 return;
             }
 
-            setFamilyId(familyMember.family_id);
+            // Use first child for now
+            const currentChildId = childAccess[0].child_id;
+            setChildId(currentChildId);
 
-            // Get child for this family
-            const { data: childData } = await supabase
-                .from("children")
-                .select("id")
-                .eq("family_id", familyMember.family_id)
-                .single();
-
-            if (childData) {
-                setChildId(childData.id);
-            }
-
-            // Fetch documents
+            // Fetch documents for this child
             const { data: documentsData } = await supabase
                 .from("documents")
                 .select("*")
-                .eq("family_id", familyMember.family_id)
+                .eq("child_id", currentChildId)
                 .order("is_pinned", { ascending: false })
                 .order("created_at", { ascending: false });
 
@@ -125,13 +118,13 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const uploadFile = async (file: File): Promise<{ success: boolean; path?: string; error?: string }> => {
-        if (!familyId) {
-            return { success: false, error: "No family found" };
+        if (!childId) {
+            return { success: false, error: "No child found" };
         }
 
         try {
             const fileExt = file.name.split(".").pop();
-            const fileName = `${familyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const fileName = `${childId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
             const { error } = await supabase.storage
                 .from("documents")
@@ -163,15 +156,14 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     };
 
     const addDocument = async (document: Omit<Document, "id" | "createdAt" | "updatedAt">): Promise<{ success: boolean; error?: string; document?: Document }> => {
-        if (!familyId) {
-            return { success: false, error: "No family found" };
+        if (!childId) {
+            return { success: false, error: "No child found" };
         }
 
         try {
             const { data, error } = await supabase
                 .from("documents")
                 .insert({
-                    family_id: familyId,
                     child_id: childId,
                     name: document.name,
                     category: document.category,
