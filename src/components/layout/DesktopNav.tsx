@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { navItems, accountNavItem, isRouteActive, hasActiveSubItem } from '@/lib/navigation';
 import { useAppState } from '@/lib/AppStateContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -105,13 +105,34 @@ const iconMap = {
 
 export default function DesktopNav() {
     const pathname = usePathname();
-    const { caregivers } = useAppState();
+    const router = useRouter();
+    const { 
+        caregivers, 
+        children: childrenList, 
+        currentChild, 
+        setCurrentChildId,
+        refreshData,
+    } = useAppState();
     const { user } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(true);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     // Get current user from caregivers (the one marked as current user)
     const currentUser = caregivers.find(c => c.isCurrentUser);
+
+    // Handle child switch - one click to switch
+    const handleChildSwitch = async (childId: string) => {
+        if (childId === currentChild?.id) {
+            // Clicking active child goes to child settings
+            router.push("/settings/child");
+            return;
+        }
+        
+        setCurrentChildId(childId);
+        await refreshData();
+        // Home is auto-selected by AppStateContext (first accessible home or last-used)
+        // No blocking redirect needed
+    };
 
     // Use label (what child calls them, e.g. "daddy"), fallback to name, then email prefix, then "Account"
     // Note: Check for empty string as well as undefined/null
@@ -261,6 +282,50 @@ export default function DesktopNav() {
                 })}
 
             </div>
+
+            {/* Child Switcher - Sidebar Footer */}
+            {childrenList.length > 0 && (
+                <div className={`flex-shrink-0 border-t border-border py-3 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+                    {!isCollapsed && childrenList.length > 1 && (
+                        <div className="text-xs text-gray-500 font-medium px-2 mb-2">Children</div>
+                    )}
+                    <div className={`space-y-1 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
+                        {childrenList.map((child) => {
+                            const isActive = child.id === currentChild?.id;
+                            return (
+                                <button
+                                    key={child.id}
+                                    onClick={() => handleChildSwitch(child.id)}
+                                    className={`flex items-center transition-all rounded-xl ${
+                                        isCollapsed 
+                                            ? 'justify-center w-11 h-11 p-0' 
+                                            : 'gap-3 px-3 py-2 w-full'
+                                    } ${
+                                        isActive
+                                            ? 'bg-softGreen ring-2 ring-forest/20'
+                                            : 'opacity-50 hover:opacity-100 hover:bg-black/5'
+                                    }`}
+                                    title={isCollapsed ? child.name : undefined}
+                                >
+                                    <Avatar
+                                        src={child.avatarUrl}
+                                        initial={child.avatarInitials}
+                                        size={isCollapsed ? 32 : 28}
+                                        bgColor={isActive ? "#4A7C59" : "#9CA3AF"}
+                                    />
+                                    {!isCollapsed && (
+                                        <span className={`text-sm truncate ${
+                                            isActive ? 'font-semibold text-forest' : 'text-gray-500'
+                                        }`}>
+                                            {child.name}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* User Profile - Fixed at bottom */}
             <div className={`flex-shrink-0 border-t border-border py-4 ${isCollapsed ? 'flex justify-center' : 'px-3'}`}>

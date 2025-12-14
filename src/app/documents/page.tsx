@@ -31,11 +31,9 @@ const categoryLabels: Record<string, string> = {
 
 export default function DocumentsPage() {
     useEnsureOnboarding();
-    const { child, children, currentChild, setCurrentChildId } = useAppState();
+    const { child, currentChild } = useAppState();
     const { documents, isLoaded, addDocument, deleteDocument, updateDocument, uploadFile, getFileUrl, getPinnedDocuments } = useDocuments();
 
-    // Child filter support for users with multiple children
-    const hasMultipleChildren = children.length > 1;
     const activeChild = currentChild || child;
     const childName = activeChild?.name || "your child";
 
@@ -177,24 +175,7 @@ export default function DocumentsPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    {/* Child selector for users with multiple children */}
-                    {hasMultipleChildren ? (
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm text-textSub">Documents for:</span>
-                            <select
-                                value={activeChild?.id || ""}
-                                onChange={(e) => setCurrentChildId(e.target.value)}
-                                className="px-2 py-1 text-sm font-medium text-forest bg-softGreen border-none rounded-lg focus:ring-2 focus:ring-forest"
-                            >
-                                {children.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    ) : null}
-                    <h1 className="font-dmSerif text-2xl text-forest mt-2">All Documents</h1>
+                    <h1 className="font-dmSerif text-2xl text-forest">All Documents</h1>
                     <p className="text-sm text-textSub mt-1">
                         A shared place for everything important for {childName}.
                     </p>

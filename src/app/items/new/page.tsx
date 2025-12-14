@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
+import MobileMultiSelect from "@/components/MobileMultiSelect";
 import ImageCropper from "@/components/ImageCropper";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -25,7 +26,7 @@ const CATEGORIES = [
 export default function AddItemPage() {
     const router = useRouter();
     const { addItem } = useItems();
-    const { caregivers, activeHomes, homes, child } = useAppState();
+    const { caregivers, activeHomes, homes, child, children, currentHomeId } = useAppState();
 
     const [name, setName] = useState("");
     const [category, setCategory] = useState("");
@@ -36,14 +37,38 @@ export default function AddItemPage() {
     const [photoPreview, setPhotoPreview] = useState<string>("");
     const [uploading, setUploading] = useState(false);
 
+    // Child selection state (which children own this item)
+    const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
+    
+    // Origin home state (where this item originates from)
+    const [originHomeId, setOriginHomeId] = useState<string>("");
+
     // Image cropper state
     const [showCropper, setShowCropper] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string>("");
+
+    // Auto-select child if only one exists
+    useEffect(() => {
+        if (children.length === 1 && selectedChildIds.length === 0) {
+            setSelectedChildIds([children[0].id]);
+        }
+    }, [children, selectedChildIds.length]);
+
+    // Default origin home to current home
+    useEffect(() => {
+        if (currentHomeId && !originHomeId) {
+            setOriginHomeId(currentHomeId);
+        }
+    }, [currentHomeId, originHomeId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !category || !location) {
             setError("Please fill in all required fields.");
+            return;
+        }
+        if (selectedChildIds.length === 0) {
+            setError("Please select at least one child.");
             return;
         }
 
@@ -154,7 +179,10 @@ export default function AddItemPage() {
                 isRequestCanceled: false,
                 photoUrl: photoUrl || undefined,
                 notes: notes || undefined,
-                // Origin is auto-set by the context (no UI prompt needed)
+                // Child ownership - which children own this item
+                childIds: selectedChildIds,
+                // Origin home - where this item originates from
+                originHomeId: originHomeId || locationHomeId || undefined,
             };
 
             const result = await addItem(newItem);
@@ -311,6 +339,55 @@ export default function AddItemPage() {
                     />
                 </div>
 
+                {/* Belongs to (Child selection) */}
+                <div>
+                    <label className="block text-xs font-semibold text-forest mb-1.5">
+                        Belongs to <span className="text-terracotta">*</span>
+                    </label>
+                    {children.length === 1 ? (
+                        // Single child - show as read-only pill
+                        <div className="px-4 py-3 border border-border rounded-xl bg-cream/50 text-sm text-forest">
+                            {children[0].name}
+                        </div>
+                    ) : (
+                        // Multiple children - show multi-select
+                        <MobileMultiSelect
+                            values={selectedChildIds}
+                            onChange={setSelectedChildIds}
+                            options={children.map((c) => ({ 
+                                value: c.id, 
+                                label: c.name 
+                            }))}
+                            allOption={children.length > 1 ? {
+                                value: "all",
+                                label: "All children"
+                            } : undefined}
+                            placeholder="Select child(ren)"
+                            title="Who does this item belong to?"
+                        />
+                    )}
+                    {selectedChildIds.length === 0 && (
+                        <p className="text-xs text-terracotta mt-1">At least one child must be selected</p>
+                    )}
+                </div>
+
+                {/* Origin home */}
+                <div>
+                    <label className="block text-xs font-semibold text-forest mb-1.5">
+                        Origin home
+                    </label>
+                    <MobileSelect
+                        value={originHomeId}
+                        onChange={setOriginHomeId}
+                        options={homes.map((home) => ({ value: home.id, label: home.name }))}
+                        placeholder="Select origin home"
+                        title="Where did this item come from?"
+                    />
+                    <p className="text-xs text-textSub mt-1">
+                        Where this item originally came from (used for packing/returns)
+                    </p>
+                </div>
+
                 {/* Notes */}
                 <div>
                     <label className="block text-xs font-semibold text-forest mb-1.5">
@@ -330,7 +407,7 @@ export default function AddItemPage() {
                 <button
                     type="submit"
                     className="w-full py-3.5 bg-forest text-white font-semibold rounded-xl hover:bg-forest/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={uploading || !name || !category || !location}
+                    disabled={uploading || !name || !category || !location || selectedChildIds.length === 0}
                 >
                     {uploading ? "Saving..." : "Save item"}
                 </button>

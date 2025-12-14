@@ -11,7 +11,7 @@ import CaregiverStatusPill from "@/components/caregivers/CaregiverStatusPill";
 import CaregiverConfirmDialog, { CaregiverAction } from "@/components/caregivers/CaregiverConfirmDialog";
 import HomeSelectionDialog from "@/components/caregivers/HomeSelectionDialog";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState, CaregiverProfile, HomeProfile } from "@/lib/AppStateContext";
+import { useAppState, CaregiverProfile, HomeProfile, ChildRoleMapping } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { getAccessLevelMessage } from "@/lib/caregiverPermissions";
@@ -26,6 +26,47 @@ const ROLE_OPTIONS = [
     { value: "family_friend", label: "Family friend" },
     { value: "other", label: "Other" },
 ];
+
+// Helper to format role label
+const getRoleLabel = (role: string): string => {
+    const option = ROLE_OPTIONS.find(r => r.value === role);
+    return option?.label || role || "Caregiver";
+};
+
+// Helper to format child roles for display
+// Returns something like "Parent of June & Elodie" or "Parent of Elodie, Step-parent of June"
+const formatChildRoles = (childRoles: ChildRoleMapping[] | undefined): string => {
+    if (!childRoles || childRoles.length === 0) return "";
+    
+    // Group by role
+    const roleGroups: Record<string, string[]> = {};
+    for (const cr of childRoles) {
+        const roleLabel = getRoleLabel(cr.role);
+        if (!roleGroups[roleLabel]) {
+            roleGroups[roleLabel] = [];
+        }
+        roleGroups[roleLabel].push(cr.childName);
+    }
+    
+    // Format each role group
+    const parts: string[] = [];
+    for (const [role, names] of Object.entries(roleGroups)) {
+        if (names.length <= 3) {
+            // Show all names: "Parent of June & Elodie"
+            const nameStr = names.length === 1 
+                ? names[0] 
+                : names.slice(0, -1).join(", ") + " & " + names[names.length - 1];
+            parts.push(`${role} of ${nameStr}`);
+        } else {
+            // Show first 3 names + count: "Parent of June, Elodie, Max & +3 more"
+            const shown = names.slice(0, 3).join(", ");
+            const remaining = names.length - 3;
+            parts.push(`${role} of ${shown} & +${remaining} more`);
+        }
+    }
+    
+    return parts.join(", ");
+};
 
 export default function CaregiversPage() {
     useEnsureOnboarding();
@@ -495,11 +536,11 @@ export default function CaregiversPage() {
                                 )}
                             </div>
                             <p className="text-sm text-textSub">{caregiver.name}</p>
-                            {caregiver.relationship && (
-                                <p className="text-xs text-textSub mt-0.5">
-                                    {getRoleLabel(caregiver.relationship)}
-                                </p>
-                            )}
+                                            {caregiver.relationship && (
+                                                <p className="text-xs text-forest/70 mt-0.5">
+                                                    {getRoleLabel(caregiver.relationship)}{child?.name ? ` of ${child.name}` : ""}
+                                                </p>
+                                            )}
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -737,9 +778,9 @@ export default function CaregiversPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="text-2xl font-dmSerif text-forest">Caregivers</h1>
+                    <h1 className="text-2xl font-dmSerif text-forest">{child?.name || "Child"}&apos;s Caregivers</h1>
                     <p className="text-sm text-textSub">
-                        Manage who has access to {child?.name || "your child"}'s information.
+                        Manage who has access to {child?.name || "your child"}&apos;s information.
                     </p>
                 </div>
 
@@ -815,7 +856,9 @@ export default function CaregiversPage() {
                         <h2 className="text-sm font-semibold text-forest">
                             Pending invites ({pendingCaregivers.length})
                         </h2>
-                        {pendingCaregivers.map((caregiver) => (
+                        {pendingCaregivers.map((caregiver) => {
+                            const roleDisplay = formatChildRoles(caregiver.childRoles);
+                            return (
                             <div key={caregiver.id} className="card-organic overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
                                 <div
                                     className="p-4 cursor-pointer hover:bg-cream/30 transition-colors"
@@ -829,6 +872,9 @@ export default function CaregiversPage() {
                                                 <CaregiverStatusPill status="pending" />
                                             </div>
                                             <p className="text-sm text-textSub">{caregiver.name}</p>
+                                            {roleDisplay && (
+                                                <p className="text-xs text-forest/70 mt-0.5">{roleDisplay}</p>
+                                            )}
                                             {caregiver.pendingHomeIds && caregiver.pendingHomeIds.length > 0 && (
                                                 <p className="text-xs text-textSub mt-0.5">
                                                     Will have access to: {caregiver.pendingHomeIds.map(id => homes.find(h => h.id === id)?.name).filter(Boolean).join(", ")}
@@ -925,7 +971,8 @@ export default function CaregiversPage() {
                                     </div>
                                 )}
                             </div>
-                        ))}
+                        );
+                        })}
                     </div>
                 )}
 

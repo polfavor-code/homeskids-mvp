@@ -39,46 +39,74 @@ export default function ChildSetupPage() {
     }, [child]);
 
     const loadChildData = async () => {
-        if (!child) return;
+        if (!child || !user) return;
 
         try {
-            // Get full child data including birthdate from children
-            // Note: gender column may not exist yet if migration hasn't been run
-            const { data, error } = await supabase
+            console.log("🔍 Loading child data for child.id:", child.id, "user.id:", user.id);
+            console.log("🔍 Child from context:", { id: child.id, name: child.name, dob: child.dob, avatarUrl: child.avatarUrl });
+            
+            // First, verify we have child_access
+            const { data: accessCheck, error: accessError } = await supabase
+                .from("child_access")
+                .select("child_id, role_type, access_level")
+                .eq("child_id", child.id)
+                .eq("user_id", user.id)
+                .single();
+            
+            console.log("🔍 Child access check:", { accessCheck, accessError });
+            
+            if (!accessCheck) {
+                console.log("❌ No child_access found - Patrick doesn't have access!");
+                return;
+            }
+
+            // Use child data from context (already loaded via AppStateContext join)
+            console.log("📋 Using child data from AppStateContext");
+            if (child.avatarUrl) {
+                console.log("✅ Setting avatar from context:", child.avatarUrl);
+                setAvatarUrl(child.avatarUrl);
+            } else {
+                console.log("⚠️ No avatarUrl in context");
+            }
+            if (child.dob) {
+                console.log("✅ Setting birthdate from context:", child.dob);
+                setBirthdate(child.dob);
+            } else {
+                console.log("⚠️ No dob in context");
+            }
+
+            // Try direct query to children table (may fail due to RLS)
+            const { data: childData, error: childError } = await supabase
                 .from("children")
-                .select("id, name, dob, avatar_url, notes, created_by, created_at, updated_at")
+                .select("id, name, dob, avatar_url, gender")
                 .eq("id", child.id)
                 .single();
+            
+            console.log("🔍 Direct child query result:", { childData, childError });
 
-            if (data) {
-                console.log("Loaded child data - dob:", data.dob);
-                setBirthdate(data.dob || "");
-                if (data.avatar_url) {
-                    const { data: urlData } = await supabase.storage
+            if (childData) {
+                console.log("✅ Direct query succeeded - dob:", childData.dob, "avatar_url:", childData.avatar_url, "gender:", childData.gender);
+                if (childData.dob) {
+                    setBirthdate(childData.dob);
+                }
+                if (childData.gender) {
+                    setGender(childData.gender);
+                }
+                if (childData.avatar_url) {
+                    const { data: urlData, error: urlError } = await supabase.storage
                         .from("avatars")
-                        .createSignedUrl(data.avatar_url, 3600);
-                    if (urlData) {
+                        .createSignedUrl(childData.avatar_url, 3600);
+                    console.log("🖼️ Avatar signed URL:", { signedUrl: urlData?.signedUrl, error: urlError });
+                    if (urlData?.signedUrl) {
                         setAvatarUrl(urlData.signedUrl);
                     }
                 }
-            }
-
-            // Try to load gender separately (column may not exist)
-            try {
-                const { data: genderData } = await supabase
-                    .from("children")
-                    .select("gender")
-                    .eq("id", child.id)
-                    .single();
-                if (genderData?.gender) {
-                    setGender(genderData.gender);
-                }
-            } catch {
-                // Gender column doesn't exist yet - that's ok
-                console.log("Gender column not available yet");
+            } else if (childError) {
+                console.log("⚠️ Direct query failed (RLS blocking):", childError.message);
+                console.log("ℹ️ Relying on context data instead");
             }
         } catch (err) {
-            console.error("Error loading child data:", err);
+            console.error("❌ Error loading child data:", err);
         }
     };
 

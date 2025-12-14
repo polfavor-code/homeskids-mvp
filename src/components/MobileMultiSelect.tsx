@@ -57,7 +57,8 @@ export default function MobileMultiSelect({
     };
 
     const handleToggle = (e: React.MouseEvent, optionValue: string) => {
-        e.stopPropagation(); // Prevent closing dropdown
+        e.stopPropagation(); // Prevent closing dropdown (React)
+        e.nativeEvent.stopImmediatePropagation(); // Prevent closing dropdown (native DOM)
         if (values.includes(optionValue)) {
             onChange(values.filter(v => v !== optionValue));
         } else {
@@ -66,7 +67,8 @@ export default function MobileMultiSelect({
     };
 
     const handleAllToggle = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent closing dropdown
+        e.stopPropagation(); // Prevent closing dropdown (React)
+        e.nativeEvent.stopImmediatePropagation(); // Prevent closing dropdown (native DOM)
         if (isAllSelected) {
             // Deselect all
             onChange([]);
@@ -135,7 +137,10 @@ export default function MobileMultiSelect({
 
             {/* Desktop Dropdown */}
             {isOpen && (
-                <div className="hidden sm:block absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-[300px] overflow-y-auto py-1">
+                <div 
+                    className="hidden sm:block absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-[300px] overflow-y-auto py-1"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     {/* Individual options */}
                     {options.map((option) => (
                         <button
@@ -182,7 +187,10 @@ export default function MobileMultiSelect({
                     />
 
                     {/* Sheet */}
-                    <div className="absolute bottom-[90px] left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up max-h-[60vh] overflow-hidden mx-3 rounded-3xl">
+                    <div 
+                        className="absolute bottom-[90px] left-0 right-0 bg-white rounded-t-3xl shadow-2xl animate-slide-up max-h-[60vh] overflow-hidden mx-3 rounded-3xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                             <h2 className="text-lg font-dmSerif text-forest">{title || label || "Select"}</h2>

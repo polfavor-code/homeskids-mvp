@@ -28,6 +28,8 @@ export type Item = {
     // Items always belong to the child
     originUserId?: string | null;
     originHomeId?: string | null;
+    // Child ownership - which children this item belongs to
+    childIds: string[];
     // V1 compatibility
     locationCaregiverId: string | null;
     locationHomeId: string | null;
@@ -62,7 +64,10 @@ type AddItemInput = {
     category?: string;
     photoUrl?: string;
     notes?: string;
-    // Origin is auto-set, not passed in
+    // Child ownership - which children this item belongs to
+    childIds?: string[];
+    // Origin home - where the item originates from
+    originHomeId?: string | null;
     // V1 compatibility
     id?: string;
     locationCaregiverId?: string;
@@ -220,6 +225,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     packedBy: item.packed_by || null,
                     originUserId: item.origin_user_id || null,
                     originHomeId: item.origin_home_id || null,
+                    // Child ownership
+                    childIds: item.child_ids || [],
                     // V1 compatibility: derive locationHomeId from child_space
                     locationHomeId: childSpaceToHomeMap.get(item.child_space_id) || null,
                     locationCaregiverId: null,  // V2 doesn't use caregiver-based location
@@ -365,32 +372,63 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
 
             const status = item.isMissing ? "lost" : "at_home";
 
-            // Get the home_id for this child_space to set origin_home_id
+            // Get the home_id for this child_space to set origin_home_id (if not provided)
             const { data: childSpaceData } = await supabase
                 .from("child_spaces")
-                .select("home_id")
+                .select("home_id, child_id")
                 .eq("id", childSpaceId)
                 .single();
 
-            const { data, error } = await supabase
+            // Determine origin_home_id: use provided value, or default to current home
+            const originHomeId = item.originHomeId !== undefined 
+                ? item.originHomeId 
+                : (childSpaceData?.home_id || null);
+
+            // Determine child_ids: use provided value, or default to child from child_space
+            const childIds = item.childIds && item.childIds.length > 0
+                ? item.childIds
+                : (childSpaceData?.child_id ? [childSpaceData.child_id] : []);
+
+            // Try insert with child_ids first, fall back without if column doesn't exist yet
+            let data: any;
+            let error: any;
+
+            const baseInsert = {
+                child_space_id: childSpaceId,
+                name: item.name,
+                category: item.category,
+                photo_url: item.photoUrl,
+                notes: item.notes,
+                status,
+                created_by: user.id,
+                origin_user_id: user.id,
+                origin_home_id: originHomeId,
+                is_requested_for_next_visit: item.isRequestedForNextVisit || false,
+                is_packed: item.isPacked || false,
+                is_request_canceled: item.isRequestCanceled || false,
+            };
+
+            // First try with child_ids
+            const result1 = await supabase
                 .from("items")
-                .insert({
-                    child_space_id: childSpaceId,
-                    name: item.name,
-                    category: item.category,
-                    photo_url: item.photoUrl,
-                    notes: item.notes,
-                    status,
-                    created_by: user.id,
-                    // Auto-set origin to current user and current home (no UI prompt)
-                    origin_user_id: user.id,
-                    origin_home_id: childSpaceData?.home_id || null,
-                    is_requested_for_next_visit: item.isRequestedForNextVisit || false,
-                    is_packed: item.isPacked || false,
-                    is_request_canceled: item.isRequestCanceled || false,
-                })
+                .insert({ ...baseInsert, child_ids: childIds })
                 .select()
                 .single();
+
+            if (result1.error?.message?.includes("child_ids")) {
+                // Column doesn't exist yet, retry without it
+                console.warn("[Items] child_ids column not found, inserting without it");
+                const result2 = await supabase
+                    .from("items")
+                    .insert(baseInsert)
+                    .select()
+                    .single();
+                data = result2.data;
+                error = result2.error;
+            } else {
+                data = result1.data;
+                error = result1.error;
+            }
 
             if (error) {
                 return { success: false, error: error.message };
@@ -413,6 +451,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 packedBy: null,
                 originUserId: data.origin_user_id || null,
                 originHomeId: data.origin_home_id || null,
+                childIds: data.child_ids || [],
                 // V1 compatibility
                 locationHomeId: item.locationHomeId || null,
                 locationCaregiverId: item.locationCaregiverId || null,
@@ -440,12 +479,28 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
         if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
         if (updates.originUserId !== undefined) dbUpdates.origin_user_id = updates.originUserId;
         if (updates.originHomeId !== undefined) dbUpdates.origin_home_id = updates.originHomeId;
+        
+        // Handle child_ids separately in case column doesn't exist yet
+        const hasChildIdsUpdate = updates.childIds !== undefined;
+        if (hasChildIdsUpdate) dbUpdates.child_ids = updates.childIds;
 
         if (Object.keys(dbUpdates).length > 0) {
-            await supabase
+            const result = await supabase
                 .from("items")
                 .update(dbUpdates)
                 .eq("id", itemId);
+
+            // If child_ids column doesn't exist, retry without it
+            if (result.error?.message?.includes("child_ids") && hasChildIdsUpdate) {
+                console.warn("[Items] child_ids column not found, updating without it");
+                delete dbUpdates.child_ids;
+                if (Object.keys(dbUpdates).length > 0) {
+                    await supabase
+                        .from("items")
+                        .update(dbUpdates)
+                        .eq("id", itemId);
+                }
+            }
         }
     };
 
@@ -737,12 +792,13 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     // ===== V1 Compatibility Methods =====
 
     // V1: updateItemLocation - maps to child_space in V2
-    const updateItemLocation = (
+    const updateItemLocation = async (
         itemId: string,
         newLocation: { caregiverId?: string; homeId?: string; toBeFound?: boolean }
     ) => {
-        // In V2, we don't directly set caregiverId/homeId - items are tied to child_spaces
-        // This is a compatibility shim that updates the item's isMissing state
+        console.log("🏠 updateItemLocation called:", { itemId, newLocation });
+        
+        // Handle "Missing" status
         if (newLocation.toBeFound !== undefined) {
             const isMissing = newLocation.toBeFound;
             const status = isMissing ? "lost" as const : "at_home" as const;
@@ -752,10 +808,79 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     : item
             ));
 
-            supabase
+            await supabase
                 .from("items")
                 .update({ status: newLocation.toBeFound ? "lost" : "at_home" })
                 .eq("id", itemId);
+            return;
+        }
+        
+        // Handle home change - need to find the child_space for the new home
+        if (newLocation.homeId) {
+            const item = items.find(i => i.id === itemId);
+            if (!item) {
+                console.error("❌ Item not found:", itemId);
+                return;
+            }
+            
+            console.log("🏠 Item current childSpaceId:", item.childSpaceId);
+            
+            // Get the current child_space to find which child this is for
+            const { data: currentChildSpace } = await supabase
+                .from("child_spaces")
+                .select("child_id")
+                .eq("id", item.childSpaceId)
+                .single();
+            
+            if (!currentChildSpace) {
+                console.error("❌ Could not find current child_space");
+                return;
+            }
+            
+            console.log("🏠 Item is for child_id:", currentChildSpace.child_id);
+            
+            // Find the child_space for this child at the new home
+            const { data: newChildSpace, error: csError } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .eq("home_id", newLocation.homeId)
+                .eq("child_id", currentChildSpace.child_id)
+                .single();
+            
+            console.log("🏠 New child_space lookup:", { newChildSpace, csError });
+            
+            if (!newChildSpace) {
+                console.error("❌ Could not find child_space for new home");
+                return;
+            }
+            
+            console.log("🏠 Moving item to child_space:", newChildSpace.id);
+            
+            // Update the item's child_space_id
+            const { error: updateError } = await supabase
+                .from("items")
+                .update({ child_space_id: newChildSpace.id })
+                .eq("id", itemId);
+            
+            if (updateError) {
+                console.error("❌ Error updating item location:", updateError);
+                return;
+            }
+            
+            console.log("✅ Item location updated successfully");
+            
+            // Update local state
+            setItems(prev => prev.map(i =>
+                i.id === itemId
+                    ? { 
+                        ...i, 
+                        childSpaceId: newChildSpace.id,
+                        locationHomeId: newLocation.homeId,
+                        isMissing: false,
+                        status: "at_home" as const
+                    }
+                    : i
+            ));
         }
     };
 

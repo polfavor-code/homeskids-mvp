@@ -1,8 +1,20 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./AuthContext";
+
+// localStorage key prefixes - will be combined with user ID for isolation
+const STORAGE_PREFIX = "homeskids";
+const STORAGE_KEY_CHILD_SUFFIX = "active_child_id";
+const STORAGE_KEY_HOME_SUFFIX = "active_home_id";
+const STORAGE_KEY_LAST_USER = "homeskids_last_user_id";
+
+// Helper to get user-specific storage keys
+const getStorageKey = (userId: string | undefined, suffix: string) => {
+    if (!userId) return null;
+    return `${STORAGE_PREFIX}_${userId}_${suffix}`;
+};
 
 // ==============================================
 // V2 TYPES - Child-Centric Permission Model
@@ -26,6 +38,14 @@ export type RoleType = "guardian" | "helper";
 export type AccessLevel = "view" | "contribute" | "manage";
 export type CaregiverStatus = "active" | "inactive" | "pending"; // V1 compatibility
 export type HomeStatus = "active" | "hidden"; // V1 compatibility
+
+// Child role mapping for pending invites (per-child role info)
+export type ChildRoleMapping = {
+    childId: string;
+    childName: string;
+    role: string;
+    label: string; // What child calls them
+};
 
 export type CaregiverProfile = {
     id: string;
@@ -59,6 +79,8 @@ export type CaregiverProfile = {
     inviteToken?: string;
     inviteId?: string;
     pendingHomeIds?: string[];
+    // For pending caregivers: role per child
+    childRoles?: ChildRoleMapping[];
 };
 
 export type HomeProfile = {
@@ -187,6 +209,15 @@ interface AppStateContextType {
     upcomingStays: { homeId: string; homeName: string; startAt: Date; endAt: Date }[];
 
     isLoaded: boolean;
+
+    // Child-first context selection
+    needsChildSelection: boolean; // True if user has multiple children and none selected
+    needsHomeSelection: boolean;  // True if user has access to multiple homes for this child and none selected
+    clearChildSelection: () => void;  // Clear child selection (triggers re-prompt)
+    clearHomeSelection: () => void;   // Clear home selection only
+    getHomesForChild: (childId: string) => HomeProfile[]; // Get ALL homes for a specific child
+    getAccessibleHomesForChild: (childId: string) => HomeProfile[]; // Get homes USER can access for a child
+    accessibleHomes: HomeProfile[]; // Homes the current user can access for the current child
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -207,6 +238,9 @@ async function getAvatarUrl(avatarPath: string | null | undefined): Promise<stri
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
+    
+    // Track previous user to detect user changes
+    const prevUserIdRef = useRef<string | null>(null);
 
     // State
     const [childrenList, setChildrenList] = useState<ChildProfile[]>([]);
@@ -221,6 +255,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // Contextual bag visibility: upcoming stays within N days
     const [upcomingStays, setUpcomingStays] = useState<{ homeId: string; homeName: string; startAt: Date; endAt: Date }[]>([]);
     const BAG_VISIBILITY_DAYS = 7; // Show bag for homes with stays within next 7 days
+    
+    // All child spaces (for all children) - needed for home lookup before child is selected
+    const [allChildSpaces, setAllChildSpaces] = useState<ChildSpace[]>([]);
+    
+    // Clear all state when user changes (prevents data leakage between users)
+    useEffect(() => {
+        const currentUserId = user?.id || null;
+        const prevUserId = prevUserIdRef.current;
+        
+        // If user changed (including logout/login with different user)
+        if (prevUserId !== null && prevUserId !== currentUserId) {
+            console.log("[AppState] User changed, clearing state", { prevUserId, currentUserId });
+            // Clear all state
+            setChildrenList([]);
+            setCurrentChildIdState("");
+            setCaregivers([]);
+            setHomes([]);
+            setChildSpaces([]);
+            setCurrentHomeIdState("");
+            setContacts([]);
+            setOnboardingCompleted(false);
+            setIsLoaded(false);
+            setAllChildSpaces([]);
+            setUpcomingStays([]);
+        }
+        
+        prevUserIdRef.current = currentUserId;
+    }, [user?.id]);
 
     // Derived: current child
     const currentChild = childrenList.find(c => c.id === currentChildId) || null;
@@ -248,19 +310,83 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         canEditItems: currentUserCaregiver?.canEditItems || false,
         canViewContacts: currentUserCaregiver?.canViewContacts || false,
     };
+    
+    // Derived: homes the current user has access to (filtered by user access, not all homes for child)
+    // - Guardians have access to all homes for the child
+    // - Helpers only have access to homes via their accessibleHomeIds
+    const accessibleHomes = homes.filter(home => {
+        // If no current user caregiver info yet, assume all homes accessible (will refine when loaded)
+        if (!currentUserCaregiver) return true;
+        // Check if this home is in the user's accessible homes
+        return currentUserCaregiver.accessibleHomeIds.includes(home.id);
+    });
+    
+    // Derived: needs child selection (multiple children, none selected)
+    const needsChildSelection = childrenList.length > 1 && !currentChildId;
+    
+    // Derived: needs home selection (user has access to multiple homes for this child, none selected)
+    // IMPORTANT: Use accessibleHomes.length, not homes.length
+    const needsHomeSelection = !!currentChildId && accessibleHomes.length > 1 && !currentHomeId;
 
-    const setCurrentChildId = (childId: string) => {
+    // Get ALL homes for a specific child (using allChildSpaces)
+    const getHomesForChild = useCallback((childId: string): HomeProfile[] => {
+        const childSpaceIds = allChildSpaces
+            .filter(cs => cs.childId === childId)
+            .map(cs => cs.homeId);
+        return homes.filter(h => childSpaceIds.includes(h.id));
+    }, [allChildSpaces, homes]);
+
+    // Get homes the CURRENT USER can access for a specific child
+    // This filters by both child AND user access
+    const getAccessibleHomesForChild = useCallback((childId: string): HomeProfile[] => {
+        const childHomes = getHomesForChild(childId);
+        // If no current user caregiver info, return all (will be refined when loaded)
+        if (!currentUserCaregiver) return childHomes;
+        // Filter by user's accessible home IDs
+        return childHomes.filter(h => currentUserCaregiver.accessibleHomeIds.includes(h.id));
+    }, [getHomesForChild, currentUserCaregiver]);
+
+    const setCurrentChildId = useCallback((childId: string) => {
         setCurrentChildIdState(childId);
-        // Reset home when switching children
-        const firstChildSpace = childSpaces.find(cs => cs.childId === childId);
-        if (firstChildSpace) {
-            setCurrentHomeIdState(firstChildSpace.homeId);
+        // Persist to user-specific localStorage
+        if (typeof window !== "undefined" && user?.id) {
+            const childKey = getStorageKey(user.id, STORAGE_KEY_CHILD_SUFFIX);
+            const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+            if (childKey) localStorage.setItem(childKey, childId);
+            if (homeKey) localStorage.removeItem(homeKey);
         }
-    };
+        // Always clear home when switching children
+        // The home auto-selection will be handled by refreshData() based on user access
+        setCurrentHomeIdState("");
+    }, [user?.id]);
 
-    const setCurrentHomeId = (homeId: string) => {
+    const setCurrentHomeId = useCallback((homeId: string) => {
         setCurrentHomeIdState(homeId);
-    };
+        // Persist to user-specific localStorage
+        if (typeof window !== "undefined" && user?.id) {
+            const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+            if (homeKey) localStorage.setItem(homeKey, homeId);
+        }
+    }, [user?.id]);
+    
+    const clearChildSelection = useCallback(() => {
+        setCurrentChildIdState("");
+        setCurrentHomeIdState("");
+        if (typeof window !== "undefined" && user?.id) {
+            const childKey = getStorageKey(user.id, STORAGE_KEY_CHILD_SUFFIX);
+            const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+            if (childKey) localStorage.removeItem(childKey);
+            if (homeKey) localStorage.removeItem(homeKey);
+        }
+    }, [user?.id]);
+    
+    const clearHomeSelection = useCallback(() => {
+        setCurrentHomeIdState("");
+        if (typeof window !== "undefined" && user?.id) {
+            const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+            if (homeKey) localStorage.removeItem(homeKey);
+        }
+    }, [user?.id]);
 
     const refreshData = async () => {
         if (!user) {
@@ -268,6 +394,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setCaregivers([]);
             setHomes([]);
             setChildSpaces([]);
+            setAllChildSpaces([]);
             setContacts([]);
             setOnboardingCompleted(false);
             setIsLoaded(true);
@@ -319,34 +446,161 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            // Build children list
+            // Build children list (deduplicated by child name to handle duplicate DB entries)
+            // Also build a map of child name -> all child IDs with that name (for loading invites)
             const loadedChildren: ChildProfile[] = [];
+            const seenChildNames = new Set<string>();
+            const childNameToAllIds: Record<string, string[]> = {};
+            
+            console.log("📊 Raw childAccessData:", JSON.stringify(childAccessData, null, 2));
+            
             for (const ca of childAccessData as any[]) {
-                if (ca.children) {
-                    const avatarUrl = await getAvatarUrl(ca.children.avatar_url);
-                    loadedChildren.push({
-                        id: ca.children.id,
-                        name: ca.children.name,
-                        avatarInitials: ca.children.name?.[0]?.toUpperCase() || "?",
-                        avatarUrl,
-                        dob: ca.children.dob,
-                    });
+                console.log("📊 Processing child_access entry:", {
+                    child_id: ca.child_id,
+                    hasChildren: !!ca.children,
+                    childData: ca.children
+                });
+                
+                const childName = ca.children?.name?.toLowerCase().trim();
+                if (ca.children && childName) {
+                    // Track all IDs for this child name (for invite loading)
+                    if (!childNameToAllIds[childName]) {
+                        childNameToAllIds[childName] = [];
+                    }
+                    childNameToAllIds[childName].push(ca.children.id);
+                    
+                    // Only add to visible list if not already seen
+                    if (!seenChildNames.has(childName)) {
+                        seenChildNames.add(childName);
+                        const avatarUrl = await getAvatarUrl(ca.children.avatar_url);
+                        console.log("📊 Child avatar_url:", ca.children.avatar_url, "-> signed:", avatarUrl);
+                        loadedChildren.push({
+                            id: ca.children.id,
+                            name: ca.children.name,
+                            avatarInitials: ca.children.name?.[0]?.toUpperCase() || "?",
+                            avatarUrl,
+                            dob: ca.children.dob,
+                        });
+                    }
+                } else {
+                    console.log("📊 WARNING: child_access entry has no children data - RLS may be blocking");
                 }
             }
             setChildrenList(loadedChildren);
-
-            // Set current child if not set
-            const activeChildId = currentChildId || loadedChildren[0]?.id;
-            if (activeChildId && !currentChildId) {
+            
+            // Load stored selections from user-specific localStorage
+            const childKey = getStorageKey(user.id, STORAGE_KEY_CHILD_SUFFIX);
+            const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+            let storedChildId = "";
+            let storedHomeId = "";
+            if (typeof window !== "undefined" && childKey && homeKey) {
+                storedChildId = localStorage.getItem(childKey) || "";
+                storedHomeId = localStorage.getItem(homeKey) || "";
+            }
+            
+            // Validate stored child ID - must be in loaded children
+            const storedChildValid = storedChildId && loadedChildren.some(c => c.id === storedChildId);
+            
+            // Determine active child ID based on selection logic:
+            // 1. If stored child is valid, use it
+            // 2. If exactly 1 child, auto-select it
+            // 3. If multiple children, require selection (leave empty)
+            let activeChildId = "";
+            if (storedChildValid) {
+                activeChildId = storedChildId;
+            } else if (loadedChildren.length === 1) {
+                activeChildId = loadedChildren[0].id;
+                // Persist the auto-selection
+                if (typeof window !== "undefined" && childKey) {
+                    localStorage.setItem(childKey, activeChildId);
+                }
+            }
+            // If multiple children and no valid stored selection, leave empty to trigger selector
+            
+            if (activeChildId && activeChildId !== currentChildId) {
                 setCurrentChildIdState(activeChildId);
+            } else if (!activeChildId && currentChildId) {
+                // Clear invalid selection
+                setCurrentChildIdState("");
+                if (typeof window !== "undefined" && childKey) {
+                    localStorage.removeItem(childKey);
+                }
             }
 
-            // 2. Get child_spaces for the current child
-            const childIdToUse = activeChildId || loadedChildren[0]?.id;
-            if (!childIdToUse) {
+            // 2. Get ALL child_spaces for all children (needed for home lookup)
+            const allChildIds = loadedChildren.map(c => c.id);
+            const { data: allChildSpacesData } = await supabase
+                .from("child_spaces")
+                .select(`
+                    id,
+                    child_id,
+                    home_id,
+                    homes (
+                        id,
+                        name,
+                        address,
+                        photo_url,
+                        notes
+                    )
+                `)
+                .in("child_id", allChildIds);
+                
+            // Build all child spaces list
+            const loadedAllChildSpaces: ChildSpace[] = [];
+            if (allChildSpacesData) {
+                for (const cs of allChildSpacesData as any[]) {
+                    loadedAllChildSpaces.push({
+                        id: cs.id,
+                        childId: cs.child_id,
+                        homeId: cs.home_id,
+                        homeName: cs.homes?.name || "Unknown",
+                    });
+                }
+            }
+            setAllChildSpaces(loadedAllChildSpaces);
+
+            // If no active child, we still need to load homes for all children
+            // but we can skip the detailed child-specific loading
+            if (!activeChildId) {
+                // Load all unique homes from all child spaces
+                const uniqueHomeIds = [...new Set(loadedAllChildSpaces.map(cs => cs.homeId))];
+                const allHomes: HomeProfile[] = [];
+                if (allChildSpacesData) {
+                    const seenHomeIds = new Set<string>();
+                    for (const cs of allChildSpacesData as any[]) {
+                        if (cs.homes && !seenHomeIds.has(cs.homes.id)) {
+                            seenHomeIds.add(cs.homes.id);
+                            const photoUrl = await getAvatarUrl(cs.homes.photo_url);
+                            allHomes.push({
+                                id: cs.homes.id,
+                                name: cs.homes.name,
+                                address: cs.homes.address,
+                                photoUrl,
+                                notes: cs.homes.notes,
+                                childSpaceId: cs.id,
+                                status: "active" as HomeStatus,
+                                isPrimary: false,
+                                accessibleCaregiverIds: [],
+                            });
+                        }
+                    }
+                }
+                setHomes(allHomes);
+                setChildSpaces([]);
                 setIsLoaded(true);
+                
+                // Check onboarding status
+                const { data: profileData } = await supabase
+                    .from("profiles")
+                    .select("onboarding_completed")
+                    .eq("id", user.id)
+                    .single();
+                setOnboardingCompleted(profileData?.onboarding_completed || false);
                 return;
             }
+
+            // 3. Get child_spaces for the current child
+            const childIdToUse = activeChildId;
 
             const { data: childSpacesData } = await supabase
                 .from("child_spaces")
@@ -421,12 +675,45 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setChildSpaces(loadedChildSpaces);
             setHomes(loadedHomes);
 
-            // Set current home if not set
-            if (!currentHomeId && loadedHomes.length > 0) {
-                setCurrentHomeIdState(loadedHomes[0].id);
+            // Determine which homes the current user can access
+            // - Guardians have access to all homes for the child
+            // - Helpers only have access to homes via home_memberships
+            const userChildAccess = childAccessData?.find((ca: any) => ca.child_id === childIdToUse);
+            const isUserGuardian = userChildAccess?.role_type === "guardian";
+            
+            const userAccessibleHomes = isUserGuardian 
+                ? loadedHomes  // Guardians can access all homes
+                : loadedHomes.filter(h => h.accessibleCaregiverIds?.includes(user.id));
+
+            // Validate stored home ID - must be in user's ACCESSIBLE homes
+            const storedHomeValid = storedHomeId && userAccessibleHomes.some(h => h.id === storedHomeId);
+            
+            // Determine active home ID based on selection logic:
+            // 1. If stored home is valid and accessible, use it
+            // 2. Otherwise, auto-select the first accessible home
+            // Home selection is non-blocking - always auto-select to avoid blocking login
+            let activeHomeId = "";
+            if (storedHomeValid) {
+                activeHomeId = storedHomeId;
+            } else if (userAccessibleHomes.length >= 1) {
+                activeHomeId = userAccessibleHomes[0].id;
+                // Persist the auto-selection
+                if (typeof window !== "undefined" && homeKey) {
+                    localStorage.setItem(homeKey, activeHomeId);
+                }
+            }
+            
+            if (activeHomeId && activeHomeId !== currentHomeId) {
+                setCurrentHomeIdState(activeHomeId);
+            } else if (!activeHomeId && currentHomeId) {
+                // Clear invalid selection
+                setCurrentHomeIdState("");
+                if (typeof window !== "undefined" && homeKey) {
+                    localStorage.removeItem(homeKey);
+                }
             }
 
-            // 3. Get all caregivers for this child
+            // 4. Get all caregivers for this child
             const { data: allChildAccess } = await supabase
                 .from("child_access")
                 .select(`
@@ -519,29 +806,74 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 }
             }
             // Also load pending invites from invites
+            // Get all child IDs for the current child's name (to handle duplicate DB entries)
+            const currentChildName = loadedChildren.find(c => c.id === childIdToUse)?.name?.toLowerCase().trim();
+            const allChildIdsForName = currentChildName ? (childNameToAllIds[currentChildName] || [childIdToUse]) : [childIdToUse];
+            
             const { data: pendingInvites, error: pendingInvitesError } = await supabase
                 .from("invites")
                 .select("*")
-                .eq("child_id", childIdToUse)
+                .in("child_id", allChildIdsForName)
                 .eq("status", "pending");
 
             if (pendingInvitesError) {
                 console.error("Error loading pending invites:", pendingInvitesError);
             }
 
-            console.log("[AppState] Loaded pending invites:", pendingInvites?.length || 0, "for child:", childIdToUse);
+            console.log("[AppState] Loaded pending invites:", pendingInvites?.length || 0, "for child IDs:", allChildIdsForName);
 
             if (pendingInvites && pendingInvites.length > 0) {
+                // Group invites by invitee name to collect all child roles
+                const invitesByName: Record<string, any[]> = {};
                 for (const invite of pendingInvites) {
+                    const inviteeName = invite.invitee_name?.toLowerCase().trim();
+                    if (!inviteeName) continue;
+                    if (!invitesByName[inviteeName]) {
+                        invitesByName[inviteeName] = [];
+                    }
+                    invitesByName[inviteeName].push(invite);
+                }
+                
+                // Create one caregiver entry per unique invitee name with all their child roles
+                for (const inviteeName of Object.keys(invitesByName)) {
+                    const invites = invitesByName[inviteeName];
+                    const firstInvite = invites[0];
+                    
+                    // Build child roles array (deduplicated by child name)
+                    const childRoles: ChildRoleMapping[] = [];
+                    const seenChildNames = new Set<string>();
+                    
+                    for (const invite of invites) {
+                        // Find the child name for this invite's child_id
+                        const childName = loadedChildren.find(c => c.id === invite.child_id)?.name 
+                            || (childAccessData as any[]).find(ca => ca.children?.id === invite.child_id)?.children?.name
+                            || "Child";
+                        const childNameLower = childName.toLowerCase().trim();
+                        
+                        // Skip if we've already added this child (dedup by name)
+                        if (seenChildNames.has(childNameLower)) continue;
+                        seenChildNames.add(childNameLower);
+                        
+                        childRoles.push({
+                            childId: invite.child_id,
+                            childName: childName,
+                            role: invite.invitee_role || "caregiver",
+                            label: invite.invitee_label || invite.invitee_name || "Caregiver",
+                        });
+                    }
+                    
+                    // Use the first invite's label as the primary label
+                    const primaryLabel = firstInvite.invitee_label || firstInvite.invitee_name || "Pending";
+                    
                     loadedCaregivers.push({
-                        id: `pending-${invite.id}`,
-                        name: invite.invitee_name || "Pending",
-                        label: invite.invitee_label || invite.invitee_name || "Pending",
-                        avatarInitials: (invite.invitee_label || invite.invitee_name || "P")[0].toUpperCase(),
+                        id: `pending-${firstInvite.id}`,
+                        name: firstInvite.invitee_name || "Pending",
+                        label: primaryLabel,
+                        avatarInitials: primaryLabel[0].toUpperCase(),
                         avatarColor: "#D97706", // Amber color for pending
                         isCurrentUser: false,
-                        roleType: invite.invitee_role === "parent" || invite.invitee_role === "step_parent" ? "guardian" : "helper",
-                        helperType: invite.invitee_role !== "parent" && invite.invitee_role !== "step_parent" ? invite.invitee_role : undefined,
+                        roleType: firstInvite.invitee_role === "parent" || firstInvite.invitee_role === "step_parent" ? "guardian" : "helper",
+                        helperType: firstInvite.invitee_role !== "parent" && firstInvite.invitee_role !== "step_parent" ? firstInvite.invitee_role : undefined,
                         accessLevel: "manage",
                         canViewCalendar: true,
                         canEditCalendar: false,
@@ -552,11 +884,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         canViewContacts: false,
                         canManageHelpers: false,
                         accessibleChildSpaceIds: [],
-                        relationship: invite.invitee_role,
-                        accessibleHomeIds: invite.home_id ? [invite.home_id] : [],
-                        pendingHomeIds: invite.home_id ? [invite.home_id] : [],
+                        relationship: firstInvite.invitee_role,
+                        accessibleHomeIds: firstInvite.home_id ? [firstInvite.home_id] : [],
+                        pendingHomeIds: firstInvite.home_id ? [firstInvite.home_id] : [],
                         status: "pending" as CaregiverStatus,
-                        inviteToken: invite.token,
+                        inviteToken: firstInvite.token,
+                        childRoles: childRoles,
                     });
                 }
             }
@@ -800,8 +1133,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     .eq("child_space_id", currentCs.id);
             }
 
-            // Update local state
+            // Update local state and persist
             setCurrentHomeIdState(targetHomeId);
+            if (typeof window !== "undefined" && user?.id) {
+                const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+                if (homeKey) localStorage.setItem(homeKey, targetHomeId);
+            }
             await refreshData();
 
             return {
@@ -863,6 +1200,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 currentJuneCaregiverId,
                 setCurrentJuneCaregiverId,
                 switchChildHomeAndMovePackedItems,
+                // Child-first context selection
+                needsChildSelection,
+                needsHomeSelection,
+                clearChildSelection,
+                clearHomeSelection,
+                getHomesForChild,
+                getAccessibleHomesForChild,
+                accessibleHomes,
             }}
         >
             {children}
