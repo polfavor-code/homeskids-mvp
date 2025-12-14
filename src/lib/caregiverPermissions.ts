@@ -21,7 +21,7 @@
  * - These behaviors will be implemented in a future update
  */
 
-import { CaregiverStatus, CaregiverProfile } from "./AppStateContext";
+import { CaregiverStatus, CaregiverProfile } from "./AppStateContextV2";
 
 /**
  * Check if a caregiver has active access (connected to at least 1 home)

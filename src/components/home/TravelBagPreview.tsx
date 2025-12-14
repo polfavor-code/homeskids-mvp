@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Item } from "@/lib/mockData";
-import { CaregiverProfile, ChildProfile, HomeProfile } from "@/lib/AppStateContext";
+import { CaregiverProfile, ChildProfile, HomeProfile } from "@/lib/AppStateContextV2";
 import ItemPhoto from "@/components/ItemPhoto";
 
 interface TravelBagPreviewProps {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
@@ -27,31 +27,64 @@ export default function InvitePage() {
     useEffect(() => {
         const fetchInvite = async () => {
             console.log("Fetching invite with token:", token);
-            const { data, error } = await supabase
+
+            // First try invites_v2 (new V2 model)
+            const { data: v2Data, error: v2Error } = await supabase
+                .from("invites_v2")
+                .select(`
+                    *,
+                    children_v2 (
+                        id,
+                        name,
+                        avatar_url
+                    )
+                `)
+                .eq("token", token)
+                .eq("status", "pending")
+                .single();
+
+            console.log("V2 invite fetch result:", { v2Data, v2Error });
+
+            if (v2Data) {
+                // Get child avatar URL if exists
+                let childAvatarUrl = null;
+                if (v2Data.children_v2?.avatar_url) {
+                    const { data: urlData } = supabase.storage
+                        .from("avatars")
+                        .getPublicUrl(v2Data.children_v2.avatar_url);
+                    if (urlData?.publicUrl) {
+                        childAvatarUrl = urlData.publicUrl;
+                    }
+                }
+
+                setInvite({
+                    ...v2Data,
+                    child_name: v2Data.children_v2?.name,
+                    child_avatar_url: childAvatarUrl,
+                    isV2: true,
+                });
+                setLoading(false);
+                return;
+            }
+
+            // Fallback to old invites table (V1 model)
+            const { data: v1Data, error: v1Error } = await supabase
                 .from("invites")
                 .select("*, families(name)")
                 .eq("token", token)
                 .single();
 
-            console.log("Invite fetch result:", { data, error });
+            console.log("V1 invite fetch result:", { v1Data, v1Error });
 
-            if (error) {
-                console.error("Error fetching invite:", error);
-            }
-
-            if (data) {
-                // Fetch child name and avatar for display (e.g., "June's Family" instead of family name)
-                const { data: childData, error: childError } = await supabase
+            if (v1Data) {
+                // Fetch child name for V1
+                const { data: childData } = await supabase
                     .from("children")
                     .select("name, avatar_url")
-                    .eq("family_id", data.family_id)
+                    .eq("family_id", v1Data.family_id)
                     .limit(1)
                     .single();
 
-                console.log("Child data fetch:", { childData, childError, family_id: data.family_id });
-
-                // Get public URL for avatar if it exists
-                // Use getPublicUrl since the invite page is viewed by unauthenticated users
                 let childAvatarUrl = null;
                 if (childData?.avatar_url) {
                     const { data: urlData } = supabase.storage
@@ -62,19 +95,183 @@ export default function InvitePage() {
                     }
                 }
 
-                // Add child name and avatar to invite data
-                const inviteWithChild = {
-                    ...data,
+                setInvite({
+                    ...v1Data,
                     child_name: childData?.name || null,
-                    child_avatar_url: childAvatarUrl
-                };
-                console.log("Invite with child:", inviteWithChild);
-                setInvite(inviteWithChild);
+                    child_avatar_url: childAvatarUrl,
+                    isV2: false,
+                });
             }
+
             setLoading(false);
         };
+
         if (token) fetchInvite();
     }, [token]);
+
+    const handleJoinV2 = async (userId: string) => {
+        if (!invite) return;
+
+        // 1. Create/update profile
+        const { error: profileError } = await supabase.from("profiles").upsert({
+            id: userId,
+            email,
+            name: invite.invitee_name || email.split("@")[0],
+            label: invite.invitee_label,
+            relationship: invite.invitee_role || null,
+            avatar_initials: invite.invitee_name?.[0]?.toUpperCase() || email[0].toUpperCase(),
+            onboarding_completed: !invite.has_own_home, // If they need to create a home, don't mark complete yet
+        });
+
+        if (profileError) {
+            console.error("Profile creation error:", profileError);
+            throw new Error("Failed to create profile");
+        }
+
+        // 2. Add user as guardian/helper to the child
+        const isGuardian = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
+
+        if (isGuardian) {
+            // Add as guardian
+            const { error: guardianError } = await supabase.from("child_guardians").insert({
+                child_id: invite.child_id,
+                user_id: userId,
+                guardian_role: invite.invitee_role,
+            });
+
+            if (guardianError) {
+                console.error("Guardian creation error:", guardianError);
+                // Don't throw - might already exist
+            }
+        }
+
+        // 3. Grant child_access
+        const { error: accessError } = await supabase.from("child_access").insert({
+            child_id: invite.child_id,
+            user_id: userId,
+            role_type: isGuardian ? "guardian" : "helper",
+            helper_type: !isGuardian ? invite.invitee_role : null,
+            access_level: isGuardian ? "manage" : "view",
+        });
+
+        if (accessError) {
+            console.error("Child access creation error:", accessError);
+            // Don't throw - might already exist
+        }
+
+        // 4. If joining existing home (not creating own), add to that home
+        if (!invite.has_own_home && invite.home_id) {
+            // Add to home_memberships
+            await supabase.from("home_memberships").insert({
+                home_id: invite.home_id,
+                user_id: userId,
+                is_home_admin: false,
+            });
+
+            // Get the child_space for this home and child
+            const { data: childSpace } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .eq("home_id", invite.home_id)
+                .eq("child_id", invite.child_id)
+                .single();
+
+            if (childSpace) {
+                // Grant child_space_access
+                await supabase.from("child_space_access").insert({
+                    child_space_id: childSpace.id,
+                    user_id: userId,
+                    can_view_address: true,
+                });
+            }
+        }
+
+        // 5. Mark invite as accepted
+        await supabase
+            .from("invites_v2")
+            .update({
+                status: "accepted",
+                accepted_at: new Date().toISOString(),
+                accepted_by: userId,
+            })
+            .eq("id", invite.id);
+
+        // 6. Redirect based on whether they need to create a home
+        if (invite.has_own_home) {
+            // Need to create their own home - go to a home setup flow
+            router.push("/setup-home?child_id=" + invite.child_id);
+        } else {
+            // Already added to existing home - go to dashboard
+            setOnboardingCompleted(true);
+            await refreshData();
+            router.replace("/");
+        }
+    };
+
+    const handleJoinV1 = async (userId: string) => {
+        if (!invite) return;
+
+        // V1 flow - family-based
+        const { error: profileError } = await supabase.from("profiles").upsert({
+            id: userId,
+            email,
+            name: invite.invitee_name || email.split("@")[0],
+            label: invite.invitee_label,
+            relationship: invite.invitee_role || null,
+            avatar_initials: invite.invitee_name?.[0]?.toUpperCase() || email[0].toUpperCase(),
+            onboarding_completed: true,
+        });
+
+        if (profileError) {
+            console.error("Profile creation error:", profileError);
+            throw new Error("Failed to create profile");
+        }
+
+        // Add to family_members
+        await supabase.from("family_members").insert({
+            family_id: invite.family_id,
+            user_id: userId,
+            role: invite.invitee_role || "parent",
+        });
+
+        // Add home_access entries
+        if (invite.home_ids && invite.home_ids.length > 0) {
+            const accessEntries = invite.home_ids.map((homeId: string) => ({
+                home_id: homeId,
+                caregiver_id: userId,
+            }));
+            await supabase.from("home_access").insert(accessEntries);
+
+            // Update legacy accessible_caregiver_ids
+            for (const homeId of invite.home_ids) {
+                const { data: home } = await supabase
+                    .from("homes")
+                    .select("accessible_caregiver_ids")
+                    .eq("id", homeId)
+                    .single();
+
+                if (home) {
+                    const currentIds = home.accessible_caregiver_ids || [];
+                    if (!currentIds.includes(userId)) {
+                        await supabase
+                            .from("homes")
+                            .update({ accessible_caregiver_ids: [...currentIds, userId] })
+                            .eq("id", homeId);
+                    }
+                }
+            }
+        }
+
+        // Update invite status
+        await supabase
+            .from("invites")
+            .update({ status: "accepted" })
+            .eq("id", invite.id);
+
+        setOnboardingCompleted(true);
+        await refreshData();
+        router.replace("/");
+    };
 
     const handleJoin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -83,7 +280,6 @@ export default function InvitePage() {
         setError("");
         setSubmitting(true);
 
-        // Validate password confirmation for signup
         if (view === "signup" && password !== confirmPassword) {
             setError("Passwords don't match. Please try again.");
             setSubmitting(false);
@@ -91,17 +287,15 @@ export default function InvitePage() {
         }
 
         try {
-            let userId;
+            let userId: string;
 
             if (view === "signup") {
-                // Sign up
                 const { data: authData, error: authError } = await supabase.auth.signUp({
                     email,
                     password,
                 });
                 if (authError) throw authError;
 
-                // Check that authData.user exists after signup
                 if (!authData.user) {
                     setError("Please check your email for a confirmation link before continuing.");
                     setSubmitting(false);
@@ -109,137 +303,20 @@ export default function InvitePage() {
                 }
 
                 userId = authData.user.id;
-
-                // Create Profile
-                if (userId) {
-                    const { error: profileError } = await supabase.from("profiles").insert({
-                        id: userId,
-                        email,
-                        name: invite.invitee_name || email.split("@")[0],
-                        label: invite.invitee_label,
-                        relationship: invite.invitee_role || null,
-                        avatar_initials: invite.invitee_name?.[0]?.toUpperCase() || email[0].toUpperCase(),
-                        onboarding_completed: true,
-                    });
-                    if (profileError) {
-                        console.error("Profile creation error:", profileError);
-                        throw new Error("Failed to create profile");
-                    }
-                }
-
             } else {
-                // Login
                 const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
                 if (authError) throw authError;
-                userId = authData.user?.id;
+                userId = authData.user.id;
             }
 
-            if (userId) {
-                // Add to family_members with the role from the invite
-                const { error: memberError } = await supabase.from("family_members").insert({
-                    family_id: invite.family_id,
-                    user_id: userId,
-                    role: invite.invitee_role || "parent",
-                });
-
-                if (memberError) {
-                    console.error("Family member creation error:", memberError);
-                    throw new Error("Failed to join family");
-                }
-
-                // Add home_access entries for the homes selected during invite
-                if (invite.home_ids && invite.home_ids.length > 0) {
-                    const accessEntries = invite.home_ids.map((homeId: string) => ({
-                        home_id: homeId,
-                        caregiver_id: userId,
-                    }));
-
-                    const { error: accessError } = await supabase
-                        .from("home_access")
-                        .insert(accessEntries);
-
-                    if (accessError) {
-                        console.error("Home access creation error:", accessError);
-                        // Don't throw - home access can be set up later
-                    }
-
-                    // Also update legacy accessible_caregiver_ids array on homes
-                    for (const homeId of invite.home_ids) {
-                        const { data: home } = await supabase
-                            .from("homes")
-                            .select("accessible_caregiver_ids")
-                            .eq("id", homeId)
-                            .single();
-
-                        if (home) {
-                            const currentIds = home.accessible_caregiver_ids || [];
-                            if (!currentIds.includes(userId)) {
-                                await supabase
-                                    .from("homes")
-                                    .update({ accessible_caregiver_ids: [...currentIds, userId] })
-                                    .eq("id", homeId);
-                            }
-                        }
-                    }
-                }
-
-                // Migrate items assigned to this invite to the new user
-                const { error: updateItemsError } = await supabase
-                    .from("items")
-                    .update({
-                        location_caregiver_id: userId,
-                        location_invite_id: null
-                    })
-                    .eq("location_invite_id", invite.id);
-
-                if (updateItemsError) {
-                    console.error("Failed to migrate items:", updateItemsError);
-                }
-
-                // Update invite status
-                await supabase
-                    .from("invites")
-                    .update({ status: "accepted" })
-                    .eq("id", invite.id);
-
-                setOnboardingCompleted(true);
-
-                // Wait a moment for auth state to fully propagate through the app
-                // This ensures AuthContext has updated before we refresh data
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Force refresh app state to ensure fresh data is available
-                await refreshData();
-
-                // Small delay to ensure state is fully settled before navigation
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                // Check if this is a parent/step-parent role and if there are unclaimed homes
-                const isParentRole = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
-
-                if (isParentRole && invite.home_ids && invite.home_ids.length > 0) {
-                    // Check if any of the homes they have access to are unclaimed
-                    const { data: accessibleHomes } = await supabase
-                        .from("homes")
-                        .select("id, owner_caregiver_id")
-                        .in("id", invite.home_ids);
-
-                    const hasUnclaimedHomes = accessibleHomes?.some(h => !h.owner_caregiver_id);
-
-                    if (hasUnclaimedHomes) {
-                        // Redirect to confirm home flow
-                        router.push("/confirm-home");
-                        return;
-                    }
-                }
-
-                // Use replace to prevent back navigation to invite page
-                // and refresh to ensure all contexts reload with fresh data
-                router.replace("/");
-                router.refresh();
+            // Use appropriate join flow based on invite type
+            if (invite.isV2) {
+                await handleJoinV2(userId);
+            } else {
+                await handleJoinV1(userId);
             }
 
         } catch (err: any) {
@@ -249,19 +326,19 @@ export default function InvitePage() {
         }
     };
 
-    // Get the family display name using child's name (e.g., "June's Family")
-    const getFamilyDisplayName = () => {
+    // Get display name
+    const getDisplayName = () => {
         if (invite?.child_name) {
-            return `${invite.child_name}'s Family`;
+            return `${invite.child_name}'s care team`;
         }
         return invite?.families?.name || "the family";
     };
 
-    // Get content for the left panel based on current view
+    // Get content for left panel
     const getLeftPanelContent = () => {
         if (view === "landing") {
             return {
-                description: `You've been invited to join ${getFamilyDisplayName()} on homes.kids.`,
+                description: `You've been invited to join ${getDisplayName()} on homes.kids.`,
                 bullets: [
                     "One shared place for everything your child needs between homes.",
                     "Plan what moves in the bag between homes.",
@@ -271,7 +348,7 @@ export default function InvitePage() {
         }
         if (view === "login") {
             return {
-                description: "Welcome back! Log in to join the family.",
+                description: "Welcome back! Log in to join.",
                 bullets: [
                     "Access shared items and schedules.",
                     "Stay in sync with your family.",
@@ -302,19 +379,15 @@ export default function InvitePage() {
     if (!invite) {
         return (
             <div className="min-h-screen flex">
-                {/* Brand Side */}
                 <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
                     <Logo size="lg" variant="light" />
                     <p className="text-lg opacity-90 mt-4">Co-parenting central hub.</p>
                 </div>
-
-                {/* Content Side */}
                 <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
                     <div className="w-full max-w-sm text-center">
                         <div className="lg:hidden mb-8">
                             <Logo size="md" variant="dark" />
                         </div>
-
                         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -338,12 +411,9 @@ export default function InvitePage() {
     if (view === "landing") {
         return (
             <div className="min-h-screen flex">
-                {/* Brand Side - Gradient */}
                 <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
                     <Logo size="lg" variant="light" />
-
                     <p className="text-lg opacity-90 mt-4 mb-8">{leftContent.description}</p>
-
                     <ul className="max-w-sm space-y-4">
                         {leftContent.bullets.map((bullet, index) => (
                             <li
@@ -357,10 +427,8 @@ export default function InvitePage() {
                     </ul>
                 </div>
 
-                {/* Form Side */}
                 <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
                     <div className="w-full max-w-sm">
-                        {/* Mobile Logo */}
                         <div className="lg:hidden text-center mb-8">
                             <Logo size="md" variant="dark" />
                             <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
@@ -382,18 +450,26 @@ export default function InvitePage() {
                                 You're invited!
                             </h2>
                             <p className="text-textSub text-sm">
-                                Join {getFamilyDisplayName()} on homes.kids
+                                Join {getDisplayName()} on homes.kids
                             </p>
                         </div>
 
-                        {invite.invitee_name && (
+                        {(invite.invitee_name || invite.invitee_label) && (
                             <div className="bg-white border border-border rounded-xl p-4 mb-6 text-center">
                                 <p className="text-sm text-textSub">You'll be joining as</p>
-                                <p className="font-semibold text-forest">{invite.invitee_name}</p>
-                                {invite.invitee_label && (
-                                    <p className="text-xs text-textSub">({invite.invitee_label})</p>
+                                <p className="font-semibold text-forest">
+                                    {invite.invitee_label || invite.invitee_name}
+                                </p>
+                                {invite.invitee_name && invite.invitee_label && (
+                                    <p className="text-xs text-textSub">({invite.invitee_name})</p>
                                 )}
                             </div>
+                        )}
+
+                        {invite.has_own_home && (
+                            <p className="text-xs text-gray-500 text-center mb-4">
+                                You'll set up your own home for {invite.child_name} after joining.
+                            </p>
                         )}
 
                         <button
@@ -419,12 +495,9 @@ export default function InvitePage() {
     if (view === "login") {
         return (
             <div className="min-h-screen flex">
-                {/* Brand Side - Gradient */}
                 <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
                     <Logo size="lg" variant="light" />
-
                     <p className="text-lg opacity-90 mt-4 mb-8">{leftContent.description}</p>
-
                     <ul className="max-w-sm space-y-4">
                         {leftContent.bullets.map((bullet, index) => (
                             <li
@@ -438,27 +511,19 @@ export default function InvitePage() {
                     </ul>
                 </div>
 
-                {/* Form Side */}
                 <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
                     <div className="w-full max-w-sm">
-                        {/* Mobile Logo */}
                         <div className="lg:hidden text-center mb-8">
                             <Logo size="md" variant="dark" />
                             <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
                         </div>
 
-                        <h2 className="font-dmSerif text-2xl text-forest mb-2">
-                            Welcome back
-                        </h2>
-                        <p className="text-textSub text-sm mb-6">
-                            Log in to join {getFamilyDisplayName()}
-                        </p>
+                        <h2 className="font-dmSerif text-2xl text-forest mb-2">Welcome back</h2>
+                        <p className="text-textSub text-sm mb-6">Log in to join {getDisplayName()}</p>
 
                         <form onSubmit={handleJoin} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-forest mb-1.5">
-                                    Email
-                                </label>
+                                <label className="block text-sm font-medium text-forest mb-1.5">Email</label>
                                 <input
                                     type="email"
                                     value={email}
@@ -469,9 +534,7 @@ export default function InvitePage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-forest mb-1.5">
-                                    Password
-                                </label>
+                                <label className="block text-sm font-medium text-forest mb-1.5">Password</label>
                                 <input
                                     type="password"
                                     value={password}
@@ -482,9 +545,7 @@ export default function InvitePage() {
                             </div>
 
                             {error && (
-                                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                                    {error}
-                                </p>
+                                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
                             )}
 
                             <button
@@ -513,12 +574,9 @@ export default function InvitePage() {
     // Signup view
     return (
         <div className="min-h-screen flex">
-            {/* Brand Side - Gradient */}
             <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
                 <Logo size="lg" variant="light" />
-
                 <p className="text-lg opacity-90 mt-4 mb-8">{leftContent.description}</p>
-
                 <ul className="max-w-sm space-y-4">
                     {leftContent.bullets.map((bullet, index) => (
                         <li
@@ -532,27 +590,19 @@ export default function InvitePage() {
                 </ul>
             </div>
 
-            {/* Form Side */}
             <div className="flex-1 bg-cream flex items-center justify-center p-6 lg:p-12">
                 <div className="w-full max-w-sm">
-                    {/* Mobile Logo */}
                     <div className="lg:hidden text-center mb-8">
                         <Logo size="md" variant="dark" />
                         <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
                     </div>
 
-                    <h2 className="font-dmSerif text-2xl text-forest mb-2">
-                        Create account
-                    </h2>
-                    <p className="text-textSub text-sm mb-6">
-                        Create an account to join {getFamilyDisplayName()}
-                    </p>
+                    <h2 className="font-dmSerif text-2xl text-forest mb-2">Create account</h2>
+                    <p className="text-textSub text-sm mb-6">Create an account to join {getDisplayName()}</p>
 
                     <form onSubmit={handleJoin} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-forest mb-1.5">
-                                Email
-                            </label>
+                            <label className="block text-sm font-medium text-forest mb-1.5">Email</label>
                             <input
                                 type="email"
                                 value={email}
@@ -563,9 +613,7 @@ export default function InvitePage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-forest mb-1.5">
-                                Password
-                            </label>
+                            <label className="block text-sm font-medium text-forest mb-1.5">Password</label>
                             <input
                                 type="password"
                                 value={password}
@@ -576,9 +624,7 @@ export default function InvitePage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-forest mb-1.5">
-                                Confirm Password
-                            </label>
+                            <label className="block text-sm font-medium text-forest mb-1.5">Confirm Password</label>
                             <input
                                 type="password"
                                 value={confirmPassword}
@@ -589,9 +635,7 @@ export default function InvitePage() {
                         </div>
 
                         {error && (
-                            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                                {error}
-                            </p>
+                            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
                         )}
 
                         <button

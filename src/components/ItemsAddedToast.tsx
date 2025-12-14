@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useItemsAddedAlert, ItemsAddedAlert } from "@/lib/ItemsAddedAlertContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState } from "@/lib/AppStateContextV2";
 
 // Bag/items icon for the toast
 function ItemsIcon() {

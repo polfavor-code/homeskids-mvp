@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useItems } from "@/lib/ItemsContext";
-import { useContacts } from "@/lib/ContactsContext";
-import { useDocuments } from "@/lib/DocumentsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContextV2";
+import { useContacts } from "@/lib/ContactsContextV2";
+import { useDocuments } from "@/lib/DocumentsContextV2";
+import { useAppState } from "@/lib/AppStateContextV2";
 
 // Onboarding step definition
 interface OnboardingStep {

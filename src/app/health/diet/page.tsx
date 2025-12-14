@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
-import { useAppState } from "@/lib/AppStateContext";
-import { useHealth, DietType, DietaryNeeds } from "@/lib/HealthContext";
+import { useAppState } from "@/lib/AppStateContextV2";
+import { useHealth, DietType, DietaryNeeds } from "@/lib/HealthContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
 const DIET_OPTIONS: { value: DietType; label: string }[] = [

@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
 import ImageCropper from "@/components/ImageCropper";
-import { useItems } from "@/lib/ItemsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContextV2";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { processImageForUpload, generateImagePaths } from "@/lib/imageUtils";
 
 const CATEGORIES = [
@@ -147,6 +147,7 @@ export default function AddItemPage() {
                 isRequestCanceled: false,
                 photoUrl: photoUrl || undefined,
                 notes: notes || undefined,
+                // Origin is auto-set by the context (no UI prompt needed)
             };
 
             const result = await addItem(newItem);

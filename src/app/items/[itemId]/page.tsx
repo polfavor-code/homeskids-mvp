@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
 import ImageCropper from "@/components/ImageCropper";
-import { useItems } from "@/lib/ItemsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContextV2";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import Avatar from "@/components/Avatar";
 import ItemPhoto from "@/components/ItemPhoto";
@@ -40,6 +40,7 @@ export default function ItemDetailPage({
         updateItemNotes,
         updateItemCategory,
         updateItemPhoto,
+        updateItem,
         getMissingMessagesForItem,
         addMissingMessage,
         markItemFound,
@@ -81,6 +82,10 @@ export default function ItemDetailPage({
     // State for photo upload
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+    // State for origin editing
+    const [isEditingOrigin, setIsEditingOrigin] = useState(false);
+    const [editedOriginHomeId, setEditedOriginHomeId] = useState(item?.originHomeId || "");
+
     // Image cropper state
     const [showCropper, setShowCropper] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string>("");
@@ -112,6 +117,27 @@ export default function ItemDetailPage({
             setIsEditingCategory(false);
         } catch (error) {
             alert("Failed to update category");
+        }
+    };
+
+    const handleSaveOrigin = async () => {
+        if (!item) return;
+        try {
+            await updateItem(item.id, { originHomeId: editedOriginHomeId || null });
+            setIsEditingOrigin(false);
+        } catch (error) {
+            alert("Failed to update origin");
+        }
+    };
+
+    const handleClearOrigin = async () => {
+        if (!item) return;
+        try {
+            await updateItem(item.id, { originHomeId: null, originUserId: null });
+            setEditedOriginHomeId("");
+            setIsEditingOrigin(false);
+        } catch (error) {
+            alert("Failed to clear origin");
         }
     };
 
@@ -455,7 +481,7 @@ export default function ItemDetailPage({
                             <button
                                 onClick={() => {
                                     setIsEditingCategory(false);
-                                    setEditedCategory(item.category);
+                                    setEditedCategory(item.category || "");
                                 }}
                                 className="p-1 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full w-6 h-6 flex items-center justify-center text-sm"
                             >
@@ -466,11 +492,11 @@ export default function ItemDetailPage({
                         <p
                             className="text-gray-500 font-medium cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-1"
                             onClick={() => {
-                                setEditedCategory(item.category);
+                                setEditedCategory(item.category || "");
                                 setIsEditingCategory(true);
                             }}
                         >
-                            {item.category} · {locationLabel}
+                            {item.category || "Uncategorized"} · {locationLabel}
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -548,6 +574,87 @@ export default function ItemDetailPage({
                     </p>
                 )}
             </div>
+
+            {/* Origin Section - "Originally from X's home" */}
+            {(item.originHomeId || item.originUserId) && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-bold text-gray-900">Origin</h3>
+                        {!isEditingOrigin && (
+                            <button
+                                onClick={() => {
+                                    setEditedOriginHomeId(item.originHomeId || "");
+                                    setIsEditingOrigin(true);
+                                }}
+                                className="text-sm text-primary hover:text-teal transition-colors"
+                            >
+                                Change
+                            </button>
+                        )}
+                    </div>
+
+                    {isEditingOrigin ? (
+                        <div className="space-y-2">
+                            <MobileSelect
+                                value={editedOriginHomeId}
+                                onChange={setEditedOriginHomeId}
+                                options={[
+                                    { value: "", label: "No origin specified" },
+                                    ...homes.map((home) => ({
+                                        value: home.id,
+                                        label: home.name
+                                    })),
+                                ]}
+                                placeholder="Select origin home"
+                                title="Where did this item originally come from?"
+                            />
+                            <div className="flex gap-2 mt-2">
+                                <button
+                                    onClick={handleSaveOrigin}
+                                    className="px-4 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                                >
+                                    Save
+                                </button>
+                                <button
+                                    onClick={handleClearOrigin}
+                                    className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                                >
+                                    Clear origin
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setIsEditingOrigin(false);
+                                        setEditedOriginHomeId(item.originHomeId || "");
+                                    }}
+                                    className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                                This helps coordinate where items should go back to when children move between homes.
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-700">
+                            {(() => {
+                                const originHome = homes.find(h => h.id === item.originHomeId);
+                                if (originHome) {
+                                    return `Originally from ${originHome.name}`;
+                                }
+                                // Fallback to user if no home but user is set
+                                if (item.originUserId) {
+                                    const originUser = caregivers.find(c => c.id === item.originUserId);
+                                    if (originUser) {
+                                        return `Originally from ${originUser.label}'s home`;
+                                    }
+                                }
+                                return <span className="text-gray-400 italic">Origin not specified</span>;
+                            })()}
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Actions Card */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">

@@ -5,8 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
-import { useContacts, Contact, ContactCategory } from "@/lib/ContactsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useContacts, Contact, ContactCategory } from "@/lib/ContactsContextV2";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
 const CATEGORIES: { value: ContactCategory; label: string }[] = [

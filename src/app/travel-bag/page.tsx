@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useItems } from "@/lib/ItemsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContextV2";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
 export default function TravelBagPage() {

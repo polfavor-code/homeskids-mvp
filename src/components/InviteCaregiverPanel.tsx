@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { QRCodeSVG } from "qrcode.react";
 import MobileSelect from "@/components/MobileSelect";
 

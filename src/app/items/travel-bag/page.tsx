@@ -11,11 +11,10 @@ import BagEssentialsSection from "@/components/travel-bag/BagEssentialsSection";
 import PreviousTripTab from "@/components/travel-bag/PreviousTripTab";
 import BagHistoryTab from "@/components/travel-bag/BagHistoryTab";
 import TransferDetailModal from "@/components/travel-bag/TransferDetailModal";
-import { useItems } from "@/lib/ItemsContext";
-import { useAppState, ChildProfile } from "@/lib/AppStateContext";
+import { useItems, ItemV2 } from "@/lib/ItemsContextV2";
+import { useAppState, ChildProfile } from "@/lib/AppStateContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useBagTransfers, BagTransfer } from "@/lib/useBagTransfers";
-import { Item } from "@/lib/mockData";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 
 // Shared tab type for the items section
@@ -76,7 +75,7 @@ function TravelBagCheckPageContent() {
     const [dismissedMissingIds, setDismissedMissingIds] = useState<Set<string>>(new Set());
 
     // State for canceled item confirmation modal
-    const [canceledItemModal, setCanceledItemModal] = useState<Item | null>(null);
+    const [canceledItemModal, setCanceledItemModal] = useState<ItemV2 | null>(null);
 
     const handleDismissMissing = (itemId: string) => {
         setDismissedMissingIds((prev) => new Set(Array.from(prev).concat(itemId)));
@@ -98,7 +97,7 @@ function TravelBagCheckPageContent() {
     };
 
     // Helper to check if item is at origin (current home where child is)
-    const isAtOrigin = (item: Item) => {
+    const isAtOrigin = (item: ItemV2) => {
         if (!originHome) return false;
 
         // If item has a locationHomeId set, use that exclusively
@@ -161,11 +160,11 @@ function TravelBagCheckPageContent() {
         }
     };
 
-    const handleRequestItem = async (item: Item) => {
+    const handleRequestItem = async (item: ItemV2) => {
         await updateItemRequested(item.id, true);
     };
 
-    const handleUnrequestItem = async (item: Item) => {
+    const handleUnrequestItem = async (item: ItemV2) => {
         // Use cancelItemRequest - if packed, it sets isRequestCanceled flag
         // so packer can confirm removal
         await cancelItemRequest(item.id);
@@ -418,20 +417,20 @@ function PackerView({
     child: ChildProfile | null;
     originHome: { name: string } | undefined;
     destinationHome: { name: string } | undefined;
-    itemsToPack: Item[];
-    toPackUnpacked: Item[];
-    toPackPacked: Item[];
-    missingItems: Item[];
-    canceledButPackedItems: Item[];
-    allItemsAtOrigin: Item[];
+    itemsToPack: ItemV2[];
+    toPackUnpacked: ItemV2[];
+    toPackPacked: ItemV2[];
+    missingItems: ItemV2[];
+    canceledButPackedItems: ItemV2[];
+    allItemsAtOrigin: ItemV2[];
     totalToPack: number;
     packedCount: number;
     progressPercent: number;
     onTogglePacked: (id: string) => void;
     onDismissMissing: (id: string) => void;
-    onShowCanceledModal: (item: Item) => void;
-    onRequestItem: (item: Item) => void;
-    onUnrequestItem: (item: Item) => void;
+    onShowCanceledModal: (item: ItemV2) => void;
+    onRequestItem: (item: ItemV2) => void;
+    onUnrequestItem: (item: ItemV2) => void;
     childId: string | undefined;
     caregivers: { id: string; name: string; isCurrentUser?: boolean }[];
     currentUserCaregiver: { id: string; name: string } | undefined;
@@ -625,12 +624,12 @@ function PackerView({
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            getItemEmoji(item.category)
+                                            getItemEmoji(item.category || "Other")
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-forest truncate">{item.name}</p>
-                                        <p className="text-xs text-textSub">{item.category}</p>
+                                        <p className="text-xs text-textSub">{item.category || "Other"}</p>
                                     </div>
                                     <Link
                                         href={`/items/${item.id}`}
@@ -653,8 +652,8 @@ function PackerView({
                     </p>
                     <div className="space-y-2">
                         {allItemsAtOrigin.map((item) => {
-                            const isInBag = item.isRequestedForNextVisit;
-                            const isPacked = item.isPacked;
+                            const isInBag = item.isRequestedForNextVisit || false;
+                            const isPacked = item.isPacked || false;
                             return (
                                 <AllItemsRow
                                     key={item.id}
@@ -697,15 +696,15 @@ function RequesterView({
     child: ChildProfile | null;
     originHome: { name: string } | undefined;
     destinationHome: { name: string } | undefined;
-    itemsToPack: Item[];
-    toPackUnpacked: Item[];
-    toPackPacked: Item[];
-    allItemsAtOrigin: Item[];
+    itemsToPack: ItemV2[];
+    toPackUnpacked: ItemV2[];
+    toPackPacked: ItemV2[];
+    allItemsAtOrigin: ItemV2[];
     totalToPack: number;
     packedCount: number;
     progressPercent: number;
-    onRequestItem: (item: Item) => void;
-    onUnrequestItem: (item: Item) => void;
+    onRequestItem: (item: ItemV2) => void;
+    onUnrequestItem: (item: ItemV2) => void;
     childId: string | undefined;
     caregivers: { id: string; name: string; isCurrentUser?: boolean }[];
     currentUserCaregiver: { id: string; name: string } | undefined;
@@ -863,8 +862,8 @@ function RequesterView({
                     </p>
                     <div className="space-y-2">
                         {allItemsAtOrigin.map((item) => {
-                            const isInBag = item.isRequestedForNextVisit;
-                            const isPacked = item.isPacked;
+                            const isInBag = item.isRequestedForNextVisit || false;
+                            const isPacked = item.isPacked || false;
                             return (
                                 <AllItemsRow
                                     key={item.id}
@@ -907,7 +906,7 @@ function PackerItemRow({
     packedLabel,
     requestedLabel,
 }: {
-    item: Item;
+    item: ItemV2;
     isPacked: boolean;
     onTogglePacked: () => void;
     onRemove: () => void;
@@ -932,7 +931,7 @@ function PackerItemRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </Link>
 
@@ -990,7 +989,7 @@ function RequesterItemRow({
     packedLabel,
     requestedLabel,
 }: {
-    item: Item;
+    item: ItemV2;
     isPacked: boolean;
     onUnrequest: () => void;
     packedLabel?: string;
@@ -1013,7 +1012,7 @@ function RequesterItemRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </Link>
 
@@ -1063,7 +1062,7 @@ function AvailableItemRow({
     item,
     onRequest,
 }: {
-    item: Item;
+    item: ItemV2;
     onRequest: () => void;
 }) {
     return (
@@ -1080,7 +1079,7 @@ function AvailableItemRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </div>
 
@@ -1109,7 +1108,7 @@ function AllItemsRow({
     packedLabel,
     requestedLabel,
 }: {
-    item: Item;
+    item: ItemV2;
     isInBag: boolean;
     isPacked: boolean;
     onAdd: () => void;
@@ -1130,7 +1129,7 @@ function AllItemsRow({
                             className="w-10 h-10 rounded-lg object-cover"
                         />
                     ) : (
-                        getItemEmoji(item.category)
+                        getItemEmoji(item.category || "Other")
                     )}
                 </div>
 
@@ -1178,7 +1177,7 @@ function AllItemsRow({
                         className="w-10 h-10 rounded-lg object-cover"
                     />
                 ) : (
-                    getItemEmoji(item.category)
+                    getItemEmoji(item.category || "Other")
                 )}
             </Link>
 
@@ -1217,7 +1216,7 @@ function MissingItemBox({
     originLabel,
     onDismiss
 }: {
-    item: Item;
+    item: ItemV2;
     originLabel: string;
     onDismiss: () => void;
 }) {
@@ -1237,7 +1236,7 @@ function MissingItemBox({
                             />
                         </div>
                     ) : (
-                        getItemEmoji(item.category)
+                        getItemEmoji(item.category || "Other")
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1271,7 +1270,7 @@ function CanceledItemBox({
     destinationLabel,
     onReview
 }: {
-    item: Item;
+    item: ItemV2;
     destinationLabel: string;
     onReview: () => void;
 }) {
@@ -1291,7 +1290,7 @@ function CanceledItemBox({
                     </div>
                 ) : (
                     <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                        {getItemEmoji(item.category)}
+                        {getItemEmoji(item.category || "Other")}
                     </div>
                 )}
             </div>

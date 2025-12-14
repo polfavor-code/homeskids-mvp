@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { HomeProfile, CaregiverProfile } from "@/lib/AppStateContext";
+import { HomeProfile, CaregiverProfile } from "@/lib/AppStateContextV2";
 
 interface HomePeopleModalProps {
     isOpen: boolean;

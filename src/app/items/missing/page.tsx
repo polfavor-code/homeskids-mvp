@@ -4,8 +4,8 @@ import React from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
-import { useItems } from "@/lib/ItemsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContextV2";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 
@@ -23,7 +23,7 @@ export default function MissingItemsPage() {
     const totalCount = items.length;
 
     // Helper to get last known location
-    const getLastKnownLocation = (item: { locationHomeId: string | null; locationCaregiverId: string | null }) => {
+    const getLastKnownLocation = (item: { locationHomeId?: string | null; locationCaregiverId?: string | null }) => {
         if (item.locationHomeId) {
             const home = homes.find((h) => h.id === item.locationHomeId);
             if (home) return home.name;

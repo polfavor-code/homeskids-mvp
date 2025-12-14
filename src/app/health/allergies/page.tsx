@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
-import { useAppState } from "@/lib/AppStateContext";
-import { useHealth, Allergy } from "@/lib/HealthContext";
+import { useAppState } from "@/lib/AppStateContextV2";
+import { useHealth, Allergy } from "@/lib/HealthContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { AllergyIcon } from "@/components/icons/DuotoneIcons";
 

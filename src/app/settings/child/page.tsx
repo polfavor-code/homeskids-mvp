@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { processImageForUpload } from "@/lib/imageUtils";

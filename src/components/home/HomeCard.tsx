@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Item } from "@/lib/mockData";
-import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
+import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContextV2";
 
 interface HomeCardProps {
     caregiver: CaregiverProfile;

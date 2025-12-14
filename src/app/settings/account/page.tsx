@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import AvatarUploader from "@/components/AvatarUploader";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 

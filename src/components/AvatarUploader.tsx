@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { supabase } from "@/lib/supabase";
 import { processImageForUpload } from "@/lib/imageUtils";
 import ImageCropper from "./ImageCropper";

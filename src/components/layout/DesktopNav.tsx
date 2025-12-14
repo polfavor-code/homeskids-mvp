@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { navItems, accountNavItem, isRouteActive, hasActiveSubItem } from '@/lib/navigation';
-import { useAppState } from '@/lib/AppStateContext';
+import { useAppState } from '@/lib/AppStateContextV2';
 import { useAuth } from '@/lib/AuthContext';
 import Avatar from '@/components/Avatar';
 import {

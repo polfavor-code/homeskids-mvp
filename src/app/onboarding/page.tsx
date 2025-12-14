@@ -2,61 +2,31 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
-import { QRCodeSVG } from "qrcode.react";
 import MobileSelect from "@/components/MobileSelect";
+import { QRCodeSVG } from "qrcode.react";
 
-// Canonical role options - used throughout the app
-// Only Parent and Step-parent can create families via direct signup
+// ==============================================
+// V2 ONBOARDING - Base Setup Only
+// ==============================================
+
 const ROLE_OPTIONS = [
-    { value: "parent", label: "Parent", isParentRole: true },
-    { value: "step_parent", label: "Step-parent", isParentRole: true },
-    { value: "family_member", label: "Family member", isParentRole: false },
-    { value: "nanny", label: "Nanny", isParentRole: false },
-    { value: "babysitter", label: "Babysitter", isParentRole: false },
-    { value: "family_friend", label: "Family friend", isParentRole: false },
-    { value: "other", label: "Other", isParentRole: false },
-];
-
-// Role options for Step 2 (Other Caregiver) - same canonical list
-const OTHER_CAREGIVER_ROLE_OPTIONS = [
     { value: "parent", label: "Parent" },
     { value: "step_parent", label: "Step-parent" },
-    { value: "family_member", label: "Family member" },
-    { value: "nanny", label: "Nanny" },
-    { value: "babysitter", label: "Babysitter" },
-    { value: "family_friend", label: "Family friend" },
-    { value: "other", label: "Other" },
 ];
 
-type OnboardingStep = 1 | 2 | 3 | 4 | 5 | "waiting";
+type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
-// Caregiver info collected during onboarding
-interface CaregiverInfo {
-    id: string; // temporary ID for UI purposes
-    name: string;
-    label: string;
-    role: string;
-    isCurrentUser: boolean;
-    userId?: string; // Only set for current user
-    inviteToken?: string; // Set after invite is created
-}
-
-// Invite info for displaying on success screen
-interface CreatedInvite {
-    caregiverLabel: string;
-    caregiverName: string;
-    token: string;
-}
-
-// Home block with "Who lives here?" selection
-interface HomeBlock {
+interface GuardianEntry {
     id: string;
     name: string;
-    caregiverIds: string[]; // IDs of caregivers who live here
+    label: string;
+    role: "parent" | "step_parent";
+    hasOwnHome: boolean;
+    inviteToken?: string;
 }
 
 export default function OnboardingPage() {
@@ -64,7 +34,6 @@ export default function OnboardingPage() {
     const { user } = useAuth();
     const { setOnboardingCompleted, refreshData } = useAppState();
 
-    // Current step
     const [step, setStep] = useState<OnboardingStep>(1);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -72,41 +41,36 @@ export default function OnboardingPage() {
     // Step 1: About You
     const [realName, setRealName] = useState("");
     const [childCallsYou, setChildCallsYou] = useState("");
-    const [selectedRole, setSelectedRole] = useState("parent");
+    const [selectedRole, setSelectedRole] = useState<"parent" | "step_parent">("parent");
 
-    // Step 2: Other Caregiver (optional)
-    const [wantOtherCaregiver, setWantOtherCaregiver] = useState<boolean | null>(null);
-    const [otherCaregiverName, setOtherCaregiverName] = useState("");
-    const [otherCaregiverLabel, setOtherCaregiverLabel] = useState("");
-    const [otherCaregiverRole, setOtherCaregiverRole] = useState("parent");
-
-    // Caregivers collected (includes current user + optional other)
-    const [caregivers, setCaregivers] = useState<CaregiverInfo[]>([]);
-
-    // Step 3: Child
+    // Step 2: Your Child
     const [childName, setChildName] = useState("");
+    const [childBirthdate, setChildBirthdate] = useState("");
 
-    // Step 4: Homes
-    const [homeSetupType, setHomeSetupType] = useState<"multiple" | "single">("multiple");
-    const [homeBlocks, setHomeBlocks] = useState<HomeBlock[]>([]);
+    // Step 3: Your Home
+    const [homeName, setHomeName] = useState("");
 
-    // Family ID (created during onboarding)
-    const [familyId, setFamilyId] = useState<string | null>(null);
+    // Step 4: Other Guardians
+    const [hasOtherGuardians, setHasOtherGuardians] = useState<boolean | null>(null);
+    const [guardians, setGuardians] = useState<GuardianEntry[]>([]);
+
+    // Created IDs
     const [childId, setChildId] = useState<string | null>(null);
+    const [homeId, setHomeId] = useState<string | null>(null);
 
-    // Invites created during onboarding (for showing on success screen)
-    const [createdInvites, setCreatedInvites] = useState<CreatedInvite[]>([]);
-    const [copiedInviteToken, setCopiedInviteToken] = useState<string | null>(null);
+    // Clipboard state for invite links
+    const [copiedId, setCopiedId] = useState<string | null>(null);
 
-    // Track if user was invited (already has a family)
-    const [wasInvited, setWasInvited] = useState(false);
-
-    // Check if user is already onboarded - redirect to home if so
+    // Debug: log user info
     useEffect(() => {
-        const checkOnboardingStatus = async () => {
+        console.log("[Onboarding] User:", user?.id, user?.email);
+    }, [user]);
+
+    // Check if already onboarded
+    useEffect(() => {
+        const checkStatus = async () => {
             if (!user) return;
 
-            // Check if user has already completed onboarding
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("onboarding_completed")
@@ -114,78 +78,25 @@ export default function OnboardingPage() {
                 .single();
 
             if (profile?.onboarding_completed) {
-                // User is already onboarded, redirect to home
                 router.push("/");
-                return;
-            }
-
-            // Check if user already has a family (via invite)
-            const { data: familyMember } = await supabase
-                .from("family_members")
-                .select("family_id")
-                .eq("user_id", user.id)
-                .single();
-
-            if (familyMember) {
-                setFamilyId(familyMember.family_id);
-                setWasInvited(true); // User was invited and already belongs to a family
             }
         };
-        checkOnboardingStatus();
+        checkStatus();
     }, [user, router]);
 
-    // Helper to check if selected role is parent/step-parent
-    const isParentRole = () => {
-        const role = ROLE_OPTIONS.find(r => r.value === selectedRole);
-        return role?.isParentRole ?? false;
-    };
-
-    // Initialize home blocks when caregivers change or child name changes
-    // Prefill with suggested names based on caregiver labels
-    const initializeHomeBlocks = () => {
-        const firstCaregiver = caregivers[0];
-        const secondCaregiver = caregivers[1];
-
-        if (homeSetupType === "single") {
-            // Single home: use child's name or first caregiver's label
-            const suggestedName = childName ? `${childName}'s home` : (firstCaregiver ? `${firstCaregiver.label}'s home` : "");
-            setHomeBlocks([{
-                id: "home-1",
-                name: suggestedName,
-                caregiverIds: caregivers.map(c => c.id),
-            }]);
-        } else {
-            // Multiple homes: prefill with caregiver labels
-            setHomeBlocks([
-                {
-                    id: "home-1",
-                    name: firstCaregiver ? `${firstCaregiver.label}'s home` : "",
-                    caregiverIds: firstCaregiver ? [firstCaregiver.id] : [],
-                },
-                {
-                    id: "home-2",
-                    name: secondCaregiver ? `${secondCaregiver.label}'s home` : "",
-                    caregiverIds: secondCaregiver ? [secondCaregiver.id] : (firstCaregiver ? [firstCaregiver.id] : []),
-                },
-            ]);
-        }
-    };
-
-    // Re-initialize homes when setup type changes or entering step 4
+    // Set default home name when childCallsYou changes
     useEffect(() => {
-        if (step === 4 && caregivers.length > 0) {
-            console.log("Initializing home blocks with caregivers:", caregivers);
-            initializeHomeBlocks();
+        if (childCallsYou && !homeName) {
+            setHomeName(`${childCallsYou}'s home`);
         }
-    }, [homeSetupType, step, caregivers.length]);
+    }, [childCallsYou, homeName]);
 
-    // STEP 1: Handle About You submission
+    // STEP 1: About You
     const handleStep1Submit = async () => {
         if (!childCallsYou.trim()) {
             setError("Please enter what your child calls you.");
             return;
         }
-
         if (!user) {
             setError("Authentication error. Please log in again.");
             return;
@@ -195,94 +106,32 @@ export default function OnboardingPage() {
         setSaving(true);
 
         try {
-            // Update user profile
             const { error: profileError } = await supabase
                 .from("profiles")
-                .update({
+                .upsert({
+                    id: user.id,
                     name: realName.trim() || null,
                     label: childCallsYou.trim(),
                     relationship: selectedRole,
                     avatar_initials: (realName.trim() || childCallsYou.trim()).charAt(0).toUpperCase(),
-                })
-                .eq("id", user.id);
+                });
 
             if (profileError) throw profileError;
 
-            // Check if this is a parent role OR if user was invited (already has a family)
-            if (isParentRole()) {
-                // Add current user as first caregiver
-                setCaregivers([{
-                    id: "caregiver-current",
-                    name: realName.trim() || childCallsYou.trim(),
-                    label: childCallsYou.trim(),
-                    role: selectedRole,
-                    isCurrentUser: true,
-                    userId: user.id,
-                }]);
-
-                // Continue to Step 2 (Other Caregiver)
-                setStep(2);
-            } else if (wasInvited) {
-                // User was invited - mark onboarding complete and go to dashboard
-                await supabase
-                    .from("profiles")
-                    .update({ onboarding_completed: true })
-                    .eq("id", user.id);
-
-                setOnboardingCompleted(true);
-                await refreshData();
-                router.push("/");
-            } else {
-                // Non-parent without invite - show waiting screen
-                await supabase
-                    .from("profiles")
-                    .update({ onboarding_completed: false })
-                    .eq("id", user.id);
-
-                setStep("waiting");
-            }
+            setStep(2);
         } catch (err: any) {
-            console.error("Error saving profile:", err);
             setError(err.message || "Failed to save. Please try again.");
         } finally {
             setSaving(false);
         }
     };
 
-    // STEP 2: Handle Other Caregiver submission
+    // STEP 2: Your Child
     const handleStep2Submit = async () => {
-        if (wantOtherCaregiver === true) {
-            // Validate other caregiver fields
-            if (!otherCaregiverLabel.trim()) {
-                setError("Please enter what your child calls them.");
-                return;
-            }
-
-            // Add other caregiver
-            const updatedCaregivers = [...caregivers, {
-                id: "caregiver-other",
-                name: otherCaregiverName.trim() || otherCaregiverLabel.trim(),
-                label: otherCaregiverLabel.trim(),
-                role: otherCaregiverRole,
-                isCurrentUser: false,
-            }];
-            setCaregivers(updatedCaregivers);
-        }
-
-        setError("");
-        // Continue to Step 3 (Child)
-        setStep(3);
-    };
-
-    // STEP 3: Handle Child submission
-    const handleStep3Submit = async () => {
-        console.log("Step 3 Submit - childName state value:", childName);
-
         if (!childName.trim()) {
             setError("Please enter your child's name.");
             return;
         }
-
         if (!user) {
             setError("Authentication error. Please log in again.");
             return;
@@ -292,59 +141,37 @@ export default function OnboardingPage() {
         setSaving(true);
 
         try {
-            let currentFamilyId = familyId;
-
-            // Create family if doesn't exist
-            if (!currentFamilyId) {
-                // Use child's name for family name
-                const familyName = `${childName.trim()}'s Family`;
-                console.log("Creating family with name:", familyName, "from childName:", childName);
-                const { data: newFamily, error: familyError } = await supabase
-                    .from("families")
-                    .insert({
-                        name: familyName,
-                    })
-                    .select()
-                    .single();
-
-                if (familyError) throw familyError;
-                console.log("Family created:", newFamily);
-                currentFamilyId = newFamily.id;
-                setFamilyId(currentFamilyId);
-
-                // Add current user as family member
-                const { error: memberError } = await supabase
-                    .from("family_members")
-                    .insert({
-                        family_id: currentFamilyId,
-                        user_id: user.id,
-                        role: selectedRole,
-                    });
-
-                if (memberError) throw memberError;
-            }
-
-            // Create child record
+            // Create child
             const { data: newChild, error: childError } = await supabase
-                .from("children")
+                .from("children_v2")
                 .insert({
-                    family_id: currentFamilyId,
                     name: childName.trim(),
-                    avatar_initials: childName.trim().charAt(0).toUpperCase(),
+                    dob: childBirthdate || null,
+                    created_by: user.id,
                 })
                 .select()
                 .single();
 
             if (childError) throw childError;
-            if (newChild) {
-                setChildId(newChild.id);
+            setChildId(newChild.id);
+
+            // Add current user as guardian
+            const { error: guardianError } = await supabase
+                .from("child_guardians")
+                .insert({
+                    child_id: newChild.id,
+                    user_id: user.id,
+                    guardian_role: selectedRole,
+                });
+
+            if (guardianError) throw guardianError;
+
+            // Set default home name if not set
+            if (!homeName) {
+                setHomeName(`${childCallsYou}'s home`);
             }
 
-            // Initialize home blocks with caregiver info
-            initializeHomeBlocks();
-
-            // Proceed to Step 4 (Homes)
-            setStep(4);
+            setStep(3);
         } catch (err: any) {
             console.error("Error creating child:", err);
             setError(err.message || "Failed to save. Please try again.");
@@ -353,25 +180,13 @@ export default function OnboardingPage() {
         }
     };
 
-    // STEP 4: Handle Homes submission
-    const handleStep4Submit = async () => {
-        const homesToCreate = homeSetupType === "single"
-            ? [homeBlocks[0]]
-            : homeBlocks;
-
-        // Validate each home
-        for (const home of homesToCreate) {
-            if (!home.name.trim()) {
-                setError("Please enter a name for each home.");
-                return;
-            }
-            if (home.caregiverIds.length === 0) {
-                setError("Please select at least one caregiver for each home in 'Who lives here?'");
-                return;
-            }
+    // STEP 3: Your Home
+    const handleStep3Submit = async () => {
+        if (!homeName.trim()) {
+            setError("Please enter a name for your home.");
+            return;
         }
-
-        if (!user || !familyId) {
+        if (!user || !childId) {
             setError("Session error. Please refresh and try again.");
             return;
         }
@@ -380,131 +195,175 @@ export default function OnboardingPage() {
         setSaving(true);
 
         try {
-            // Create homes with "Who lives here?" assignments
-            for (let i = 0; i < homesToCreate.length; i++) {
-                const home = homesToCreate[i];
-                const isPrimary = i === 0;
+            // Create home
+            const { data: newHome, error: homeError } = await supabase
+                .from("homes_v2")
+                .insert({
+                    name: homeName.trim(),
+                    created_by: user.id,
+                })
+                .select()
+                .single();
 
-                // Owner is the first checked caregiver
-                const firstCaregiverId = home.caregiverIds[0];
-                const firstCaregiver = caregivers.find(c => c.id === firstCaregiverId);
+            if (homeError) throw homeError;
+            setHomeId(newHome.id);
 
-                // Determine owner_caregiver_id
-                // If the first caregiver is the current user, use their userId
-                // Otherwise, set to null (placeholder for invited caregiver to claim later)
-                const ownerCaregiverId = firstCaregiver?.isCurrentUser ? user.id : null;
-
-                // Build accessible_caregiver_ids for current user only (other will be added via invite)
-                // Only include current user if they were actually selected for this home
-                const currentUserSelected = home.caregiverIds.some(id => {
-                    const c = caregivers.find(cg => cg.id === id);
-                    return c?.isCurrentUser;
-                });
-                const accessibleCaregiverIds = currentUserSelected ? [user.id] : [];
-
-                const { data: newHome, error: homeError } = await supabase
-                    .from("homes")
-                    .insert({
-                        family_id: familyId,
-                        name: home.name.trim(),
-                        is_primary: isPrimary,
-                        time_zone: "auto",
-                        accessible_caregiver_ids: accessibleCaregiverIds,
-                        owner_caregiver_id: ownerCaregiverId,
-                    })
-                    .select()
-                    .single();
-
-                if (homeError) throw homeError;
-
-                // Create home_access entry for current user if they are checked
-                const currentUserChecked = home.caregiverIds.some(id => {
-                    const c = caregivers.find(cg => cg.id === id);
-                    return c?.isCurrentUser;
+            // Create home_membership for current user
+            await supabase
+                .from("home_memberships")
+                .insert({
+                    home_id: newHome.id,
+                    user_id: user.id,
+                    is_home_admin: true,
                 });
 
-                if (currentUserChecked && newHome) {
-                    await supabase
-                        .from("home_access")
+            // Link child to home (child_space)
+            const { data: newChildSpace, error: csError } = await supabase
+                .from("child_spaces")
+                .insert({
+                    home_id: newHome.id,
+                    child_id: childId,
+                })
+                .select()
+                .single();
+
+            if (csError) throw csError;
+
+            // Grant current user child_space_access
+            await supabase
+                .from("child_space_access")
+                .insert({
+                    child_space_id: newChildSpace.id,
+                    user_id: user.id,
+                    can_view_address: true,
+                });
+
+            setStep(4);
+        } catch (err: any) {
+            console.error("Error creating home:", err);
+            setError(err.message || "Failed to create home. Please try again.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // STEP 4: Other Guardians - Add a new guardian entry
+    const addGuardianEntry = () => {
+        setGuardians([
+            ...guardians,
+            {
+                id: crypto.randomUUID(),
+                name: "",
+                label: "",
+                role: "parent",
+                hasOwnHome: true,
+            },
+        ]);
+    };
+
+    const updateGuardian = (id: string, field: keyof GuardianEntry, value: any) => {
+        setGuardians(guardians.map(g =>
+            g.id === id ? { ...g, [field]: value } : g
+        ));
+    };
+
+    const removeGuardian = (id: string) => {
+        setGuardians(guardians.filter(g => g.id !== id));
+    };
+
+    // STEP 4: Submit
+    const handleStep4Submit = async () => {
+        if (hasOtherGuardians === null) {
+            setError("Please select an option.");
+            return;
+        }
+
+        if (hasOtherGuardians && guardians.length === 0) {
+            setError("Please add at least one guardian or select 'No'.");
+            return;
+        }
+
+        // Validate guardian entries
+        for (const g of guardians) {
+            if (!g.label.trim()) {
+                setError("Please fill in what the child calls each guardian.");
+                return;
+            }
+        }
+
+        if (!user || !childId) {
+            setError("Session error. Please refresh and try again.");
+            return;
+        }
+
+        setError("");
+        setSaving(true);
+
+        try {
+            if (hasOtherGuardians && guardians.length > 0) {
+                // Create invites for each guardian
+                const updatedGuardians = [...guardians];
+                let hasInviteError = false;
+
+                for (let i = 0; i < updatedGuardians.length; i++) {
+                    const g = updatedGuardians[i];
+                    const token = crypto.randomUUID();
+
+                    // Always set the token so QR shows
+                    updatedGuardians[i] = { ...g, inviteToken: token };
+
+                    const { error: inviteError } = await supabase
+                        .from("invites_v2")
                         .insert({
-                            home_id: newHome.id,
-                            caregiver_id: user.id,
+                            token: token,
+                            status: "pending",
+                            invitee_name: g.name.trim() || null,
+                            invitee_label: g.label.trim(),
+                            invitee_role: g.role,
+                            child_id: childId,
+                            home_id: g.hasOwnHome ? null : homeId,
+                            invited_by: user.id,
+                            has_own_home: g.hasOwnHome,
                         });
-                }
 
-                // If there's a non-current-user caregiver checked, create an invite for them
-                const otherCaregiver = caregivers.find(c => !c.isCurrentUser && home.caregiverIds.includes(c.id));
-                console.log("Checking for other caregiver:", {
-                    homeName: home.name,
-                    caregiverIds: home.caregiverIds,
-                    allCaregivers: caregivers.map(c => ({ id: c.id, label: c.label, isCurrentUser: c.isCurrentUser })),
-                    otherCaregiver: otherCaregiver ? { label: otherCaregiver.label, name: otherCaregiver.name } : null,
-                });
-                if (otherCaregiver && newHome) {
-                    // Check if we already created an invite for this caregiver
-                    const { data: existingInvite } = await supabase
-                        .from("invites")
-                        .select("id, home_ids, token")
-                        .eq("family_id", familyId)
-                        .eq("invitee_label", otherCaregiver.label)
-                        .eq("status", "pending")
-                        .single();
-
-                    if (existingInvite) {
-                        // Add this home to the existing invite
-                        const updatedHomeIds = [...(existingInvite.home_ids || []), newHome.id];
-                        await supabase
-                            .from("invites")
-                            .update({ home_ids: updatedHomeIds })
-                            .eq("id", existingInvite.id);
-
-                        // Track this invite for success screen (if not already tracked)
-                        setCreatedInvites(prev => {
-                            if (prev.some(inv => inv.token === existingInvite.token)) {
-                                return prev;
-                            }
-                            return [...prev, {
-                                caregiverLabel: otherCaregiver.label,
-                                caregiverName: otherCaregiver.name,
-                                token: existingInvite.token,
-                            }];
-                        });
-                    } else {
-                        // Create new invite
-                        const token = crypto.randomUUID();
-                        const { error: inviteError } = await supabase
-                            .from("invites")
-                            .insert({
-                                family_id: familyId,
-                                token: token,
-                                status: "pending",
-                                invitee_name: otherCaregiver.name,
-                                invitee_label: otherCaregiver.label,
-                                invitee_role: otherCaregiver.role,
-                                home_ids: [newHome.id],
-                            });
-
-                        if (inviteError) {
-                            console.error("Failed to create invite:", inviteError);
-                        } else {
-                            // Track this invite for the success screen
-                            setCreatedInvites(prev => {
-                                // Don't add duplicates
-                                if (prev.some(inv => inv.caregiverLabel === otherCaregiver.label)) {
-                                    return prev;
-                                }
-                                return [...prev, {
-                                    caregiverLabel: otherCaregiver.label,
-                                    caregiverName: otherCaregiver.name,
-                                    token: token,
-                                }];
-                            });
-                        }
+                    if (inviteError) {
+                        console.error("Failed to create invite:", inviteError);
+                        hasInviteError = true;
                     }
                 }
-            }
 
-            // Mark onboarding as complete and proceed to finish screen
+                setGuardians(updatedGuardians);
+
+                if (hasInviteError) {
+                    console.warn("Some invites failed to save to database. Run the invites_v2 migration.");
+                }
+
+                setStep(5);
+            } else {
+                // No other guardians - complete onboarding
+                await supabase
+                    .from("profiles")
+                    .update({ onboarding_completed: true })
+                    .eq("id", user.id);
+
+                setOnboardingCompleted(true);
+                await refreshData();
+                setStep(6);
+            }
+        } catch (err: any) {
+            console.error("Error in step 4:", err);
+            setError(err.message || "Failed to save. Please try again.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // STEP 5: Complete (after viewing invites)
+    const handleStep5Complete = async () => {
+        if (!user) return;
+
+        setSaving(true);
+        try {
             await supabase
                 .from("profiles")
                 .update({ onboarding_completed: true })
@@ -512,61 +371,20 @@ export default function OnboardingPage() {
 
             setOnboardingCompleted(true);
             await refreshData();
-            setStep(5);
+            setStep(6);
         } catch (err: any) {
-            console.error("Error creating homes:", err);
-            setError(err.message || "Failed to create homes. Please try again.");
+            setError(err.message || "Failed to complete setup.");
         } finally {
             setSaving(false);
         }
     };
 
-    // Add another home block
-    const addHomeBlock = () => {
-        const newId = `home-${homeBlocks.length + 1}`;
-        const firstCaregiver = caregivers[0];
-        setHomeBlocks([...homeBlocks, {
-            id: newId,
-            name: "",
-            caregiverIds: firstCaregiver ? [firstCaregiver.id] : [],
-        }]);
-    };
-
-    // Update home block name
-    const updateHomeBlockName = (id: string, name: string) => {
-        setHomeBlocks(homeBlocks.map(h => h.id === id ? { ...h, name } : h));
-    };
-
-    // Toggle caregiver in home's "Who lives here?"
-    const toggleHomeCaregiver = (homeId: string, caregiverId: string) => {
-        setHomeBlocks(homeBlocks.map(h => {
-            if (h.id !== homeId) return h;
-
-            const isCurrentlyChecked = h.caregiverIds.includes(caregiverId);
-            let newCaregiverIds: string[];
-
-            if (isCurrentlyChecked) {
-                // Don't allow unchecking if it's the last one
-                if (h.caregiverIds.length === 1) return h;
-                newCaregiverIds = h.caregiverIds.filter(id => id !== caregiverId);
-            } else {
-                newCaregiverIds = [...h.caregiverIds, caregiverId];
-            }
-
-            return { ...h, caregiverIds: newCaregiverIds };
-        }));
-    };
-
-    // Remove home block (keep at least 2 for multiple)
-    const removeHomeBlock = (id: string) => {
-        if (homeBlocks.length > 2) {
-            setHomeBlocks(homeBlocks.filter(h => h.id !== id));
-        }
-    };
-
-    // Go to dashboard
-    const handleGoToDashboard = () => {
-        router.push("/");
+    // Copy invite link
+    const handleCopyLink = (token: string, guardianId: string) => {
+        const link = `${window.location.origin}/invite/${token}`;
+        navigator.clipboard.writeText(link);
+        setCopiedId(guardianId);
+        setTimeout(() => setCopiedId(null), 2000);
     };
 
     // Get step info for left panel
@@ -577,59 +395,59 @@ export default function OnboardingPage() {
                     title: "Welcome to homes.kids",
                     description: "Let's set up your account.",
                     bullets: [
-                        "Tell us about yourself so we can personalize your experience.",
-                        "Parents and step-parents can set up a family.",
-                        "Other caregivers will need an invite from a parent.",
+                        "Tell us about yourself.",
+                        "This helps personalize the experience.",
+                        "Only parents and step-parents can set up a family.",
                     ],
                 };
             case 2:
                 return {
-                    title: "Add caregivers",
-                    description: "Who else cares for your child?",
+                    title: "Add your child",
+                    description: "Create a profile for your child.",
                     bullets: [
-                        "Add another parent or caregiver.",
-                        "They'll be able to see the same information as you.",
-                        "You can always add more people later.",
+                        "Your child is the center of everything.",
+                        "All homes and caregivers connect through them.",
+                        "You can add more children later.",
                     ],
                 };
             case 3:
                 return {
-                    title: "Add your child",
-                    description: "Create a shared space for your child.",
+                    title: "Your home",
+                    description: "Set up your home.",
                     bullets: [
-                        "We'll create a hub centered around your child.",
-                        "You can add more details like photo and birthday later.",
-                        "All caregivers will see the same information.",
+                        "This is the home you manage.",
+                        "Other parents can add their own homes later.",
+                        "Track items as they move between homes.",
                     ],
                 };
             case 4:
                 return {
-                    title: "Set up homes",
-                    description: "Add the places where your child stays.",
+                    title: "Other guardians",
+                    description: "Add parents and step-parents.",
                     bullets: [
-                        "Homes help organize where things are.",
-                        "Choose who lives at each home.",
-                        "Track items as they move between homes.",
+                        "Add anyone who is a parent or step-parent.",
+                        "They can set up their own homes.",
+                        "Helpers like nannies can be added later.",
                     ],
                 };
             case 5:
+                return {
+                    title: "Invite guardians",
+                    description: "Share invite links.",
+                    bullets: [
+                        "Each guardian gets their own link.",
+                        "They'll set up their account when they join.",
+                        "You can send invites later too.",
+                    ],
+                };
+            case 6:
                 return {
                     title: "You're all set!",
                     description: "Your family hub is ready.",
                     bullets: [
                         "Start adding items to track.",
-                        "Invite more caregivers from settings.",
+                        "Add helpers from settings.",
                         "Manage homes and access anytime.",
-                    ],
-                };
-            case "waiting":
-                return {
-                    title: "Account created",
-                    description: "You're ready to be invited.",
-                    bullets: [
-                        "A parent needs to send you an invite.",
-                        "Share your email with them so they can add you.",
-                        "Check back later or refresh to see new invites.",
                     ],
                 };
             default:
@@ -638,612 +456,21 @@ export default function OnboardingPage() {
     };
 
     const stepInfo = getStepInfo();
-
-    // Render the current step content
-    const renderStepContent = () => {
-        // WAITING SCREEN (non-parent path)
-        if (step === "waiting") {
-            return (
-                <div className="text-center">
-                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                    </div>
-                    <h2 className="font-dmSerif text-2xl text-forest mb-3">
-                        Waiting for an invite
-                    </h2>
-                    <p className="text-textSub mb-6">
-                        You've created your caregiver account. A parent needs to invite you to their child's family.
-                    </p>
-
-                    <div className="bg-cream border border-border rounded-xl p-5 mb-6 text-left">
-                        <h3 className="font-semibold text-forest mb-2">How to get invited:</h3>
-                        <ol className="text-sm text-textSub space-y-2">
-                            <li className="flex gap-2">
-                                <span className="font-semibold text-forest">1.</span>
-                                Ask a parent to open homes.kids
-                            </li>
-                            <li className="flex gap-2">
-                                <span className="font-semibold text-forest">2.</span>
-                                They go to Settings → Caregivers → Invite
-                            </li>
-                            <li className="flex gap-2">
-                                <span className="font-semibold text-forest">3.</span>
-                                They send you an invite link
-                            </li>
-                            <li className="flex gap-2">
-                                <span className="font-semibold text-forest">4.</span>
-                                Click the link to join the family
-                            </li>
-                        </ol>
-                    </div>
-
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="w-full py-3 bg-white border border-border text-forest rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-                    >
-                        Refresh to check for invites
-                    </button>
-                </div>
-            );
-        }
-
-        // STEP 1: About You
-        if (step === 1) {
-            return (
-                <div className="space-y-5">
-                    <div>
-                        <h2 className="font-dmSerif text-2xl text-forest mb-1">About you</h2>
-                        <p className="text-textSub text-sm">Tell us a bit about yourself.</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 1 of 4</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            Your name
-                        </label>
-                        <input
-                            type="text"
-                            value={realName}
-                            onChange={(e) => setRealName(e.target.value)}
-                            placeholder="e.g., Ellis"
-                            className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            What does your child call you?
-                        </label>
-                        <input
-                            type="text"
-                            value={childCallsYou}
-                            onChange={(e) => setChildCallsYou(e.target.value)}
-                            placeholder="e.g., Mommy, Daddy, Grandma"
-                            className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            Your role
-                        </label>
-                        <MobileSelect
-                            value={selectedRole}
-                            onChange={setSelectedRole}
-                            options={ROLE_OPTIONS}
-                            title="Select your role"
-                        />
-                        {!isParentRole() && !wasInvited && (
-                            <p className="text-xs text-amber-600 mt-2">
-                                As a {ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}, you'll need an invite from a parent to join a family.
-                            </p>
-                        )}
-                        {!isParentRole() && wasInvited && (
-                            <p className="text-xs text-teal mt-2">
-                                You were invited to this family. You can complete your profile and start using the app.
-                            </p>
-                        )}
-                    </div>
-
-                    {error && (
-                        <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                            {error}
-                        </p>
-                    )}
-
-                    <button
-                        onClick={handleStep1Submit}
-                        disabled={saving}
-                        className="w-full py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
-                    >
-                        {saving ? "Saving..." : "Continue"}
-                    </button>
-                </div>
-            );
-        }
-
-        // STEP 2: Other Caregiver (optional)
-        if (step === 2) {
-            // Initial question
-            if (wantOtherCaregiver === null) {
-                return (
-                    <div className="space-y-5">
-                        <div>
-                            <h2 className="font-dmSerif text-2xl text-forest mb-1">Other caregiver</h2>
-                            <p className="text-textSub text-sm">Is there another adult who also cares for your child?</p>
-                            <p className="text-textSub/60 text-xs mt-1">Step 2 of 4</p>
-                        </div>
-
-                        <div className="space-y-3">
-                            <button
-                                onClick={() => setWantOtherCaregiver(true)}
-                                className="w-full py-4 bg-white border border-border rounded-xl text-left px-4 hover:bg-cream transition-colors"
-                            >
-                                <span className="font-semibold text-forest">Yes, add another caregiver</span>
-                                <p className="text-xs text-textSub mt-1">
-                                    Add another parent or caregiver
-                                </p>
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setWantOtherCaregiver(false);
-                                    setStep(3);
-                                }}
-                                className="w-full py-4 bg-white border border-border rounded-xl text-left px-4 hover:bg-cream transition-colors"
-                            >
-                                <span className="font-semibold text-forest">No, continue</span>
-                                <p className="text-xs text-textSub mt-1">
-                                    You can add more caregivers later
-                                </p>
-                            </button>
-                        </div>
-
-                        <button
-                            onClick={() => setStep(1)}
-                            className="w-full py-3 border border-border rounded-xl font-medium text-forest hover:bg-white transition-colors"
-                        >
-                            Back
-                        </button>
-                    </div>
-                );
-            }
-
-            // Other caregiver form
-            return (
-                <div className="space-y-5">
-                    <div>
-                        <h2 className="font-dmSerif text-2xl text-forest mb-1">Add another caregiver</h2>
-                        <p className="text-textSub text-sm">Enter their details.</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 2 of 4</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            Their name
-                        </label>
-                        <input
-                            type="text"
-                            value={otherCaregiverName}
-                            onChange={(e) => setOtherCaregiverName(e.target.value)}
-                            placeholder="e.g., Paul"
-                            className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            What does your child call them?
-                        </label>
-                        <input
-                            type="text"
-                            value={otherCaregiverLabel}
-                            onChange={(e) => setOtherCaregiverLabel(e.target.value)}
-                            placeholder="e.g., Daddy, Mommy, Grandma"
-                            className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            Their role
-                        </label>
-                        <MobileSelect
-                            value={otherCaregiverRole}
-                            onChange={setOtherCaregiverRole}
-                            options={OTHER_CAREGIVER_ROLE_OPTIONS}
-                            title="Select their role"
-                        />
-                    </div>
-
-                    <p className="text-xs text-textSub">
-                        We'll create an invite link for them after you finish setting up.
-                    </p>
-
-                    {error && (
-                        <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                            {error}
-                        </p>
-                    )}
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setWantOtherCaregiver(null)}
-                            className="px-6 py-3 border border-border rounded-xl font-medium text-forest hover:bg-white transition-colors"
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={handleStep2Submit}
-                            disabled={saving}
-                            className="flex-1 py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
-                        >
-                            Continue
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        // STEP 3: Child
-        if (step === 3) {
-            return (
-                <div className="space-y-5">
-                    <div>
-                        <h2 className="font-dmSerif text-2xl text-forest mb-1">Add your child</h2>
-                        <p className="text-textSub text-sm">Enter your child's name to get started.</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 3 of 4</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            Child's name
-                        </label>
-                        <input
-                            type="text"
-                            value={childName}
-                            onChange={(e) => setChildName(e.target.value)}
-                            placeholder="e.g., June"
-                            className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                        />
-                        <p className="text-xs text-textSub mt-2">
-                            You can add photo, birthday and notes later in Child details.
-                        </p>
-                    </div>
-
-                    {error && (
-                        <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                            {error}
-                        </p>
-                    )}
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setStep(2)}
-                            className="px-6 py-3 border border-border rounded-xl font-medium text-forest hover:bg-white transition-colors"
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={handleStep3Submit}
-                            disabled={saving}
-                            className="flex-1 py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
-                        >
-                            {saving ? "Saving..." : "Continue"}
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        // STEP 4: Homes with "Who lives here?"
-        if (step === 4) {
-            return (
-                <div className="space-y-5">
-                    <div>
-                        <h2 className="font-dmSerif text-2xl text-forest mb-1">Set up homes</h2>
-                        <p className="text-textSub text-sm">How many homes does {childName || "your child"} have?</p>
-                        <p className="text-textSub/60 text-xs mt-1">Step 4 of 4</p>
-                    </div>
-
-                    {/* Home type selection */}
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setHomeSetupType("multiple")}
-                            className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-colors ${homeSetupType === "multiple"
-                                ? "bg-forest text-white"
-                                : "bg-white border border-border text-forest hover:bg-cream"
-                                }`}
-                        >
-                            Multiple homes
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setHomeSetupType("single")}
-                            className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-colors ${homeSetupType === "single"
-                                ? "bg-forest text-white"
-                                : "bg-white border border-border text-forest hover:bg-cream"
-                                }`}
-                        >
-                            One home
-                        </button>
-                    </div>
-
-                    {/* Home blocks */}
-                    <div className="space-y-4">
-                        {homeSetupType === "single" ? (
-                            // Single home
-                            <div className="bg-white border border-border rounded-xl p-4 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-forest mb-1.5">
-                                        Home name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={homeBlocks[0]?.name || ""}
-                                        onChange={(e) => updateHomeBlockName(homeBlocks[0]?.id, e.target.value)}
-                                        placeholder={`e.g., ${childName || "Child"}'s home`}
-                                        className="w-full px-4 py-3 bg-cream border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                                    />
-                                </div>
-
-                                {/* Who lives here? */}
-                                <div>
-                                    <label className="block text-sm font-medium text-forest mb-2">
-                                        Who lives here?
-                                    </label>
-                                    <div className="space-y-2">
-                                        {caregivers.map((caregiver) => {
-                                            const isChecked = homeBlocks[0]?.caregiverIds.includes(caregiver.id) || false;
-                                            return (
-                                                <label
-                                                    key={caregiver.id}
-                                                    className="flex items-center gap-3 p-3 bg-cream/50 rounded-xl cursor-pointer hover:bg-cream transition-colors"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isChecked}
-                                                        onChange={() => toggleHomeCaregiver(homeBlocks[0]?.id, caregiver.id)}
-                                                        className="w-5 h-5 rounded border-border text-forest focus:ring-forest/30"
-                                                    />
-                                                    <div>
-                                                        <p className="text-sm font-medium text-forest">{caregiver.label}</p>
-                                                        {caregiver.name !== caregiver.label && (
-                                                            <p className="text-xs text-textSub">{caregiver.name}</p>
-                                                        )}
-                                                    </div>
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            // Multiple homes
-                            <>
-                                {homeBlocks.map((home, index) => {
-                                    // Get placeholder based on index and caregivers
-                                    const getPlaceholder = () => {
-                                        const caregiver = caregivers[index];
-                                        if (caregiver) {
-                                            return `e.g., ${caregiver.label}'s home`;
-                                        }
-                                        return "e.g., Home name";
-                                    };
-
-                                    return (
-                                    <div key={home.id} className="bg-white border border-border rounded-xl p-4 space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-forest">Home {index + 1}</span>
-                                            {index > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeHomeBlock(home.id)}
-                                                    className="text-xs text-red-500 hover:text-red-600"
-                                                >
-                                                    Remove
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-forest mb-1.5">
-                                                Home name
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={home.name}
-                                                onChange={(e) => updateHomeBlockName(home.id, e.target.value)}
-                                                placeholder={getPlaceholder()}
-                                                className="w-full px-4 py-3 bg-cream border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all"
-                                            />
-                                        </div>
-
-                                        {/* Who lives here? */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-forest mb-2">
-                                                Who lives here?
-                                            </label>
-                                            <div className="space-y-2">
-                                                {caregivers.map((caregiver) => {
-                                                    const isChecked = home.caregiverIds.includes(caregiver.id);
-                                                    return (
-                                                        <label
-                                                            key={caregiver.id}
-                                                            className="flex items-center gap-3 p-3 bg-cream/50 rounded-xl cursor-pointer hover:bg-cream transition-colors"
-                                                        >
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isChecked}
-                                                                onChange={() => toggleHomeCaregiver(home.id, caregiver.id)}
-                                                                className="w-5 h-5 rounded border-border text-forest focus:ring-forest/30"
-                                                            />
-                                                            <div>
-                                                                <p className="text-sm font-medium text-forest">{caregiver.label}</p>
-                                                                {caregiver.name !== caregiver.label && (
-                                                                    <p className="text-xs text-textSub">{caregiver.name}</p>
-                                                                )}
-                                                            </div>
-                                                        </label>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    );
-                                })}
-
-                                <button
-                                    type="button"
-                                    onClick={addHomeBlock}
-                                    className="w-full py-3 border-2 border-dashed border-forest/30 rounded-xl text-sm font-medium text-forest hover:border-forest hover:bg-softGreen/20 transition-colors"
-                                >
-                                    + Add another home
-                                </button>
-                            </>
-                        )}
-                    </div>
-
-                    <p className="text-xs text-textSub">
-                        Addresses and notes can be added later in Home Setup.
-                    </p>
-
-                    {error && (
-                        <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
-                            {error}
-                        </p>
-                    )}
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setStep(3)}
-                            className="px-6 py-3 border border-border rounded-xl font-medium text-forest hover:bg-white transition-colors"
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={handleStep4Submit}
-                            disabled={saving}
-                            className="flex-1 py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors disabled:opacity-50"
-                        >
-                            {saving ? "Creating homes..." : "Continue"}
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        // STEP 5: Finish
-        if (step === 5) {
-            const handleCopyInviteLink = (token: string) => {
-                const link = `${window.location.origin}/invite/${token}`;
-                navigator.clipboard.writeText(link);
-                setCopiedInviteToken(token);
-                setTimeout(() => setCopiedInviteToken(null), 2000);
-            };
-
-            return (
-                <div>
-                    <div className="text-center mb-8">
-                        <div className="w-20 h-20 bg-softGreen rounded-full flex items-center justify-center mx-auto mb-5">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-forest">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                        </div>
-                        <h2 className="font-dmSerif text-3xl text-forest mb-3">
-                            You're all set!
-                        </h2>
-                        <p className="text-textSub text-base">
-                            Your family hub for {childName || "your child"} is ready.
-                        </p>
-                    </div>
-
-                    {/* Invite cards for created invites */}
-                    {createdInvites.length > 0 && (
-                        <div className="space-y-4 mb-8">
-                            {createdInvites.map((invite) => {
-                                const inviteLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${invite.token}`;
-                                const isCopied = copiedInviteToken === invite.token;
-
-                                return (
-                                    <div key={invite.token} className="bg-white border border-border rounded-xl p-5">
-                                        <h3 className="font-semibold text-forest text-lg mb-1">
-                                            Invite {invite.caregiverName}
-                                        </h3>
-                                        <p className="text-sm text-textSub mb-5">
-                                            Share this link or QR code so they can join your family.
-                                        </p>
-
-                                        <div className="flex flex-col sm:flex-row gap-4 items-center">
-                                            {/* QR Code */}
-                                            <div className="bg-cream p-3 rounded-xl border border-border/50 flex-shrink-0">
-                                                <QRCodeSVG
-                                                    value={inviteLink}
-                                                    size={200}
-                                                    level="M"
-                                                />
-                                            </div>
-
-                                            {/* Link and copy button */}
-                                            <div className="flex-1 w-full">
-                                                <input
-                                                    type="text"
-                                                    readOnly
-                                                    value={inviteLink}
-                                                    className="w-full px-3 py-2.5 bg-cream border border-border rounded-lg text-sm font-mono text-forest mb-3"
-                                                />
-                                                <button
-                                                    onClick={() => handleCopyInviteLink(invite.token)}
-                                                    className={`w-full py-3 rounded-xl font-medium text-base transition-colors ${
-                                                        isCopied
-                                                            ? "bg-softGreen text-forest"
-                                                            : "bg-cream border border-border text-forest hover:bg-white"
-                                                    }`}
-                                                >
-                                                    {isCopied ? "Copied!" : "Copy invite link"}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <p className="text-xs text-textSub/70 mt-4 text-center">
-                                            You can always find this later in Settings → Caregivers.
-                                        </p>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <button
-                        onClick={handleGoToDashboard}
-                        className="w-full py-4 bg-forest text-white rounded-xl font-semibold text-base hover:bg-teal transition-colors"
-                    >
-                        Go to dashboard
-                    </button>
-                </div>
-            );
-        }
-
-        return null;
-    };
+    const totalSteps = hasOtherGuardians === false ? 5 : 6;
 
     return (
         <div className="min-h-screen flex">
             {/* Brand Side - Gradient */}
             <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
                 <Logo size="lg" variant="light" />
-
                 <p className="text-lg opacity-90 mt-4 mb-8">{stepInfo.description}</p>
-
                 <ul className="max-w-sm space-y-4">
                     {stepInfo.bullets.map((bullet, index) => (
                         <li
                             key={index}
-                            className={`flex items-start gap-3 text-white/85 text-sm ${index < stepInfo.bullets.length - 1 ? "border-b border-white/10 pb-4" : "pb-4"
-                                }`}
+                            className={`flex items-start gap-3 text-white/85 text-sm ${
+                                index < stepInfo.bullets.length - 1 ? "border-b border-white/10 pb-4" : "pb-4"
+                            }`}
                         >
                             <span className="opacity-60 mt-0.5">→</span>
                             <span>{bullet}</span>
@@ -1258,10 +485,442 @@ export default function OnboardingPage() {
                     {/* Mobile Logo */}
                     <div className="lg:hidden text-center mb-8">
                         <Logo size="md" variant="dark" />
-                        <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
+                        <p className="text-textSub text-sm mt-2">Co-parenting made simple.</p>
                     </div>
 
-                    {renderStepContent()}
+                    {/* Progress indicator */}
+                    <div className="flex justify-center gap-2 mb-8">
+                        {[1, 2, 3, 4, 5, 6].slice(0, totalSteps).map(s => (
+                            <div
+                                key={s}
+                                className={`w-2 h-2 rounded-full ${
+                                    s <= step ? "bg-forest" : "bg-gray-300"
+                                }`}
+                            />
+                        ))}
+                    </div>
+
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* STEP 1: About You */}
+                    {step === 1 && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-forest mb-2">About you</h1>
+                                <p className="text-gray-600">Tell us a bit about yourself</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Your name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={realName}
+                                    onChange={e => setRealName(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                    placeholder="John Smith"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    What does your child call you?
+                                </label>
+                                <input
+                                    type="text"
+                                    value={childCallsYou}
+                                    onChange={e => setChildCallsYou(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                    placeholder="Daddy, Mommy, Papa..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Your role
+                                </label>
+                                <MobileSelect
+                                    value={selectedRole}
+                                    onChange={val => setSelectedRole(val as "parent" | "step_parent")}
+                                    options={ROLE_OPTIONS}
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleStep1Submit}
+                                disabled={saving}
+                                className="w-full py-3 bg-forest text-white rounded-xl font-medium hover:bg-forest/90 disabled:opacity-50"
+                            >
+                                {saving ? "Saving..." : "Continue"}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* STEP 2: Your Child */}
+                    {step === 2 && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-forest mb-2">Your child</h1>
+                                <p className="text-gray-600">Who is this family hub for?</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Child's first name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={childName}
+                                    onChange={e => setChildName(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                    placeholder="Emma"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Birthdate (optional)
+                                </label>
+                                <input
+                                    type="date"
+                                    value={childBirthdate}
+                                    onChange={e => setChildBirthdate(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                />
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setStep(1)}
+                                    className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    onClick={handleStep2Submit}
+                                    disabled={saving}
+                                    className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                                >
+                                    {saving ? "Saving..." : "Continue"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: Your Home */}
+                    {step === 3 && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-forest mb-2">Your home</h1>
+                                <p className="text-gray-600">Where does {childName} stay with you?</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Home name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={homeName}
+                                    onChange={e => setHomeName(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                    placeholder={`${childCallsYou}'s home`}
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    You manage this home. Other parents or step-parents can add their own homes later.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setStep(2)}
+                                    className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    onClick={handleStep3Submit}
+                                    disabled={saving}
+                                    className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                                >
+                                    {saving ? "Creating..." : "Continue"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 4: Other Guardians */}
+                    {step === 4 && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-forest mb-2">Other guardians</h1>
+                                <p className="text-gray-600">Is there another parent or step-parent for {childName}?</p>
+                            </div>
+
+                            {/* Yes/No Selection */}
+                            {hasOtherGuardians === null && (
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => {
+                                            setHasOtherGuardians(false);
+                                        }}
+                                        className="flex-1 py-4 rounded-xl border-2 border-gray-300 font-medium text-gray-700 hover:border-forest hover:bg-forest/5"
+                                    >
+                                        No
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setHasOtherGuardians(true);
+                                            if (guardians.length === 0) {
+                                                addGuardianEntry();
+                                            }
+                                        }}
+                                        className="flex-1 py-4 rounded-xl border-2 border-gray-300 font-medium text-gray-700 hover:border-forest hover:bg-forest/5"
+                                    >
+                                        Yes
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Guardian Entries */}
+                            {hasOtherGuardians === true && (
+                                <div className="space-y-4">
+                                    {guardians.map((guardian, index) => (
+                                        <div key={guardian.id} className="p-4 bg-white rounded-xl border border-gray-200 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium text-forest">
+                                                    Guardian {index + 1}
+                                                </span>
+                                                {guardians.length > 1 && (
+                                                    <button
+                                                        onClick={() => removeGuardian(guardian.id)}
+                                                        className="text-xs text-red-500 hover:text-red-600"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm text-gray-600 mb-1">
+                                                    Their name (optional)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={guardian.name}
+                                                    onChange={e => updateGuardian(guardian.id, "name", e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                                    placeholder="Jane Smith"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm text-gray-600 mb-1">
+                                                    What does {childName} call them?
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={guardian.label}
+                                                    onChange={e => updateGuardian(guardian.id, "label", e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                                    placeholder="Mommy, Daddy, Papa..."
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm text-gray-600 mb-1">
+                                                    Role
+                                                </label>
+                                                <MobileSelect
+                                                    value={guardian.role}
+                                                    onChange={val => updateGuardian(guardian.id, "role", val)}
+                                                    options={ROLE_OPTIONS}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm text-gray-600 mb-2">
+                                                    Does {childName} stay with them at another home?
+                                                </label>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateGuardian(guardian.id, "hasOwnHome", false)}
+                                                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border ${
+                                                            !guardian.hasOwnHome
+                                                                ? "border-forest bg-forest/5 text-forest"
+                                                                : "border-gray-300 text-gray-600"
+                                                        }`}
+                                                    >
+                                                        No, same home
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateGuardian(guardian.id, "hasOwnHome", true)}
+                                                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border ${
+                                                            guardian.hasOwnHome
+                                                                ? "border-forest bg-forest/5 text-forest"
+                                                                : "border-gray-300 text-gray-600"
+                                                        }`}
+                                                    >
+                                                        Yes, another home
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        onClick={addGuardianEntry}
+                                        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-forest hover:text-forest"
+                                    >
+                                        + Add another guardian
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* No other guardians selected */}
+                            {hasOtherGuardians === false && (
+                                <div className="p-4 bg-white rounded-xl border border-gray-200">
+                                    <p className="text-sm text-gray-600 text-center">
+                                        No problem! You can add other parents or step-parents later from settings.
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => {
+                                        if (hasOtherGuardians !== null) {
+                                            setHasOtherGuardians(null);
+                                        } else {
+                                            setStep(3);
+                                        }
+                                    }}
+                                    className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
+                                >
+                                    Back
+                                </button>
+                                {hasOtherGuardians !== null && (
+                                    <button
+                                        onClick={handleStep4Submit}
+                                        disabled={saving}
+                                        className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                                    >
+                                        {saving ? "Saving..." : "Continue"}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 5: Invite Guardians */}
+                    {step === 5 && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-forest mb-2">Invite guardians</h1>
+                                <p className="text-gray-600">Share these links so they can join {childName}'s care team</p>
+                            </div>
+
+                            {/* Guardian Cards */}
+                            <div className="space-y-4">
+                                {guardians.map(guardian => (
+                                    <div key={guardian.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                        {/* Card Header */}
+                                        <div className="p-4 border-b border-gray-100">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="font-semibold text-forest">
+                                                        {guardian.label || guardian.name || "Guardian"}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        {guardian.role === "parent" ? "Parent" : "Step-parent"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-2">
+                                                {guardian.hasOwnHome
+                                                    ? `Will join ${childName} and set up their own home`
+                                                    : `Will join ${childName} in your home`}
+                                            </p>
+                                        </div>
+
+                                        {/* QR Code and Link */}
+                                        {guardian.inviteToken && (
+                                            <div className="p-4 space-y-4">
+                                                <div className="flex justify-center">
+                                                    <div className="bg-white p-2 rounded-lg border border-gray-100">
+                                                        <QRCodeSVG
+                                                            value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${guardian.inviteToken}`}
+                                                            size={140}
+                                                            level="M"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        readOnly
+                                                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${guardian.inviteToken}`}
+                                                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono text-gray-600 truncate"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleCopyLink(guardian.inviteToken!, guardian.id)}
+                                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                            copiedId === guardian.id
+                                                                ? "bg-green-100 text-green-700"
+                                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                        }`}
+                                                    >
+                                                        {copiedId === guardian.id ? "Copied!" : "Copy"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <p className="text-xs text-gray-500 text-center">
+                                You can send these invites later from Settings → Caregivers
+                            </p>
+
+                            <button
+                                onClick={handleStep5Complete}
+                                disabled={saving}
+                                className="w-full py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                            >
+                                {saving ? "Finishing..." : "Continue to dashboard"}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* STEP 6: Success */}
+                    {step === 6 && (
+                        <div className="space-y-6 text-center">
+                            <div className="text-6xl">🎉</div>
+                            <h1 className="text-2xl font-bold text-forest">You're all set!</h1>
+                            <p className="text-gray-600">
+                                {childName}'s family hub is ready.
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                You can add helpers, contacts, and items anytime.
+                            </p>
+
+                            <button
+                                onClick={() => router.push("/")}
+                                className="w-full py-3 bg-forest text-white rounded-xl font-medium"
+                            >
+                                Go to dashboard
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -9,12 +9,12 @@ import HomesHorizontalSection from "@/components/home/HomesHorizontalSection";
 import WelcomeDashboard from "@/components/home/WelcomeDashboard";
 import SetupSteps from "@/components/home/SetupSteps";
 import { ToastContainer, ToastData } from "@/components/Toast";
-import { useItems } from "@/lib/ItemsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContextV2";
+import { useAppState } from "@/lib/AppStateContextV2";
 import { useAuth } from "@/lib/AuthContext";
-import { useHealth } from "@/lib/HealthContext";
-import { useContacts } from "@/lib/ContactsContext";
-import { useDocuments } from "@/lib/DocumentsContext";
+import { useHealth } from "@/lib/HealthContextV2";
+import { useContacts } from "@/lib/ContactsContextV2";
+import { useDocuments } from "@/lib/DocumentsContextV2";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useHomeSwitchAlert } from "@/lib/HomeSwitchAlertContext";
 
