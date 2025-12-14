@@ -24,7 +24,7 @@ const ROLE_OPTIONS = [
 ];
 
 // Track invite link data outside component to survive re-renders
-let pendingInviteData: { token: string; name: string; label: string; role: string; homeIds: string[] } | null = null;
+let pendingInviteData: { token: string; name: string; role: string; homeIds: string[] } | null = null;
 
 export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCaregiverPanelProps) {
     const { user } = useAuth();
@@ -33,7 +33,6 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
     // Initialize from pending data if exists (survives re-renders from context updates)
     const [showInviteLink, setShowInviteLink] = useState(() => pendingInviteData !== null);
     const [inviteName, setInviteName] = useState(() => pendingInviteData?.name || "");
-    const [inviteLabel, setInviteLabel] = useState(() => pendingInviteData?.label || "");
     const [inviteRole, setInviteRole] = useState(() => pendingInviteData?.role || "");
     const [inviteToken, setInviteToken] = useState(() => pendingInviteData?.token || "");
 
@@ -44,15 +43,13 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
         return homes.length === 1 ? [homes[0].id] : [];
     });
     const [skipHomeSelection, setSkipHomeSelection] = useState(false);
+    const [askToCreateHome, setAskToCreateHome] = useState(false);
 
     const [generatingInvite, setGeneratingInvite] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
     const handleToggleHome = (homeId: string) => {
-        // If only one home, don't allow deselection
-        if (homes.length === 1) return;
-
         setSelectedHomeIds(prev => {
             if (prev.includes(homeId)) {
                 return prev.filter(id => id !== homeId);
@@ -68,12 +65,21 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
 
     const handleSkipHomeSelection = () => {
         setSkipHomeSelection(true);
+        setAskToCreateHome(false);
         setSelectedHomeIds([]);
     };
 
+    const handleToggleAskToCreateHome = () => {
+        setAskToCreateHome(prev => !prev);
+        // Clear skip when toggling this option
+        if (!askToCreateHome) {
+            setSkipHomeSelection(false);
+        }
+    };
+
     const handleGenerateInvite = async () => {
-        if (!inviteName.trim() || !inviteLabel.trim()) {
-            setError("Please fill in both name and what your child calls them");
+        if (!inviteName.trim()) {
+            setError("Please enter their name");
             return;
         }
 
@@ -82,9 +88,10 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             return;
         }
 
-        // Validate home selection (unless skipped or only 1 home)
-        if (homes.length > 1 && !skipHomeSelection && selectedHomeIds.length === 0) {
-            setError("Please select at least one home or choose 'Skip for now'");
+        // Validate home selection - need at least one option selected
+        const hasHomeSelection = selectedHomeIds.length > 0 || askToCreateHome || skipHomeSelection;
+        if (!hasHomeSelection) {
+            setError("Please select at least one home or choose an option");
             return;
         }
 
@@ -100,21 +107,35 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             // Generate new invite token
             const newToken = crypto.randomUUID();
 
-            // Determine final home ID (use first selected, or first home if only one)
-            const finalHomeIds = homes.length === 1 ? [homes[0].id] : selectedHomeIds;
+            // Determine final home IDs - can have both selected homes AND ask to create own
+            const finalHomeIds = selectedHomeIds.length > 0 ? selectedHomeIds : [];
             const primaryHomeId = finalHomeIds.length > 0 ? finalHomeIds[0] : null;
 
-            const { error: insertError } = await supabase.from("invites").insert({
+            // Build invite data - home_ids column may not exist in older databases
+            const inviteData: Record<string, any> = {
                 child_id: child.id,
                 invited_by: user?.id,
                 token: newToken,
                 status: "pending",
                 invitee_name: inviteName.trim(),
-                invitee_label: inviteLabel.trim(),
+                invitee_label: null, // Will be set by invitee during their onboarding
                 invitee_role: inviteRole,
-                has_own_home: false, // For now, they join an existing home
+                has_own_home: askToCreateHome, // True if they need to create their own home
                 home_id: primaryHomeId,
+            };
+
+            // Try to include home_ids if the column exists
+            let { error: insertError } = await supabase.from("invites").insert({
+                ...inviteData,
+                home_ids: finalHomeIds.length > 0 ? finalHomeIds : null,
             });
+
+            // If home_ids column doesn't exist, retry without it
+            if (insertError?.message?.includes("home_ids")) {
+                console.log("home_ids column not found, inserting without it");
+                const result = await supabase.from("invites").insert(inviteData);
+                insertError = result.error;
+            }
 
             if (insertError) throw insertError;
 
@@ -122,7 +143,6 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             pendingInviteData = {
                 token: newToken,
                 name: inviteName.trim(),
-                label: inviteLabel.trim(),
                 role: inviteRole,
                 homeIds: finalHomeIds
             };
@@ -153,21 +173,28 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
         setShowInviteLink(false);
         setInviteToken("");
         setInviteName("");
-        setInviteLabel("");
         setInviteRole("");
         setSelectedHomeIds(homes.length === 1 ? [homes[0].id] : []);
         setSkipHomeSelection(false);
+        setAskToCreateHome(false);
         setError("");
         onClose();
     };
 
     // Get home names for display
     const getSelectedHomeNames = () => {
-        if (pendingInviteData?.homeIds && pendingInviteData.homeIds.length > 0) {
-            return pendingInviteData.homeIds
-                .map(id => homes.find(h => h.id === id)?.name)
-                .filter(Boolean)
-                .join(", ");
+        const homeNames = (pendingInviteData?.homeIds || selectedHomeIds)
+            .map(id => homes.find(h => h.id === id)?.name)
+            .filter(Boolean);
+        
+        if (homeNames.length > 0 && askToCreateHome) {
+            return `${homeNames.join(", ")} + will create their own`;
+        }
+        if (askToCreateHome) {
+            return `${inviteName || "They"} will create their own home(s)`;
+        }
+        if (homeNames.length > 0) {
+            return homeNames.join(", ");
         }
         return "No homes selected (will be inactive)";
     };
@@ -283,23 +310,6 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 </div>
 
                 <div>
-                    <label htmlFor="invitee-label" className="block text-sm font-semibold text-forest mb-1.5">
-                        What does your child call them?
-                    </label>
-                    <input
-                        id="invitee-label"
-                        type="text"
-                        value={inviteLabel}
-                        onChange={(e) => setInviteLabel(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                        placeholder="e.g., Mommy, Daddy, Grandma, Uncle Bob, Auntie May"
-                    />
-                    <p className="text-xs text-textSub mt-1.5">
-                        This is the name your child uses. We show this across the app.
-                    </p>
-                </div>
-
-                <div>
                     <label htmlFor="invitee-role" className="block text-sm font-semibold text-forest mb-1.5">
                         Role
                     </label>
@@ -322,16 +332,59 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                     </p>
 
                     {homes.length === 1 ? (
-                        // Single home - show pre-selected and non-removable
-                        <div className="flex items-center gap-2 p-3 rounded-xl bg-softGreen/50 border border-forest/20">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-forest flex-shrink-0">
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                                <polyline points="9 22 9 12 15 12 15 22" />
-                            </svg>
-                            <span className="text-sm text-forest font-medium flex-1">{homes[0].name}</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-forest">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
+                        // Single home - show toggleable options
+                        <div className="space-y-2">
+                            <button
+                                type="button"
+                                onClick={() => handleToggleHome(homes[0].id)}
+                                className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${
+                                    selectedHomeIds.includes(homes[0].id)
+                                        ? "bg-softGreen/50 border-forest/20"
+                                        : "bg-white border-border hover:border-forest/30"
+                                }`}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`flex-shrink-0 ${selectedHomeIds.includes(homes[0].id) ? "text-forest" : "text-textSub"}`}>
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                    <polyline points="9 22 9 12 15 12 15 22" />
+                                </svg>
+                                <span className={`text-sm font-medium flex-1 text-left ${selectedHomeIds.includes(homes[0].id) ? "text-forest" : "text-textSub"}`}>{homes[0].name}</span>
+                                {selectedHomeIds.includes(homes[0].id) && (
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-forest">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                )}
+                            </button>
+
+                            {/* Ask to create their own home */}
+                            <button
+                                type="button"
+                                onClick={handleToggleAskToCreateHome}
+                                className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${
+                                    askToCreateHome
+                                        ? "bg-blue-50 border-blue-200"
+                                        : "bg-white border-border hover:border-forest/30"
+                                }`}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`flex-shrink-0 ${askToCreateHome ? "text-blue-600" : "text-textSub"}`}>
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                    <line x1="12" y1="14" x2="12" y2="18" />
+                                    <line x1="10" y1="16" x2="14" y2="16" />
+                                </svg>
+                                <span className={`text-sm font-medium flex-1 text-left ${askToCreateHome ? "text-blue-700" : "text-textSub"}`}>
+                                    Ask {inviteName || "them"} to create their home(s)
+                                </span>
+                                {askToCreateHome && (
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                )}
+                            </button>
+
+                            {askToCreateHome && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                    {inviteName || "They"} will also be asked to set up their own home(s) when accepting the invite.
+                                </p>
+                            )}
                         </div>
                     ) : (
                         // Multiple homes - show checkboxes
@@ -363,6 +416,43 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                                     </button>
                                 );
                             })}
+
+                            {/* Ask to create their own home */}
+                            <button
+                                type="button"
+                                onClick={handleToggleAskToCreateHome}
+                                className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${
+                                    askToCreateHome
+                                        ? "bg-blue-50 border-blue-200"
+                                        : "bg-white border-border hover:border-forest/30"
+                                }`}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`flex-shrink-0 ${askToCreateHome ? "text-blue-600" : "text-textSub"}`}>
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                    <line x1="12" y1="14" x2="12" y2="18" />
+                                    <line x1="10" y1="16" x2="14" y2="16" />
+                                </svg>
+                                <span className={`text-sm font-medium flex-1 text-left ${askToCreateHome ? "text-blue-700" : "text-textSub"}`}>
+                                    Ask {inviteName || "them"} to create their home(s)
+                                </span>
+                                {askToCreateHome && (
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                )}
+                            </button>
+
+                            {askToCreateHome && selectedHomeIds.length > 0 && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                    {inviteName || "They"} will have access to selected homes and also be asked to set up their own.
+                                </p>
+                            )}
+
+                            {askToCreateHome && selectedHomeIds.length === 0 && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                    {inviteName || "They"} will be asked to set up their own home(s) when accepting the invite.
+                                </p>
+                            )}
 
                             {/* Skip for now option */}
                             <button
@@ -406,7 +496,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 </button>
                 <button
                     onClick={handleGenerateInvite}
-                    disabled={generatingInvite || !inviteName.trim() || !inviteLabel.trim()}
+                    disabled={generatingInvite || !inviteName.trim() || !inviteRole}
                     className="btn-primary flex-1 disabled:opacity-50"
                 >
                     {generatingInvite ? "Creating..." : "Create Invite"}

@@ -7,7 +7,12 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
+import Avatar from "@/components/Avatar";
 import { UserIcon } from "@/components/icons/DuotoneIcons";
+
+// localStorage keys for persisting selection (same as AppStateContext)
+const STORAGE_KEY_CHILD = "homeskids_active_child_id";
+const STORAGE_KEY_HOME = "homeskids_active_home_id";
 
 export default function InvitePage() {
     const params = useParams();
@@ -46,14 +51,37 @@ export default function InvitePage() {
             console.log("V2 invite fetch result:", { v2Data, v2Error });
 
             if (v2Data) {
-                // Get child avatar URL if exists
+                console.log("📸 V2 invite child data:", v2Data.child);
+                
+                // Get child avatar URL if exists (use signed URL for private bucket)
                 let childAvatarUrl = null;
                 if (v2Data.child?.avatar_url) {
-                    const { data: urlData } = supabase.storage
+                    console.log("📸 Child has avatar_url:", v2Data.child.avatar_url);
+                    const { data: urlData, error: urlError } = await supabase.storage
                         .from("avatars")
-                        .getPublicUrl(v2Data.child.avatar_url);
-                    if (urlData?.publicUrl) {
-                        childAvatarUrl = urlData.publicUrl;
+                        .createSignedUrl(v2Data.child.avatar_url, 3600); // 1 hour expiry
+                    console.log("📸 Signed URL result:", { urlData, urlError });
+                    if (!urlError && urlData?.signedUrl) {
+                        childAvatarUrl = urlData.signedUrl;
+                    }
+                } else {
+                    console.log("📸 No avatar_url on child - RLS may be blocking child data");
+                    // If child join failed due to RLS, try fetching child directly
+                    if (v2Data.child_id) {
+                        const { data: directChild, error: directError } = await supabase
+                            .from("children")
+                            .select("name, avatar_url")
+                            .eq("id", v2Data.child_id)
+                            .single();
+                        console.log("📸 Direct child fetch:", { directChild, directError });
+                        if (directChild?.avatar_url) {
+                            const { data: urlData } = await supabase.storage
+                                .from("avatars")
+                                .createSignedUrl(directChild.avatar_url, 3600);
+                            if (urlData?.signedUrl) {
+                                childAvatarUrl = urlData.signedUrl;
+                            }
+                        }
                     }
                 }
 
@@ -87,11 +115,11 @@ export default function InvitePage() {
 
                 let childAvatarUrl = null;
                 if (childData?.avatar_url) {
-                    const { data: urlData } = supabase.storage
+                    const { data: urlData, error: urlError } = await supabase.storage
                         .from("avatars")
-                        .getPublicUrl(childData.avatar_url);
-                    if (urlData?.publicUrl) {
-                        childAvatarUrl = urlData.publicUrl;
+                        .createSignedUrl(childData.avatar_url, 3600); // 1 hour expiry
+                    if (!urlError && urlData?.signedUrl) {
+                        childAvatarUrl = urlData.signedUrl;
                     }
                 }
 
@@ -128,44 +156,54 @@ export default function InvitePage() {
             throw new Error("Failed to create profile");
         }
 
-        // 2. Add user as guardian/helper to the child
-        const isGuardian = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
-
-        if (isGuardian) {
-            // Add as guardian
-            const { error: guardianError } = await supabase.from("child_guardians").insert({
-                child_id: invite.child_id,
-                user_id: userId,
-                guardian_role: invite.invitee_role,
+        // 2. Use database function to accept invite (bypasses RLS)
+        // This creates child_guardians, child_access, and permission overrides
+        const { data: acceptResult, error: acceptError } = await supabase
+            .rpc("accept_invite", {
+                p_invite_id: invite.id,
+                p_user_id: userId,
             });
 
-            if (guardianError) {
-                console.error("Guardian creation error:", guardianError);
-                // Don't throw - might already exist
+        if (acceptError) {
+            console.error("Accept invite RPC error:", acceptError);
+            // Fall back to direct inserts (may fail due to RLS but worth trying)
+            const isGuardian = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
+
+            if (isGuardian) {
+                const { error: guardianError } = await supabase.from("child_guardians").insert({
+                    child_id: invite.child_id,
+                    user_id: userId,
+                    guardian_role: invite.invitee_role,
+                });
+                if (guardianError) {
+                    console.error("Guardian fallback error:", guardianError);
+                }
             }
+
+            const { error: accessError } = await supabase.from("child_access").upsert({
+                child_id: invite.child_id,
+                user_id: userId,
+                role_type: isGuardian ? "guardian" : "helper",
+                helper_type: !isGuardian ? invite.invitee_role : null,
+                access_level: isGuardian ? "manage" : "view",
+            }, { onConflict: "child_id,user_id" });
+            if (accessError) {
+                console.error("Child access fallback error:", accessError);
+            }
+        } else {
+            console.log("Accept invite result:", acceptResult);
         }
 
-        // 3. Grant child_access
-        const { error: accessError } = await supabase.from("child_access").insert({
-            child_id: invite.child_id,
-            user_id: userId,
-            role_type: isGuardian ? "guardian" : "helper",
-            helper_type: !isGuardian ? invite.invitee_role : null,
-            access_level: isGuardian ? "manage" : "view",
-        });
-
-        if (accessError) {
-            console.error("Child access creation error:", accessError);
-            // Don't throw - might already exist
-        }
-
-        // 4. If joining existing home (not creating own), add to that home
-        if (!invite.has_own_home && invite.home_id) {
+        // 4. If there's an existing home to join, add to that home
+        // (This can happen even if has_own_home is true - user gets access to existing homes AND creates their own)
+        if (invite.home_id) {
             // Add to home_memberships
-            await supabase.from("home_memberships").insert({
+            await supabase.from("home_memberships").upsert({
                 home_id: invite.home_id,
                 user_id: userId,
                 is_home_admin: false,
+            }, {
+                onConflict: "home_id,user_id",
             });
 
             // Get the child_space for this home and child
@@ -178,33 +216,57 @@ export default function InvitePage() {
 
             if (childSpace) {
                 // Grant child_space_access
-                await supabase.from("child_space_access").insert({
+                await supabase.from("child_space_access").upsert({
                     child_space_id: childSpace.id,
                     user_id: userId,
                     can_view_address: true,
+                }, {
+                    onConflict: "child_space_id,user_id",
                 });
             }
         }
 
-        // 5. Mark invite as accepted
-        await supabase
-            .from("invites")
-            .update({
-                status: "accepted",
-                accepted_at: new Date().toISOString(),
-                accepted_by: userId,
-            })
-            .eq("id", invite.id);
+        // 5. Auto-select the invited child
+        if (invite.child_id) {
+            // Store in localStorage so AppStateContext picks it up
+            if (typeof window !== "undefined") {
+                localStorage.setItem(STORAGE_KEY_CHILD, invite.child_id);
+                // Also store home if they were added to one
+                if (invite.home_id) {
+                    localStorage.setItem(STORAGE_KEY_HOME, invite.home_id);
+                }
+            }
+        }
 
         // 6. Redirect based on whether they need to create a home
         if (invite.has_own_home) {
             // Need to create their own home - go to a home setup flow
-            router.push("/setup-home?child_id=" + invite.child_id);
+            // Don't mark invite as accepted yet - that happens after setup-home is complete
+            // Pass home_id and has_own_home in URL so setup-home doesn't need to re-query
+            const setupParams = new URLSearchParams({
+                child_id: invite.child_id,
+                invite_id: invite.id,
+                has_own_home: "true",
+            });
+            if (invite.home_id) {
+                setupParams.set("home_id", invite.home_id);
+            }
+            router.push("/setup-home?" + setupParams.toString());
         } else {
-            // Already added to existing home - go to dashboard
+            // Already added to existing home - mark invite as accepted and go to dashboard
+            await supabase
+                .from("invites")
+                .update({
+                    status: "accepted",
+                    accepted_at: new Date().toISOString(),
+                    accepted_by: userId,
+                })
+                .eq("id", invite.id);
+            
             setOnboardingCompleted(true);
             await refreshData();
-            router.replace("/");
+            // Full page reload to ensure all data contexts refresh
+            window.location.href = "/";
         }
     };
 
@@ -337,7 +399,7 @@ export default function InvitePage() {
         return name.split(" ")[0] || "there";
     };
 
-    // Get display label for role
+    // Get display label for role (e.g., "Parent of June")
     const getRoleLabel = () => {
         const roleMap: Record<string, string> = {
             parent: "Parent",
@@ -348,7 +410,9 @@ export default function InvitePage() {
             family_friend: "Family friend",
             other: "Caregiver",
         };
-        return roleMap[invite?.invitee_role] || "Caregiver";
+        const role = roleMap[invite?.invitee_role] || "Caregiver";
+        const childName = getChildName();
+        return `${role} of ${childName}`;
     };
 
     // Get content for left panel
@@ -450,6 +514,12 @@ export default function InvitePage() {
                             <Logo size="md" variant="dark" />
                         </div>
 
+                        {/* Progress indicator - step 1 of 2 */}
+                        <div className="flex justify-center gap-2 mb-6">
+                            <div className="w-2 h-2 rounded-full bg-forest" />
+                            <div className="w-2 h-2 rounded-full bg-gray-300" />
+                        </div>
+
                         {/* Title & Subtitle */}
                         <div className="text-center mb-8">
                             <h1 className="font-dmSerif text-3xl text-forest mb-2">
@@ -460,12 +530,20 @@ export default function InvitePage() {
                             </p>
                         </div>
 
-                        {/* Context Card */}
-                        <div className="bg-white border border-border rounded-xl p-5 mb-8 text-center">
-                            <p className="text-sm text-textSub mb-1">You'll be joining as</p>
-                            <p className="font-semibold text-forest text-lg">
-                                {getRoleLabel()}
-                            </p>
+                        {/* Context */}
+                        <div className="text-center mb-8">
+                            <p className="text-sm text-textSub mb-3">You'll be joining as</p>
+                            <div className="inline-flex items-center gap-3 bg-white border border-border rounded-full px-4 py-2">
+                                <Avatar
+                                    src={invite?.child_avatar_url}
+                                    initial={getChildName()?.[0]?.toUpperCase() || "?"}
+                                    size={36}
+                                    bgColor="#4A7C59"
+                                />
+                                <span className="font-semibold text-forest">
+                                    {getRoleLabel()}
+                                </span>
+                            </div>
                             <p className="text-xs text-textSub mt-2">
                                 (You can change this later)
                             </p>
@@ -519,8 +597,14 @@ export default function InvitePage() {
                             <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
                         </div>
 
-                        <h2 className="font-dmSerif text-2xl text-forest mb-2">Welcome back</h2>
-                        <p className="text-textSub text-sm mb-6">Log in to join {getChildName()}'s homes</p>
+                        {/* Progress indicator - step 1 of 2 */}
+                        <div className="flex justify-center gap-2 mb-6">
+                            <div className="w-2 h-2 rounded-full bg-forest" />
+                            <div className="w-2 h-2 rounded-full bg-gray-300" />
+                        </div>
+
+                        <h2 className="font-dmSerif text-2xl text-forest mb-2 text-center">Welcome back</h2>
+                        <p className="text-textSub text-sm mb-6 text-center">Log in to join {getChildName()}'s homes</p>
 
                         <form onSubmit={handleJoin} className="space-y-4">
                             <div>
@@ -598,8 +682,14 @@ export default function InvitePage() {
                         <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
                     </div>
 
-                    <h2 className="font-dmSerif text-2xl text-forest mb-2">Create account</h2>
-                    <p className="text-textSub text-sm mb-6">Create an account to join {getChildName()}'s homes</p>
+                    {/* Progress indicator - step 1 of 2 */}
+                    <div className="flex justify-center gap-2 mb-6">
+                        <div className="w-2 h-2 rounded-full bg-forest" />
+                        <div className="w-2 h-2 rounded-full bg-gray-300" />
+                    </div>
+
+                    <h2 className="font-dmSerif text-2xl text-forest mb-2 text-center">Create account</h2>
+                    <p className="text-textSub text-sm mb-6 text-center">Create an account to join {getChildName()}'s homes</p>
 
                     <form onSubmit={handleJoin} className="space-y-4">
                         <div>

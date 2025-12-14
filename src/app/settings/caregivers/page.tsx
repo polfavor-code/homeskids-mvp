@@ -11,7 +11,7 @@ import CaregiverStatusPill from "@/components/caregivers/CaregiverStatusPill";
 import CaregiverConfirmDialog, { CaregiverAction } from "@/components/caregivers/CaregiverConfirmDialog";
 import HomeSelectionDialog from "@/components/caregivers/HomeSelectionDialog";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState, CaregiverProfile, HomeProfile } from "@/lib/AppStateContext";
+import { useAppState, CaregiverProfile, HomeProfile, ChildRoleMapping } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { getAccessLevelMessage } from "@/lib/caregiverPermissions";
@@ -26,6 +26,47 @@ const ROLE_OPTIONS = [
     { value: "family_friend", label: "Family friend" },
     { value: "other", label: "Other" },
 ];
+
+// Helper to format role label
+const getRoleLabel = (role: string): string => {
+    const option = ROLE_OPTIONS.find(r => r.value === role);
+    return option?.label || role || "Caregiver";
+};
+
+// Helper to format child roles for display
+// Returns something like "Parent of June & Elodie" or "Parent of Elodie, Step-parent of June"
+const formatChildRoles = (childRoles: ChildRoleMapping[] | undefined): string => {
+    if (!childRoles || childRoles.length === 0) return "";
+    
+    // Group by role
+    const roleGroups: Record<string, string[]> = {};
+    for (const cr of childRoles) {
+        const roleLabel = getRoleLabel(cr.role);
+        if (!roleGroups[roleLabel]) {
+            roleGroups[roleLabel] = [];
+        }
+        roleGroups[roleLabel].push(cr.childName);
+    }
+    
+    // Format each role group
+    const parts: string[] = [];
+    for (const [role, names] of Object.entries(roleGroups)) {
+        if (names.length <= 3) {
+            // Show all names: "Parent of June & Elodie"
+            const nameStr = names.length === 1 
+                ? names[0] 
+                : names.slice(0, -1).join(", ") + " & " + names[names.length - 1];
+            parts.push(`${role} of ${nameStr}`);
+        } else {
+            // Show first 3 names + count: "Parent of June, Elodie, Max & +3 more"
+            const shown = names.slice(0, 3).join(", ");
+            const remaining = names.length - 3;
+            parts.push(`${role} of ${shown} & +${remaining} more`);
+        }
+    }
+    
+    return parts.join(", ");
+};
 
 export default function CaregiversPage() {
     useEnsureOnboarding();
@@ -174,69 +215,46 @@ export default function CaregiversPage() {
         }
     };
 
-    // Disable caregiver access - remove all home_access entries
+    // Disable caregiver access - remove from child_space_access and home_memberships (V2)
     const disableCaregiverAccess = async (caregiverId: string) => {
-        // Get family ID
-        const { data: familyMember } = await supabase
-            .from("family_members")
-            .select("family_id")
-            .eq("user_id", user?.id)
-            .single();
+        if (!child) throw new Error("No child context");
 
-        if (!familyMember) throw new Error("Family not found");
+        console.log("🔧 Disabling caregiver (V2):", caregiverId, "for child:", child.id);
 
-        console.log("🔧 Disabling caregiver:", caregiverId);
+        // Remove from child_space_access for this child's spaces
+        const { data: childSpaces } = await supabase
+            .from("child_spaces")
+            .select("id, home_id")
+            .eq("child_id", child.id);
 
-        // Fetch fresh home data directly from database (don't rely on React state)
-        const { data: freshHomes, error: homesError } = await supabase
-            .from("homes")
-            .select("id, name, accessible_caregiver_ids")
-            .eq("family_id", familyMember.family_id);
+        if (childSpaces && childSpaces.length > 0) {
+            const childSpaceIds = childSpaces.map(cs => cs.id);
+            const homeIds = childSpaces.map(cs => cs.home_id);
 
-        if (homesError) {
-            console.error("🔧 Error fetching homes:", homesError);
-            throw homesError;
-        }
-
-        const familyHomeIds = (freshHomes || []).map(h => h.id);
-        console.log("🔧 Family home IDs:", familyHomeIds);
-
-        // Try to delete from home_access table (may not exist yet)
-        try {
-            const { error: deleteError } = await supabase
-                .from("home_access")
+            // Remove from child_space_access
+            const { error: csaError } = await supabase
+                .from("child_space_access")
                 .delete()
-                .eq("caregiver_id", caregiverId)
-                .in("home_id", familyHomeIds);
+                .eq("user_id", caregiverId)
+                .in("child_space_id", childSpaceIds);
 
-            if (deleteError) {
-                console.log("🔧 home_access delete error (may not exist):", deleteError);
+            if (csaError) {
+                console.log("🔧 child_space_access delete error:", csaError);
             } else {
-                console.log("🔧 Deleted from home_access table");
+                console.log("🔧 Removed from child_space_access");
             }
-        } catch (e) {
-            console.log("🔧 home_access table may not exist:", e);
-        }
 
-        // Update the legacy accessible_caregiver_ids array on homes table
-        // This is the PRIMARY source of truth until home_access is fully deployed
-        for (const home of (freshHomes || [])) {
-            const currentIds = home.accessible_caregiver_ids || [];
-            console.log(`🔧 Checking home ${home.name}: caregiverIds =`, currentIds);
-            if (currentIds.includes(caregiverId)) {
-                const newIds = currentIds.filter((id: string) => id !== caregiverId);
-                console.log(`🔧 Updating home ${home.name}: removing ${caregiverId}, new ids:`, newIds);
-                const { error: updateError } = await supabase
-                    .from("homes")
-                    .update({ accessible_caregiver_ids: newIds })
-                    .eq("id", home.id);
+            // Remove from home_memberships
+            const { error: hmError } = await supabase
+                .from("home_memberships")
+                .delete()
+                .eq("user_id", caregiverId)
+                .in("home_id", homeIds);
 
-                if (updateError) {
-                    console.error(`🔧 Error updating home ${home.name}:`, updateError);
-                    throw updateError;
-                } else {
-                    console.log(`🔧 Successfully updated home ${home.name}`);
-                }
+            if (hmError) {
+                console.log("🔧 home_memberships delete error:", hmError);
+            } else {
+                console.log("🔧 Removed from home_memberships");
             }
         }
 
@@ -244,36 +262,37 @@ export default function CaregiversPage() {
         await refreshData();
     };
 
-    // Enable caregiver access - add home_access entries for selected homes
+    // Enable caregiver access - add to child_space_access and home_memberships (V2)
     const handleEnableAccess = async (selectedHomeIds: string[]) => {
         const caregiver = homeSelectionDialog.caregiver;
-        if (!caregiver || selectedHomeIds.length === 0) return;
+        if (!caregiver || selectedHomeIds.length === 0 || !child) return;
 
         try {
             setSaving(true);
 
-            // Insert home_access entries for each selected home
-            const insertPromises = selectedHomeIds.map(homeId =>
-                supabase
-                    .from("home_access")
-                    .insert({ home_id: homeId, caregiver_id: caregiver.id })
-                    .single()
-            );
+            // Get child_spaces for selected homes
+            const { data: childSpaces } = await supabase
+                .from("child_spaces")
+                .select("id, home_id")
+                .eq("child_id", child.id)
+                .in("home_id", selectedHomeIds);
 
-            await Promise.all(insertPromises);
-
-            // Also update the legacy accessible_caregiver_ids array on homes table
-            for (const homeId of selectedHomeIds) {
-                const home = homes.find(h => h.id === homeId);
-                if (home) {
-                    const currentIds = home.accessibleCaregiverIds || [];
-                    if (!currentIds.includes(caregiver.id)) {
-                        await supabase
-                            .from("homes")
-                            .update({ accessible_caregiver_ids: [...currentIds, caregiver.id] })
-                            .eq("id", homeId);
-                    }
+            if (childSpaces) {
+                // Add to child_space_access
+                for (const cs of childSpaces) {
+                    await supabase
+                        .from("child_space_access")
+                        .upsert({ child_space_id: cs.id, user_id: caregiver.id })
+                        .select();
                 }
+            }
+
+            // Add to home_memberships
+            for (const homeId of selectedHomeIds) {
+                await supabase
+                    .from("home_memberships")
+                    .upsert({ home_id: homeId, user_id: caregiver.id })
+                    .select();
             }
 
             await refreshData();
@@ -287,42 +306,59 @@ export default function CaregiversPage() {
         }
     };
 
-    // Remove caregiver from family entirely
+    // Remove caregiver from child entirely (V2)
     const removeCaregiver = async (caregiver: CaregiverProfile) => {
-        const { data: familyMember } = await supabase
-            .from("family_members")
-            .select("family_id")
-            .eq("user_id", user?.id)
-            .single();
+        if (!child) throw new Error("No child context");
 
-        if (!familyMember) throw new Error("Family not found");
+        console.log("🔧 Removing caregiver (V2):", caregiver.id, "from child:", child.id);
 
-        // 1. Delete all home_access entries
-        const familyHomeIds = homes.map(h => h.id);
-        await supabase
-            .from("home_access")
-            .delete()
-            .eq("caregiver_id", caregiver.id)
-            .in("home_id", familyHomeIds);
+        // Get child's spaces and homes
+        const { data: childSpaces } = await supabase
+            .from("child_spaces")
+            .select("id, home_id")
+            .eq("child_id", child.id);
 
-        // 2. Remove from family_members
-        await supabase
-            .from("family_members")
-            .delete()
-            .eq("user_id", caregiver.id)
-            .eq("family_id", familyMember.family_id);
+        if (childSpaces && childSpaces.length > 0) {
+            const childSpaceIds = childSpaces.map(cs => cs.id);
+            const homeIds = childSpaces.map(cs => cs.home_id);
 
-        // 3. Update legacy accessible_caregiver_ids on homes
-        for (const home of homes) {
-            if (home.accessibleCaregiverIds?.includes(caregiver.id)) {
-                const newIds = home.accessibleCaregiverIds.filter(id => id !== caregiver.id);
-                await supabase
-                    .from("homes")
-                    .update({ accessible_caregiver_ids: newIds })
-                    .eq("id", home.id);
-            }
+            // Remove from child_space_access
+            await supabase
+                .from("child_space_access")
+                .delete()
+                .eq("user_id", caregiver.id)
+                .in("child_space_id", childSpaceIds);
+
+            // Remove from home_memberships
+            await supabase
+                .from("home_memberships")
+                .delete()
+                .eq("user_id", caregiver.id)
+                .in("home_id", homeIds);
         }
 
+        // Remove from child_guardians
+        await supabase
+            .from("child_guardians")
+            .delete()
+            .eq("user_id", caregiver.id)
+            .eq("child_id", child.id);
+
+        // Remove from child_permission_overrides
+        await supabase
+            .from("child_permission_overrides")
+            .delete()
+            .eq("user_id", caregiver.id)
+            .eq("child_id", child.id);
+
+        // Remove from child_access
+        await supabase
+            .from("child_access")
+            .delete()
+            .eq("user_id", caregiver.id)
+            .eq("child_id", child.id);
+
+        console.log("🔧 Caregiver removed, refreshing...");
         await refreshData();
     };
 
@@ -340,25 +376,30 @@ export default function CaregiversPage() {
         return homes.filter(home => !caregiver.accessibleHomeIds.includes(home.id));
     };
 
-    // Add caregiver to a home
+    // Add caregiver to a home (V2)
     const handleAddToHome = async (caregiverId: string, homeId: string) => {
+        if (!child) return;
+        
         try {
-            // Insert into home_access
-            await supabase
-                .from("home_access")
-                .insert({ home_id: homeId, caregiver_id: caregiverId });
+            // Get child_space for this home
+            const { data: childSpace } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .eq("child_id", child.id)
+                .eq("home_id", homeId)
+                .single();
 
-            // Update legacy accessible_caregiver_ids
-            const home = homes.find(h => h.id === homeId);
-            if (home) {
-                const currentIds = home.accessibleCaregiverIds || [];
-                if (!currentIds.includes(caregiverId)) {
-                    await supabase
-                        .from("homes")
-                        .update({ accessible_caregiver_ids: [...currentIds, caregiverId] })
-                        .eq("id", homeId);
-                }
+            if (childSpace) {
+                // Add to child_space_access
+                await supabase
+                    .from("child_space_access")
+                    .upsert({ child_space_id: childSpace.id, user_id: caregiverId });
             }
+
+            // Add to home_memberships
+            await supabase
+                .from("home_memberships")
+                .upsert({ home_id: homeId, user_id: caregiverId });
 
             await refreshData();
         } catch (err: any) {
@@ -367,25 +408,34 @@ export default function CaregiversPage() {
         }
     };
 
-    // Remove caregiver from a home
+    // Remove caregiver from a home (V2)
     const handleRemoveFromHome = async (caregiverId: string, homeId: string) => {
+        if (!child) return;
+        
         try {
-            // Delete from home_access
+            // Get child_space for this home
+            const { data: childSpace } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .eq("child_id", child.id)
+                .eq("home_id", homeId)
+                .single();
+
+            if (childSpace) {
+                // Remove from child_space_access
+                await supabase
+                    .from("child_space_access")
+                    .delete()
+                    .eq("child_space_id", childSpace.id)
+                    .eq("user_id", caregiverId);
+            }
+
+            // Remove from home_memberships
             await supabase
-                .from("home_access")
+                .from("home_memberships")
                 .delete()
                 .eq("home_id", homeId)
-                .eq("caregiver_id", caregiverId);
-
-            // Update legacy accessible_caregiver_ids
-            const home = homes.find(h => h.id === homeId);
-            if (home) {
-                const newIds = (home.accessibleCaregiverIds || []).filter(id => id !== caregiverId);
-                await supabase
-                    .from("homes")
-                    .update({ accessible_caregiver_ids: newIds })
-                    .eq("id", homeId);
-            }
+                .eq("user_id", caregiverId);
 
             await refreshData();
         } catch (err: any) {
@@ -495,11 +545,11 @@ export default function CaregiversPage() {
                                 )}
                             </div>
                             <p className="text-sm text-textSub">{caregiver.name}</p>
-                            {caregiver.relationship && (
-                                <p className="text-xs text-textSub mt-0.5">
-                                    {getRoleLabel(caregiver.relationship)}
-                                </p>
-                            )}
+                                            {caregiver.relationship && (
+                                                <p className="text-xs text-forest/70 mt-0.5">
+                                                    {getRoleLabel(caregiver.relationship)}{child?.name ? ` of ${child.name}` : ""}
+                                                </p>
+                                            )}
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -737,9 +787,9 @@ export default function CaregiversPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="text-2xl font-dmSerif text-forest">Caregivers</h1>
+                    <h1 className="text-2xl font-dmSerif text-forest">{child?.name || "Child"}&apos;s Caregivers</h1>
                     <p className="text-sm text-textSub">
-                        Manage who has access to {child?.name || "your child"}'s information.
+                        Manage who has access to {child?.name || "your child"}&apos;s information.
                     </p>
                 </div>
 
@@ -815,7 +865,9 @@ export default function CaregiversPage() {
                         <h2 className="text-sm font-semibold text-forest">
                             Pending invites ({pendingCaregivers.length})
                         </h2>
-                        {pendingCaregivers.map((caregiver) => (
+                        {pendingCaregivers.map((caregiver) => {
+                            const roleDisplay = formatChildRoles(caregiver.childRoles);
+                            return (
                             <div key={caregiver.id} className="card-organic overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
                                 <div
                                     className="p-4 cursor-pointer hover:bg-cream/30 transition-colors"
@@ -829,6 +881,9 @@ export default function CaregiversPage() {
                                                 <CaregiverStatusPill status="pending" />
                                             </div>
                                             <p className="text-sm text-textSub">{caregiver.name}</p>
+                                            {roleDisplay && (
+                                                <p className="text-xs text-forest/70 mt-0.5">{roleDisplay}</p>
+                                            )}
                                             {caregiver.pendingHomeIds && caregiver.pendingHomeIds.length > 0 && (
                                                 <p className="text-xs text-textSub mt-0.5">
                                                     Will have access to: {caregiver.pendingHomeIds.map(id => homes.find(h => h.id === id)?.name).filter(Boolean).join(", ")}
@@ -925,7 +980,8 @@ export default function CaregiversPage() {
                                     </div>
                                 )}
                             </div>
-                        ))}
+                        );
+                        })}
                     </div>
                 )}
 

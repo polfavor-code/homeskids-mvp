@@ -1,22 +1,14 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import DesktopNav from "@/components/layout/DesktopNav";
 import MobileNav from "@/components/layout/MobileNav";
-import { PlusIcon } from "@/components/icons/DuotoneIcons";
 
 interface AppShellProps {
     children: React.ReactNode;
 }
 
 export default function AppShell({ children }: AppShellProps) {
-    const pathname = usePathname();
-
-    // Hide + button on onboarding routes
-    const isOnboarding = pathname === "/onboarding";
-
     return (
         <div className="min-h-screen bg-cream flex">
             {/* Desktop Side Navigation */}
@@ -31,8 +23,6 @@ export default function AppShell({ children }: AppShellProps) {
 
             {/* Mobile Bottom Navigation */}
             <MobileNav />
-
-
         </div>
     );
 }

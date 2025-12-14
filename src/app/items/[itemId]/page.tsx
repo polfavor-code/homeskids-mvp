@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
+import MobileMultiSelect from "@/components/MobileMultiSelect";
 import ImageCropper from "@/components/ImageCropper";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -47,7 +48,7 @@ export default function ItemDetailPage({
         deleteItem,
     } = useItems();
     const router = useRouter();
-    const { caregivers, homes, currentJuneCaregiverId, currentHomeId, child } = useAppState();
+    const { caregivers, homes, currentJuneCaregiverId, currentHomeId, child, children } = useAppState();
     const item = items.find((i) => i.id === params.itemId);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,6 +86,10 @@ export default function ItemDetailPage({
     // State for origin editing
     const [isEditingOrigin, setIsEditingOrigin] = useState(false);
     const [editedOriginHomeId, setEditedOriginHomeId] = useState(item?.originHomeId || "");
+
+    // State for child ownership editing
+    const [isEditingChildren, setIsEditingChildren] = useState(false);
+    const [editedChildIds, setEditedChildIds] = useState<string[]>(item?.childIds || []);
 
     // Image cropper state
     const [showCropper, setShowCropper] = useState(false);
@@ -138,6 +143,20 @@ export default function ItemDetailPage({
             setIsEditingOrigin(false);
         } catch (error) {
             alert("Failed to clear origin");
+        }
+    };
+
+    const handleSaveChildren = async () => {
+        if (!item) return;
+        if (editedChildIds.length === 0) {
+            alert("At least one child must be selected");
+            return;
+        }
+        try {
+            await updateItem(item.id, { childIds: editedChildIds });
+            setIsEditingChildren(false);
+        } catch (error) {
+            alert("Failed to update child ownership");
         }
     };
 
@@ -523,6 +542,85 @@ export default function ItemDetailPage({
                 )}
             </div>
 
+            {/* Belongs to (Child ownership) Section */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-gray-900">Belongs to</h3>
+                    {!isEditingChildren && children.length > 1 && (
+                        <button
+                            onClick={() => {
+                                setEditedChildIds(item.childIds || []);
+                                setIsEditingChildren(true);
+                            }}
+                            className="text-sm text-primary hover:text-teal transition-colors"
+                        >
+                            Change
+                        </button>
+                    )}
+                </div>
+
+                {isEditingChildren ? (
+                    <div className="space-y-2">
+                        <MobileMultiSelect
+                            values={editedChildIds}
+                            onChange={setEditedChildIds}
+                            options={children.map((c) => ({ 
+                                value: c.id, 
+                                label: c.name 
+                            }))}
+                            allOption={children.length > 1 ? {
+                                value: "all",
+                                label: "All children"
+                            } : undefined}
+                            placeholder="Select child(ren)"
+                            title="Who does this item belong to?"
+                        />
+                        {editedChildIds.length === 0 && (
+                            <p className="text-xs text-terracotta">At least one child must be selected</p>
+                        )}
+                        <div className="flex gap-2 mt-2">
+                            <button
+                                onClick={handleSaveChildren}
+                                disabled={editedChildIds.length === 0}
+                                className="px-4 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+                            >
+                                Save
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsEditingChildren(false);
+                                    setEditedChildIds(item.childIds || []);
+                                }}
+                                className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-700">
+                        {(() => {
+                            const itemChildIds = item.childIds || [];
+                            if (itemChildIds.length === 0) {
+                                // Fallback: if no childIds, show current child
+                                return child?.name || <span className="text-gray-400 italic">Not specified</span>;
+                            }
+                            // Check if all children are selected
+                            if (itemChildIds.length === children.length && children.length > 1) {
+                                return "All children";
+                            }
+                            // Show list of child names
+                            const selectedNames = children
+                                .filter(c => itemChildIds.includes(c.id))
+                                .map(c => c.name);
+                            return selectedNames.length > 0 
+                                ? selectedNames.join(", ") 
+                                : <span className="text-gray-400 italic">Not specified</span>;
+                        })()}
+                    </p>
+                )}
+            </div>
+
             {/* Notes Section - Always show, editable */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
                 <div className="flex items-center justify-between mb-2">
@@ -576,85 +674,82 @@ export default function ItemDetailPage({
             </div>
 
             {/* Origin Section - "Originally from X's home" */}
-            {(item.originHomeId || item.originUserId) && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-gray-900">Origin</h3>
-                        {!isEditingOrigin && (
-                            <button
-                                onClick={() => {
-                                    setEditedOriginHomeId(item.originHomeId || "");
-                                    setIsEditingOrigin(true);
-                                }}
-                                className="text-sm text-primary hover:text-teal transition-colors"
-                            >
-                                Change
-                            </button>
-                        )}
-                    </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-gray-900">Origin home</h3>
+                    {!isEditingOrigin && (
+                        <button
+                            onClick={() => {
+                                setEditedOriginHomeId(item.originHomeId || "");
+                                setIsEditingOrigin(true);
+                            }}
+                            className="text-sm text-primary hover:text-teal transition-colors"
+                        >
+                            {item.originHomeId ? "Change" : "Set origin"}
+                        </button>
+                    )}
+                </div>
 
-                    {isEditingOrigin ? (
-                        <div className="space-y-2">
-                            <MobileSelect
-                                value={editedOriginHomeId}
-                                onChange={setEditedOriginHomeId}
-                                options={[
-                                    { value: "", label: "No origin specified" },
-                                    ...homes.map((home) => ({
-                                        value: home.id,
-                                        label: home.name
-                                    })),
-                                ]}
-                                placeholder="Select origin home"
-                                title="Where did this item originally come from?"
-                            />
-                            <div className="flex gap-2 mt-2">
-                                <button
-                                    onClick={handleSaveOrigin}
-                                    className="px-4 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                                >
-                                    Save
-                                </button>
+                {isEditingOrigin ? (
+                    <div className="space-y-2">
+                        <MobileSelect
+                            value={editedOriginHomeId}
+                            onChange={setEditedOriginHomeId}
+                            options={homes.map((home) => ({
+                                value: home.id,
+                                label: home.name
+                            }))}
+                            placeholder="Select origin home"
+                            title="Where did this item originally come from?"
+                        />
+                        <div className="flex gap-2 mt-2">
+                            <button
+                                onClick={handleSaveOrigin}
+                                className="px-4 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                            >
+                                Save
+                            </button>
+                            {item.originHomeId && (
                                 <button
                                     onClick={handleClearOrigin}
                                     className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                                 >
-                                    Clear origin
+                                    Clear
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        setIsEditingOrigin(false);
-                                        setEditedOriginHomeId(item.originHomeId || "");
-                                    }}
-                                    className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                                This helps coordinate where items should go back to when children move between homes.
-                            </p>
+                            )}
+                            <button
+                                onClick={() => {
+                                    setIsEditingOrigin(false);
+                                    setEditedOriginHomeId(item.originHomeId || "");
+                                }}
+                                className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
                         </div>
-                    ) : (
-                        <p className="text-sm text-gray-700">
-                            {(() => {
-                                const originHome = homes.find(h => h.id === item.originHomeId);
-                                if (originHome) {
-                                    return `Originally from ${originHome.name}`;
-                                }
-                                // Fallback to user if no home but user is set
-                                if (item.originUserId) {
-                                    const originUser = caregivers.find(c => c.id === item.originUserId);
-                                    if (originUser) {
-                                        return `Originally from ${originUser.label}'s home`;
-                                    }
-                                }
-                                return <span className="text-gray-400 italic">Origin not specified</span>;
-                            })()}
+                        <p className="text-xs text-gray-500 mt-2">
+                            This helps coordinate where items should go back to when children move between homes.
                         </p>
-                    )}
-                </div>
-            )}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-700">
+                        {(() => {
+                            const originHome = homes.find(h => h.id === item.originHomeId);
+                            if (originHome) {
+                                return `Originates from ${originHome.name}`;
+                            }
+                            // Fallback to user if no home but user is set
+                            if (item.originUserId) {
+                                const originUser = caregivers.find(c => c.id === item.originUserId);
+                                if (originUser) {
+                                    return `Originates from ${originUser.label}'s home`;
+                                }
+                            }
+                            return <span className="text-gray-400 italic">Origin not specified</span>;
+                        })()}
+                    </p>
+                )}
+            </div>
 
             {/* Actions Card */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">

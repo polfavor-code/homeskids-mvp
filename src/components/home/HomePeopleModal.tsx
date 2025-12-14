@@ -23,21 +23,18 @@ export default function HomePeopleModal({
 }: HomePeopleModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
 
-    // Get caregivers for this home
+    // Get caregivers connected to this home
+    // Uses home.accessibleCaregiverIds (from home_memberships) as the source of truth
     const getHomeCaregivers = (): CaregiverProfile[] => {
         if (!home) return [];
 
         return caregivers.filter((caregiver) => {
-            // Check if caregiver has access to this home
-            if (caregiver.accessibleHomeIds?.includes(home.id)) {
-                return true;
-            }
-            // Also check legacy ownerCaregiverId
-            if (home.ownerCaregiverId === caregiver.id) {
-                return true;
-            }
-            // Check legacy accessibleCaregiverIds
+            // Primary check: caregiver is in home's accessibleCaregiverIds (from home_memberships)
             if (home.accessibleCaregiverIds?.includes(caregiver.id)) {
+                return true;
+            }
+            // Legacy fallback: owner of the home
+            if (home.ownerCaregiverId === caregiver.id) {
                 return true;
             }
             return false;
