@@ -416,7 +416,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         id,
                         name,
                         dob,
-                        avatar_url
+                        avatar_url,
+                        gender
                     )
                 `)
                 .eq("user_id", user.id);
@@ -480,6 +481,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                             avatarInitials: ca.children.name?.[0]?.toUpperCase() || "?",
                             avatarUrl,
                             dob: ca.children.dob,
+                            gender: ca.children.gender,
                         });
                     }
                 } else {
@@ -563,7 +565,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             // but we can skip the detailed child-specific loading
             if (!activeChildId) {
                 // Load all unique homes from all child spaces
-                const uniqueHomeIds = [...new Set(loadedAllChildSpaces.map(cs => cs.homeId))];
+                const uniqueHomeIds = Array.from(new Set(loadedAllChildSpaces.map(cs => cs.homeId)));
                 const allHomes: HomeProfile[] = [];
                 if (allChildSpacesData) {
                     const seenHomeIds = new Set<string>();
@@ -669,6 +671,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     for (const home of loadedHomes) {
                         home.accessibleCaregiverIds = membershipsByHome[home.id] || [];
                     }
+                }
+            }
+
+            // Auto-hide homes with 0 caregivers connected
+            for (const home of loadedHomes) {
+                if (!home.accessibleCaregiverIds || home.accessibleCaregiverIds.length === 0) {
+                    home.status = "hidden";
                 }
             }
 

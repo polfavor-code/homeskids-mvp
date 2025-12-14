@@ -242,7 +242,16 @@ export default function InvitePage() {
         if (invite.has_own_home) {
             // Need to create their own home - go to a home setup flow
             // Don't mark invite as accepted yet - that happens after setup-home is complete
-            router.push("/setup-home?child_id=" + invite.child_id + "&invite_id=" + invite.id);
+            // Pass home_id and has_own_home in URL so setup-home doesn't need to re-query
+            const setupParams = new URLSearchParams({
+                child_id: invite.child_id,
+                invite_id: invite.id,
+                has_own_home: "true",
+            });
+            if (invite.home_id) {
+                setupParams.set("home_id", invite.home_id);
+            }
+            router.push("/setup-home?" + setupParams.toString());
         } else {
             // Already added to existing home - mark invite as accepted and go to dashboard
             await supabase
@@ -256,7 +265,8 @@ export default function InvitePage() {
             
             setOnboardingCompleted(true);
             await refreshData();
-            router.replace("/");
+            // Full page reload to ensure all data contexts refresh
+            window.location.href = "/";
         }
     };
 

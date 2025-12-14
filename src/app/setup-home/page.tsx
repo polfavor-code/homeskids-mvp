@@ -17,6 +17,9 @@ export default function SetupHomePage() {
     const searchParams = useSearchParams();
     const childId = searchParams.get("child_id");
     const inviteId = searchParams.get("invite_id");
+    // These params come directly from the invite page to avoid re-querying
+    const urlHomeId = searchParams.get("home_id");
+    const urlHasOwnHome = searchParams.get("has_own_home") === "true";
 
     const { user } = useAuth();
     const { setOnboardingCompleted, refreshData } = useAppState();
@@ -34,6 +37,8 @@ export default function SetupHomePage() {
     useEffect(() => {
         const loadData = async () => {
             if (!childId || !user) return;
+
+            console.log("🏠 Loading setup-home data:", { childId, inviteId });
 
             // Get child name
             const { data: child } = await supabase
@@ -57,6 +62,57 @@ export default function SetupHomePage() {
                 setUserLabel(profile.label || profile.name || "");
             }
 
+            // If coming from invite, load invite data to filter homes
+            let allowedHomeIds: string[] | null = null;
+            let shouldCreateOwnHome = false;
+
+            // Check for invite data from URL params (passed from invite page)
+            // or fall back to querying the database
+            if (urlHomeId || urlHasOwnHome) {
+                // Use URL params directly (more reliable, avoids RLS issues)
+                console.log("🏠 Using URL params:", { urlHomeId, urlHasOwnHome });
+                
+                if (urlHomeId) {
+                    allowedHomeIds = [urlHomeId];
+                    setSelectedHomeIds([urlHomeId]);
+                } else {
+                    allowedHomeIds = [];
+                }
+                
+                shouldCreateOwnHome = urlHasOwnHome;
+                
+                if (shouldCreateOwnHome) {
+                    setNewHomes([{ id: crypto.randomUUID(), name: "" }]);
+                }
+            } else if (inviteId) {
+                // Fallback: query invite from database
+                const { data: invite, error: inviteError } = await supabase
+                    .from("invites")
+                    .select("home_id, has_own_home")
+                    .eq("id", inviteId)
+                    .single();
+
+                console.log("🏠 Invite query result:", { invite, error: inviteError });
+
+                if (invite) {
+                    if (invite.home_id) {
+                        allowedHomeIds = [invite.home_id];
+                    } else {
+                        allowedHomeIds = [];
+                    }
+                    
+                    shouldCreateOwnHome = invite.has_own_home || false;
+
+                    if (allowedHomeIds.length > 0) {
+                        setSelectedHomeIds(allowedHomeIds);
+                    }
+
+                    if (shouldCreateOwnHome) {
+                        setNewHomes([{ id: crypto.randomUUID(), name: "" }]);
+                    }
+                }
+            }
+
             // Get existing homes for this child (homes already set up by other caregivers)
             const { data: childSpaces } = await supabase
                 .from("child_spaces")
@@ -70,10 +126,18 @@ export default function SetupHomePage() {
                 .eq("child_id", childId);
 
             if (childSpaces && childSpaces.length > 0) {
-                const homes = childSpaces
+                let homes = childSpaces
                     .map((cs: any) => cs.homes)
                     .filter(Boolean)
                     .map((h: any) => ({ id: h.id, name: h.name }));
+                
+                // If coming from invite, only show homes that were selected in the invite
+                // allowedHomeIds is null if NOT from invite (show all), array if from invite (filter to only those)
+                if (allowedHomeIds !== null) {
+                    homes = homes.filter(h => allowedHomeIds!.includes(h.id));
+                    console.log("🏠 Filtered to allowed homes:", homes);
+                }
+                
                 setExistingHomes(homes);
             }
 
@@ -81,7 +145,7 @@ export default function SetupHomePage() {
         };
 
         loadData();
-    }, [childId, user]);
+    }, [childId, inviteId, urlHomeId, urlHasOwnHome, user]);
 
     const addHome = () => {
         setNewHomes([...newHomes, { id: crypto.randomUUID(), name: "" }]);
@@ -209,10 +273,11 @@ export default function SetupHomePage() {
                     .eq("id", inviteId);
             }
 
-            // 5. Update app state and redirect
+            // 5. Update app state and redirect with full page reload
+            // Full reload ensures all contexts (items, contacts, health, etc.) refresh properly
             setOnboardingCompleted(true);
             await refreshData();
-            router.replace("/");
+            window.location.href = "/";
         } catch (err: any) {
             console.error("Error setting up homes:", err);
             setError(err.message || "Failed to set up homes. Please try again.");
@@ -245,10 +310,10 @@ export default function SetupHomePage() {
 
             setOnboardingCompleted(true);
             await refreshData();
-            router.replace("/");
+            window.location.href = "/";
         } catch (err) {
             console.error("Error skipping:", err);
-            router.replace("/");
+            window.location.href = "/";
         }
     };
 

@@ -16,6 +16,10 @@ export const FEATURES = {
     // Uses new tables: children, homes, child_access, etc.
     // V2 contexts are backward-compatible with V1 interfaces
     V2_PERMISSIONS: true,     // Enabled - using new child-centric permission model
+    
+    // Calendar feature - Enable after running migration 012
+    // Tables: calendar_events, calendar_notifications
+    CALENDAR: true,           // Set to true after running supabase-v2-migration-012-calendar-events.sql
 };
 
 if (!supabaseUrl) {

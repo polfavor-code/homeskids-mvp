@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Child Selector - Design Variations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forest: '#2C3E2D',
+                        cream: '#FAF8F5',
+                        teal: '#4A7C74',
+                        softGreen: '#E8F0E8',
+                        border: '#E5E2DC',
+                        textSub: '#6B7280',
+                        terracotta: '#C4694A',
+                    },
+                    fontFamily: {
+                        dmSerif: ['"DM Serif Display"', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f3f0;
+        }
+        .font-dmSerif {
+            font-family: 'DM Serif Display', serif;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <h1 class="font-dmSerif text-3xl text-forest mb-2">Child Selector Designs</h1>
+    <p class="text-textSub mb-8">6 variations matching the homes.kids design language</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+        <!-- VERSION 1: Dropdown Style with Label -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-border">
+            <h2 class="font-dmSerif text-lg text-forest mb-4">Version 1: Labeled Dropdown</h2>
+            <p class="text-xs text-textSub mb-4">Clear label, compact, matches form inputs</p>
+            
+            <div class="w-64 bg-cream rounded-xl p-3 border border-border">
+                <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2">Viewing as</p>
+                <button class="w-full flex items-center gap-3 px-3 py-2.5 bg-white rounded-xl border border-border hover:border-forest/30 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-teal flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                    </div>
+                    <span class="flex-1 text-left text-sm font-medium text-forest">June</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Expanded state -->
+            <div class="w-64 bg-cream rounded-xl p-3 border border-border mt-4">
+                <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2">Viewing as</p>
+                <div class="bg-white rounded-xl border border-forest/20 shadow-lg overflow-hidden">
+                    <button class="w-full flex items-center gap-3 px-3 py-2.5 bg-softGreen border-b border-border">
+                        <div class="w-8 h-8 rounded-full overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                        </div>
+                        <span class="flex-1 text-left text-sm font-semibold text-forest">June</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-forest">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </button>
+                    <button class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-cream/50 transition-colors">
+                        <div class="w-8 h-8 rounded-full bg-terracotta flex items-center justify-center text-white text-sm font-semibold">E</div>
+                        <span class="flex-1 text-left text-sm font-medium text-forest">Elodie</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 2: Pill Tabs -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-border">
+            <h2 class="font-dmSerif text-lg text-forest mb-4">Version 2: Pill Tabs</h2>
+            <p class="text-xs text-textSub mb-4">Quick switching, always visible, no dropdown</p>
+            
+            <div class="w-64">
+                <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2 px-1">Switch child</p>
+                <div class="flex gap-2 p-1.5 bg-cream rounded-xl border border-border">
+                    <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm border border-forest/10">
+                        <div class="w-6 h-6 rounded-full overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                        </div>
+                        <span class="text-sm font-semibold text-forest">June</span>
+                    </button>
+                    <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg hover:bg-white/50 transition-colors">
+                        <div class="w-6 h-6 rounded-full bg-terracotta flex items-center justify-center text-white text-xs font-semibold">E</div>
+                        <span class="text-sm font-medium text-textSub">Elodie</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- With 3 children -->
+            <div class="w-64 mt-6">
+                <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2 px-1">With 3 children</p>
+                <div class="flex gap-1.5 p-1.5 bg-cream rounded-xl border border-border">
+                    <button class="flex-1 flex flex-col items-center gap-1 px-2 py-2 bg-white rounded-lg shadow-sm border border-forest/10">
+                        <div class="w-7 h-7 rounded-full overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                        </div>
+                        <span class="text-xs font-semibold text-forest">June</span>
+                    </button>
+                    <button class="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg hover:bg-white/50 transition-colors">
+                        <div class="w-7 h-7 rounded-full bg-terracotta flex items-center justify-center text-white text-xs font-semibold">E</div>
+                        <span class="text-xs font-medium text-textSub">Elodie</span>
+                    </button>
+                    <button class="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-lg hover:bg-white/50 transition-colors">
+                        <div class="w-7 h-7 rounded-full bg-teal flex items-center justify-center text-white text-xs font-semibold">M</div>
+                        <span class="text-xs font-medium text-textSub">Max</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 3: Card Stack -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-border">
+            <h2 class="font-dmSerif text-lg text-forest mb-4">Version 3: Stacked Cards</h2>
+            <p class="text-xs text-textSub mb-4">Visual hierarchy, clear active state</p>
+            
+            <div class="w-64 space-y-2">
+                <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide px-1">Children</p>
+                
+                <!-- Active child -->
+                <div class="flex items-center gap-3 px-3 py-2.5 bg-softGreen rounded-xl border-2 border-forest/20">
+                    <div class="w-10 h-10 rounded-full overflow-hidden ring-2 ring-forest ring-offset-2">
+                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-forest">June</p>
+                        <p class="text-[10px] text-teal font-medium">Currently viewing</p>
+                    </div>
+                    <div class="w-5 h-5 rounded-full bg-forest flex items-center justify-center">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Other child -->
+                <button class="w-full flex items-center gap-3 px-3 py-2.5 bg-cream rounded-xl border border-border hover:border-forest/30 hover:bg-white transition-all">
+                    <div class="w-10 h-10 rounded-full bg-terracotta flex items-center justify-center text-white font-semibold">E</div>
+                    <div class="flex-1 text-left">
+                        <p class="text-sm font-medium text-forest">Elodie</p>
+                        <p class="text-[10px] text-textSub">Tap to switch</p>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-textSub">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- VERSION 4: Floating Avatars -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-border">
+            <h2 class="font-dmSerif text-lg text-forest mb-4">Version 4: Avatar Row</h2>
+            <p class="text-xs text-textSub mb-4">Compact, icon-focused, great for collapsed sidebar</p>
+            
+            <!-- Expanded sidebar -->
+            <div class="w-64 mb-6">
+                <div class="flex items-center gap-2 px-2 py-3 border-t border-border">
+                    <div class="flex -space-x-1">
+                        <button class="relative w-10 h-10 rounded-full ring-2 ring-forest ring-offset-2 ring-offset-white overflow-hidden z-10 transition-transform hover:scale-105">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                        </button>
+                        <button class="relative w-10 h-10 rounded-full bg-terracotta flex items-center justify-center text-white font-semibold border-2 border-white hover:z-20 transition-transform hover:scale-105 hover:ring-2 hover:ring-terracotta hover:ring-offset-2">
+                            E
+                        </button>
+                    </div>
+                    <div class="flex-1 ml-2">
+                        <p class="text-xs font-medium text-forest">June</p>
+                        <p class="text-[10px] text-textSub">Tap other to switch</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collapsed sidebar -->
+            <div class="w-16 bg-cream rounded-xl p-2 border border-border">
+                <p class="text-[8px] font-semibold text-forest/60 uppercase tracking-wide mb-2 text-center">Kids</p>
+                <div class="flex flex-col items-center gap-2">
+                    <button class="w-10 h-10 rounded-full ring-2 ring-forest ring-offset-2 ring-offset-cream overflow-hidden transition-transform hover:scale-105">
+                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-terracotta flex items-center justify-center text-white font-semibold border-2 border-cream hover:ring-2 hover:ring-terracotta hover:ring-offset-2 hover:ring-offset-cream transition-all">
+                        E
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 5: Segmented Control -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-border">
+            <h2 class="font-dmSerif text-lg text-forest mb-4">Version 5: Segmented Control</h2>
+            <p class="text-xs text-textSub mb-4">iOS-style, clean toggle, modern feel</p>
+            
+            <div class="w-64">
+                <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2 px-1">Active child</p>
+                <div class="relative bg-border/50 rounded-xl p-1">
+                    <!-- Sliding background -->
+                    <div class="absolute top-1 left-1 w-[calc(50%-4px)] h-[calc(100%-8px)] bg-white rounded-lg shadow-sm transition-transform duration-200"></div>
+                    
+                    <div class="relative flex">
+                        <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg z-10">
+                            <div class="w-6 h-6 rounded-full overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                            </div>
+                            <span class="text-sm font-semibold text-forest">June</span>
+                        </button>
+                        <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg z-10 hover:bg-white/30 transition-colors">
+                            <div class="w-6 h-6 rounded-full bg-terracotta flex items-center justify-center text-white text-xs font-semibold">E</div>
+                            <span class="text-sm font-medium text-textSub">Elodie</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- With icon indicator -->
+            <div class="w-64 mt-6">
+                <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2 px-1">With switch icon</p>
+                <div class="flex items-center gap-2">
+                    <div class="flex-1 relative bg-cream rounded-xl p-1 border border-border">
+                        <div class="absolute top-1 left-1 w-[calc(50%-4px)] h-[calc(100%-8px)] bg-white rounded-lg shadow-sm border border-forest/10"></div>
+                        <div class="relative flex">
+                            <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg z-10">
+                                <div class="w-6 h-6 rounded-full overflow-hidden">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                                </div>
+                                <span class="text-sm font-semibold text-forest">June</span>
+                            </button>
+                            <button class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg z-10">
+                                <div class="w-6 h-6 rounded-full bg-terracotta flex items-center justify-center text-white text-xs font-semibold">E</div>
+                                <span class="text-sm font-medium text-textSub">Elodie</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="w-8 h-8 rounded-lg bg-cream border border-border flex items-center justify-center text-textSub hover:text-forest hover:border-forest/30 transition-colors" title="Switch children">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="17 1 21 5 17 9"></polyline>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                            <polyline points="7 23 3 19 7 15"></polyline>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VERSION 6: Bottom Bar Style -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-border">
+            <h2 class="font-dmSerif text-lg text-forest mb-4">Version 6: Footer Card</h2>
+            <p class="text-xs text-textSub mb-4">Clear separation, always accessible</p>
+            
+            <div class="w-64">
+                <!-- Current child with expand trigger -->
+                <div class="bg-cream rounded-xl border border-border overflow-hidden">
+                    <button class="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/50 transition-colors">
+                        <div class="w-9 h-9 rounded-full overflow-hidden ring-2 ring-forest/20">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 text-left">
+                            <p class="text-xs text-textSub">Viewing</p>
+                            <p class="text-sm font-semibold text-forest">June's Space</p>
+                        </div>
+                        <div class="flex items-center gap-1 text-teal">
+                            <span class="text-xs font-medium">Switch</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Expanded state -->
+                <div class="bg-cream rounded-xl border border-border overflow-hidden mt-4">
+                    <div class="px-4 py-2 border-b border-border bg-white/50">
+                        <p class="text-[10px] font-semibold text-forest/60 uppercase tracking-wide">Switch child</p>
+                    </div>
+                    <div class="p-2 space-y-1">
+                        <button class="w-full flex items-center gap-3 px-3 py-2.5 bg-white rounded-lg border border-forest/20 shadow-sm">
+                            <div class="w-8 h-8 rounded-full overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="" class="w-full h-full object-cover">
+                            </div>
+                            <span class="flex-1 text-left text-sm font-semibold text-forest">June</span>
+                            <div class="w-5 h-5 rounded-full bg-forest flex items-center justify-center">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </button>
+                        <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-terracotta flex items-center justify-center text-white text-sm font-semibold">E</div>
+                            <span class="flex-1 text-left text-sm font-medium text-forest">Elodie</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Recommendation Section -->
+    <div class="mt-12 bg-softGreen rounded-2xl p-6 border border-forest/10 max-w-2xl">
+        <h2 class="font-dmSerif text-xl text-forest mb-3">💡 Recommendation</h2>
+        <p class="text-sm text-forest mb-4">
+            Based on your current design language, <strong>Version 1 (Labeled Dropdown)</strong> or <strong>Version 6 (Footer Card)</strong> 
+            would integrate best with your existing UI. They:
+        </p>
+        <ul class="text-sm text-forest space-y-1 ml-4 list-disc">
+            <li>Match your card-based layout pattern</li>
+            <li>Use the same border, shadow, and color treatments</li>
+            <li>Provide clear labeling ("Viewing as" / "Switch child")</li>
+            <li>Work well in both expanded and collapsed sidebar states</li>
+        </ul>
+        <p class="text-sm text-forest mt-4">
+            For <strong>2 children</strong>, Version 2 (Pill Tabs) is also great - quick, always visible.<br>
+            For <strong>3+ children</strong>, stick with dropdown-based versions (1, 3, or 6).
+        </p>
+    </div>
+
+</body>
+</html>

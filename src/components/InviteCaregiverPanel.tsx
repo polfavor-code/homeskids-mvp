@@ -111,7 +111,8 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             const finalHomeIds = selectedHomeIds.length > 0 ? selectedHomeIds : [];
             const primaryHomeId = finalHomeIds.length > 0 ? finalHomeIds[0] : null;
 
-            const { error: insertError } = await supabase.from("invites").insert({
+            // Build invite data - home_ids column may not exist in older databases
+            const inviteData: Record<string, any> = {
                 child_id: child.id,
                 invited_by: user?.id,
                 token: newToken,
@@ -121,7 +122,20 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 invitee_role: inviteRole,
                 has_own_home: askToCreateHome, // True if they need to create their own home
                 home_id: primaryHomeId,
+            };
+
+            // Try to include home_ids if the column exists
+            let { error: insertError } = await supabase.from("invites").insert({
+                ...inviteData,
+                home_ids: finalHomeIds.length > 0 ? finalHomeIds : null,
             });
+
+            // If home_ids column doesn't exist, retry without it
+            if (insertError?.message?.includes("home_ids")) {
+                console.log("home_ids column not found, inserting without it");
+                const result = await supabase.from("invites").insert(inviteData);
+                insertError = result.error;
+            }
 
             if (insertError) throw insertError;
 

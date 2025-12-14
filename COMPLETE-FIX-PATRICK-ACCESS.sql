@@ -312,6 +312,141 @@ USING (
 );
 
 -- ============================================
+-- FIX: Update documents table RLS to use V2 child_access
+-- ============================================
+-- The documents table RLS was using old V1 family_id-based access
+-- Now uses V2 child_access so all caregivers with access can manage documents
+
+DROP POLICY IF EXISTS "Family members can view documents" ON documents;
+DROP POLICY IF EXISTS "Family members can insert documents" ON documents;
+DROP POLICY IF EXISTS "Family members can update documents" ON documents;
+DROP POLICY IF EXISTS "Family members can delete documents" ON documents;
+DROP POLICY IF EXISTS "Users can view their family's documents" ON documents;
+DROP POLICY IF EXISTS "Users can insert documents for their family" ON documents;
+DROP POLICY IF EXISTS "Users can update their family's documents" ON documents;
+DROP POLICY IF EXISTS "Users can delete their family's documents" ON documents;
+DROP POLICY IF EXISTS "Users with child access can view documents" ON documents;
+DROP POLICY IF EXISTS "Guardians can insert documents" ON documents;
+DROP POLICY IF EXISTS "Guardians can update documents" ON documents;
+DROP POLICY IF EXISTS "Guardians can delete documents" ON documents;
+
+-- SELECT: Anyone with child_access can view
+CREATE POLICY "Users with child access can view documents"
+ON documents FOR SELECT
+USING (
+    child_id IS NOT NULL AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id = documents.child_id 
+        AND child_access.user_id = auth.uid()
+    )
+);
+
+-- INSERT: Guardians can insert
+CREATE POLICY "Guardians can insert documents"
+ON documents FOR INSERT
+WITH CHECK (
+    child_id IS NOT NULL AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id = documents.child_id 
+        AND child_access.user_id = auth.uid()
+        AND child_access.role_type = 'guardian'
+    )
+);
+
+-- UPDATE: Guardians can update
+CREATE POLICY "Guardians can update documents"
+ON documents FOR UPDATE
+USING (
+    child_id IS NOT NULL AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id = documents.child_id 
+        AND child_access.user_id = auth.uid()
+        AND child_access.role_type = 'guardian'
+    )
+);
+
+-- DELETE: Guardians can delete
+CREATE POLICY "Guardians can delete documents"
+ON documents FOR DELETE
+USING (
+    child_id IS NOT NULL AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id = documents.child_id 
+        AND child_access.user_id = auth.uid()
+        AND child_access.role_type = 'guardian'
+    )
+);
+
+-- ============================================
+-- FIX: Update documents STORAGE RLS to use V2 child_access
+-- ============================================
+-- Storage bucket uses child_id as folder name now
+
+DROP POLICY IF EXISTS "Users can upload documents to family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Family members can view documents storage" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update documents in family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete documents from family folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload documents to child folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view documents in child folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update documents in child folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete documents in child folder" ON storage.objects;
+
+-- Storage: Upload documents (guardians only)
+CREATE POLICY "Users can upload documents to child folder"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+    bucket_id = 'documents' AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id::text = (storage.foldername(name))[1]
+        AND child_access.user_id = auth.uid()
+        AND child_access.role_type = 'guardian'
+    )
+);
+
+-- Storage: View documents (anyone with child access)
+CREATE POLICY "Users can view documents in child folder"
+ON storage.objects FOR SELECT TO authenticated
+USING (
+    bucket_id = 'documents' AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id::text = (storage.foldername(name))[1]
+        AND child_access.user_id = auth.uid()
+    )
+);
+
+-- Storage: Update documents (guardians only)
+CREATE POLICY "Users can update documents in child folder"
+ON storage.objects FOR UPDATE TO authenticated
+USING (
+    bucket_id = 'documents' AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id::text = (storage.foldername(name))[1]
+        AND child_access.user_id = auth.uid()
+        AND child_access.role_type = 'guardian'
+    )
+);
+
+-- Storage: Delete documents (guardians only)
+CREATE POLICY "Users can delete documents in child folder"
+ON storage.objects FOR DELETE TO authenticated
+USING (
+    bucket_id = 'documents' AND
+    EXISTS (
+        SELECT 1 FROM child_access 
+        WHERE child_access.child_id::text = (storage.foldername(name))[1]
+        AND child_access.user_id = auth.uid()
+        AND child_access.role_type = 'guardian'
+    )
+);
+
+-- ============================================
 -- FINAL VERIFICATION
 -- ============================================
-SELECT 'dietary_needs RLS policies updated successfully' as status;
+SELECT 'All RLS policies updated for V2 child_access system' as status;

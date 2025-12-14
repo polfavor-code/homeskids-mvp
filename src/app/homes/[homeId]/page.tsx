@@ -20,14 +20,16 @@ export default function HomeDetailPage() {
     // Find the home
     const home = homes.find((h) => h.id === homeId);
 
-    // Get caregivers for this home
+    // Get caregivers connected to this home
+    // Uses home.accessibleCaregiverIds (from home_memberships) as the source of truth
     const getHomeCaregivers = (): CaregiverProfile[] => {
         if (!home) return [];
 
         return caregivers.filter((caregiver) => {
-            if (caregiver.accessibleHomeIds?.includes(home.id)) return true;
-            if (home.ownerCaregiverId === caregiver.id) return true;
+            // Primary check: caregiver is in home's accessibleCaregiverIds (from home_memberships)
             if (home.accessibleCaregiverIds?.includes(caregiver.id)) return true;
+            // Legacy fallback: owner of the home
+            if (home.ownerCaregiverId === caregiver.id) return true;
             return false;
         });
     };

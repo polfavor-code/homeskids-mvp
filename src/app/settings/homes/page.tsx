@@ -9,6 +9,7 @@ import MobileMultiSelect from "@/components/MobileMultiSelect";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 
@@ -66,6 +67,12 @@ export default function HomeSetupPage() {
 
     const { user, loading: authLoading } = useAuth();
     const { child, homes, activeHomes, hiddenHomes, caregivers, currentHomeId, refreshData, isLoaded } = useAppState();
+    const { items } = useItems();
+
+    // Count items located at each home
+    const getItemCountForHome = (homeId: string): number => {
+        return items.filter(item => item.locationHomeId === homeId).length;
+    };
 
     const [expandedHomeId, setExpandedHomeId] = useState<string | null>(null);
     const [editingHomeId, setEditingHomeId] = useState<string | null>(null);
@@ -435,6 +442,9 @@ export default function HomeSetupPage() {
                         )}
                         <p className="text-xs text-textSub mt-0.5">
                             {getValidCaregiverCount(home)} caregiver(s) connected
+                            {getItemCountForHome(home.id) > 0 && (
+                                <span className="text-textSub/60"> · {getItemCountForHome(home.id)} item{getItemCountForHome(home.id) !== 1 ? 's' : ''}</span>
+                            )}
                         </p>
                     </div>
 
@@ -795,7 +805,7 @@ export default function HomeSetupPage() {
                             <span className="text-sm font-normal">({hiddenHomes.length})</span>
                         </h2>
                         <p className="text-xs text-textSub -mt-2">
-                            Hidden homes are not shown on the dashboard or travel bag. You can show them again anytime.
+                            Homes with no caregivers connected are automatically hidden. Add caregivers to show them again.
                         </p>
 
                         {hiddenHomes.map((home) => renderHomeCard(home, true))}
@@ -816,8 +826,8 @@ export default function HomeSetupPage() {
                             <p className="text-sm text-forest font-medium mb-1">About Homes</p>
                             <p className="text-xs text-textSub leading-relaxed">
                                 Homes are physical locations where {child?.name || "your child"} stays.
-                                Hide homes you don't actively use (like Grandma's house or summer homes) to keep your dashboard clean.
-                                Hidden homes can be shown again anytime. Caregivers with access only to hidden homes will appear as "Inactive".
+                                Homes with no caregivers connected are automatically hidden.
+                                Add caregivers to a home to make it active again.
                             </p>
                         </div>
                     </div>

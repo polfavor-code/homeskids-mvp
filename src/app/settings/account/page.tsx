@@ -19,7 +19,6 @@ export default function MyAccountPage() {
 
     const [profile, setProfile] = useState<any>(null);
     const [name, setName] = useState("");
-    const [label, setLabel] = useState("");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -58,7 +57,6 @@ export default function MyAccountPage() {
 
             setProfile(profileData);
             setName(profileData?.name || "");
-            setLabel(profileData?.label || "");
         } catch (err) {
             console.error("Error loading profile:", err);
         } finally {
@@ -80,7 +78,6 @@ export default function MyAccountPage() {
                 .from("profiles")
                 .update({
                     name: name.trim(),
-                    label: label.trim() || null,
                     avatar_initials: name.trim()[0].toUpperCase(),
                 })
                 .eq("id", user?.id);
@@ -309,7 +306,7 @@ export default function MyAccountPage() {
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="user-name" className="block text-sm font-semibold text-forest mb-1.5">
-                                Your Name
+                                Your Full Name
                             </label>
                             <input
                                 id="user-name"
@@ -317,25 +314,8 @@ export default function MyAccountPage() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                                placeholder="Your name"
+                                placeholder="Your full name"
                             />
-                        </div>
-
-                        <div>
-                            <label htmlFor="user-label" className="block text-sm font-semibold text-forest mb-1.5">
-                                Home Label
-                            </label>
-                            <input
-                                id="user-label"
-                                type="text"
-                                value={label}
-                                onChange={(e) => setLabel(e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                                placeholder="e.g., Daddy, Mommy, Grandma"
-                            />
-                            <p className="text-xs text-textSub mt-1.5">
-                                This is how your home appears in the app (e.g., "Daddy's")
-                            </p>
                         </div>
 
                         <div>

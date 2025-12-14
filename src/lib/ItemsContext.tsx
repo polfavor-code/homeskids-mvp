@@ -82,6 +82,9 @@ interface ItemsContextType {
     items: Item[];
     isLoaded: boolean;
 
+    // Refresh items (call after onboarding or when data access changes)
+    refetchItems: () => Promise<void>;
+
     // CRUD operations - accepts both V1 and V2 formats
     addItem: (item: AddItemInput) => Promise<{ success: boolean; error?: string; item?: Item }>;
 
@@ -872,10 +875,10 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             // Update local state
             setItems(prev => prev.map(i =>
                 i.id === itemId
-                    ? { 
-                        ...i, 
+                    ? {
+                        ...i,
                         childSpaceId: newChildSpace.id,
-                        locationHomeId: newLocation.homeId,
+                        locationHomeId: newLocation.homeId || null,
                         isMissing: false,
                         status: "at_home" as const
                     }
@@ -940,6 +943,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             value={{
                 items,
                 isLoaded,
+                refetchItems: fetchItems,
                 addItem,
                 updateItem,
                 deleteItem,

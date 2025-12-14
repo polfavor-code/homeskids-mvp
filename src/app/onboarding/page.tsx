@@ -235,31 +235,29 @@ export default function OnboardingPage() {
             // First, check for existing children this user has access to (prevent duplicates)
             const { data: existingAccess } = await supabase
                 .from("child_access")
-                .select("children(id, name)")
+                .select("child_id, children(id, name)")
                 .eq("user_id", user.id);
-            
-            const existingChildNames = new Set(
-                (existingAccess || [])
-                    .map((ca: any) => ca.children?.name?.toLowerCase().trim())
-                    .filter(Boolean)
-            );
+
+            // Build a map of child names to their data (children is an object, not array)
+            const existingChildMap = new Map<string, { id: string; name: string }>();
+            for (const ca of (existingAccess || []) as any[]) {
+                const childName = ca.children?.name?.toLowerCase().trim();
+                if (childName && ca.children?.id) {
+                    existingChildMap.set(childName, { id: ca.children.id, name: ca.children.name });
+                }
+            }
 
             for (const child of validChildren) {
                 const childNameLower = child.name.trim().toLowerCase();
-                
+
                 // Skip if child with this name already exists for this user
-                if (existingChildNames.has(childNameLower)) {
-                    // Find the existing child ID
-                    const existing = (existingAccess || []).find(
-                        (ca: any) => ca.children?.name?.toLowerCase().trim() === childNameLower
-                    );
-                    if (existing?.children?.id) {
-                        childIds.push(existing.children.id);
-                        updatedChildren.push({
-                            id: existing.children.id,
-                            name: child.name.trim(),
-                        });
-                    }
+                const existingChild = existingChildMap.get(childNameLower);
+                if (existingChild) {
+                    childIds.push(existingChild.id);
+                    updatedChildren.push({
+                        id: existingChild.id,
+                        name: child.name.trim(),
+                    });
                     continue;
                 }
 
@@ -297,9 +295,9 @@ export default function OnboardingPage() {
                 if (accessError) {
                     console.error("Error creating child_access:", accessError);
                 }
-                
-                // Add to seen names to prevent duplicates within same submission
-                existingChildNames.add(childNameLower);
+
+                // Add to map to prevent duplicates within same submission
+                existingChildMap.set(childNameLower, { id: newChild.id, name: child.name.trim() });
             }
 
             setCreatedChildIds(childIds);
@@ -643,7 +641,7 @@ export default function OnboardingPage() {
 
     // Get roles summary for display
     const getCaregiverRolesSummary = (relationships: ChildRelationship[]) => {
-        const uniqueRoles = [...new Set(relationships.map(r => r.role))];
+        const uniqueRoles = Array.from(new Set(relationships.map(r => r.role)));
         return uniqueRoles.map(role => getRoleLabel(role)).join(", ");
     };
 
@@ -1257,7 +1255,7 @@ export default function OnboardingPage() {
                             )}
 
                             <button
-                                onClick={() => router.push("/")}
+                                onClick={() => window.location.href = "/"}
                                 className="w-full py-3 bg-forest text-white rounded-xl font-medium"
                             >
                                 Continue to dashboard
