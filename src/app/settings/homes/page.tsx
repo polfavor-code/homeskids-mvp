@@ -8,7 +8,7 @@ import MobileSelect from "@/components/MobileSelect";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContextV2";
+import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 

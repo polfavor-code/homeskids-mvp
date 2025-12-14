@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
-import { useItems } from "@/lib/ItemsContextV2";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useItems } from "@/lib/ItemsContext";
+import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { ChevronDownIcon, ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 

@@ -11,7 +11,7 @@ import CaregiverStatusPill from "@/components/caregivers/CaregiverStatusPill";
 import CaregiverConfirmDialog, { CaregiverAction } from "@/components/caregivers/CaregiverConfirmDialog";
 import HomeSelectionDialog from "@/components/caregivers/HomeSelectionDialog";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState, CaregiverProfile, HomeProfile } from "@/lib/AppStateContextV2";
+import { useAppState, CaregiverProfile, HomeProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { getAccessLevelMessage } from "@/lib/caregiverPermissions";
@@ -430,9 +430,9 @@ export default function CaregiversPage() {
         try {
             setSaving(true);
 
-            // Try invites_v2 first (V2 model), then fall back to invites (V1 model)
+            // Try invites first (V2 model), then fall back to invites (V1 model)
             const { error: v2Error } = await supabase
-                .from("invites_v2")
+                .from("invites")
                 .delete()
                 .eq("id", inviteId);
 

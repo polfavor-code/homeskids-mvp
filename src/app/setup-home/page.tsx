@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useAppState } from "@/lib/AppStateContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
 
@@ -28,7 +28,7 @@ export default function SetupHomePage() {
 
             // Get child name
             const { data: child } = await supabase
-                .from("children_v2")
+                .from("children")
                 .select("name")
                 .eq("id", childId)
                 .single();
@@ -72,7 +72,7 @@ export default function SetupHomePage() {
         try {
             // 1. Create home
             const { data: newHome, error: homeError } = await supabase
-                .from("homes_v2")
+                .from("homes")
                 .insert({
                     name: homeName.trim(),
                     created_by: user.id,
@@ -132,7 +132,7 @@ export default function SetupHomePage() {
             {/* Brand Side - Gradient */}
             <div className="hidden lg:flex flex-1 bg-gradient-to-br from-forest via-[#3D5A40] to-teal flex-col items-center justify-center p-12 text-white">
                 <Logo size="lg" variant="light" />
-                <p className="text-lg opacity-90 mt-4 mb-8">Set up your home for {childName || "your child"}.</p>
+                <p className="text-lg opacity-90 mt-4 mb-8">Add your home for {childName || "your child"}.</p>
                 <ul className="max-w-sm space-y-4">
                     <li className="flex items-start gap-3 text-white/85 text-sm border-b border-white/10 pb-4">
                         <span className="opacity-60 mt-0.5">→</span>
@@ -160,9 +160,9 @@ export default function SetupHomePage() {
 
                     <div className="space-y-6">
                         <div className="text-center">
-                            <h1 className="text-2xl font-bold text-forest mb-2">Set up your home</h1>
+                            <h1 className="text-2xl font-bold text-forest mb-2">Add your home for {childName || "your child"}</h1>
                             <p className="text-gray-600">
-                                Create a home for {childName || "your child"} to stay at
+                                How should we name the home where {childName || "your child"} stays when {childName ? "she's" : "they're"} with you?
                             </p>
                         </div>
 
@@ -184,7 +184,7 @@ export default function SetupHomePage() {
                                 placeholder={userLabel ? `${userLabel}'s home` : "My home"}
                             />
                             <p className="text-xs text-gray-500 mt-2">
-                                This helps {childName || "your child"} know which home they're at.
+                                This helps everyone know where {childName || "your child"} is.
                             </p>
                         </div>
 
@@ -193,8 +193,21 @@ export default function SetupHomePage() {
                             disabled={saving}
                             className="w-full py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
                         >
-                            {saving ? "Creating..." : "Create home and continue"}
+                            {saving ? "Adding..." : "Add home"}
                         </button>
+
+                        <div className="text-center">
+                            <button
+                                onClick={() => router.replace("/")}
+                                disabled={saving}
+                                className="text-sm text-gray-500 hover:text-gray-700 underline"
+                            >
+                                Skip for now
+                            </button>
+                            <p className="text-xs text-gray-400 mt-1">
+                                You can add your home later.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { ItemsProvider } from "@/lib/ItemsContextV2";
-import { AppStateProvider } from "@/lib/AppStateContextV2";
+import { ItemsProvider } from "@/lib/ItemsContext";
+import { AppStateProvider } from "@/lib/AppStateContext";
 import { AuthProvider } from "@/lib/AuthContext";
-import { ContactsProvider } from "@/lib/ContactsContextV2";
-import { HealthProvider } from "@/lib/HealthContextV2";
-import { DocumentsProvider } from "@/lib/DocumentsContextV2";
+import { ContactsProvider } from "@/lib/ContactsContext";
+import { HealthProvider } from "@/lib/HealthContext";
+import { DocumentsProvider } from "@/lib/DocumentsContext";
 import { TravelBagProvider } from "@/lib/TravelBagContext";
 import { ItemsAddedAlertProvider } from "@/lib/ItemsAddedAlertContext";
 import { ItemsAddedToastContainer } from "@/components/ItemsAddedToast";

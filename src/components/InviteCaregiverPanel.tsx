@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useAppState } from "@/lib/AppStateContext";
 import { QRCodeSVG } from "qrcode.react";
 import MobileSelect from "@/components/MobileSelect";
 
@@ -28,7 +28,7 @@ let pendingInviteData: { token: string; name: string; label: string; role: strin
 
 export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCaregiverPanelProps) {
     const { user } = useAuth();
-    const { homes, refreshData } = useAppState();
+    const { child, homes, refreshData } = useAppState();
 
     // Initialize from pending data if exists (survives re-renders from context updates)
     const [showInviteLink, setShowInviteLink] = useState(() => pendingInviteData !== null);
@@ -77,9 +77,19 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             return;
         }
 
+        if (!inviteRole) {
+            setError("Please select a role");
+            return;
+        }
+
         // Validate home selection (unless skipped or only 1 home)
         if (homes.length > 1 && !skipHomeSelection && selectedHomeIds.length === 0) {
             setError("Please select at least one home or choose 'Skip for now'");
+            return;
+        }
+
+        if (!child) {
+            setError("No child profile found. Please complete setup first.");
             return;
         }
 
@@ -87,31 +97,23 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             setGeneratingInvite(true);
             setError("");
 
-            // Get family ID
-            const { data: familyMember } = await supabase
-                .from("family_members")
-                .select("family_id")
-                .eq("user_id", user?.id)
-                .single();
-
-            if (!familyMember) {
-                throw new Error("No family found");
-            }
-
             // Generate new invite token
             const newToken = crypto.randomUUID();
 
-            // Determine final home IDs (use selected, or first home if only one)
+            // Determine final home ID (use first selected, or first home if only one)
             const finalHomeIds = homes.length === 1 ? [homes[0].id] : selectedHomeIds;
+            const primaryHomeId = finalHomeIds.length > 0 ? finalHomeIds[0] : null;
 
             const { error: insertError } = await supabase.from("invites").insert({
-                family_id: familyMember.family_id,
+                child_id: child.id,
+                invited_by: user?.id,
                 token: newToken,
                 status: "pending",
                 invitee_name: inviteName.trim(),
                 invitee_label: inviteLabel.trim(),
-                invitee_role: inviteRole || null,
-                home_ids: finalHomeIds,
+                invitee_role: inviteRole,
+                has_own_home: false, // For now, they join an existing home
+                home_id: primaryHomeId,
             });
 
             if (insertError) throw insertError;
@@ -194,7 +196,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 )}
 
                 <p className="text-sm text-textSub">
-                    Send this link to <strong>{inviteName}</strong> so they can join your family.
+                    Send this link to <strong>{inviteName}</strong> so they can access {child?.name}'s information.
                 </p>
 
                 {/* Show which homes they'll have access to */}

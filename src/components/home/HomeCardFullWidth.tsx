@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { CaregiverProfile, ChildProfile, HomeProfile } from "@/lib/AppStateContextV2";
+import { CaregiverProfile, ChildProfile, HomeProfile } from "@/lib/AppStateContext";
 import { Item } from "@/lib/mockData";
 
 interface HomeCardFullWidthProps {

@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState } from "@/lib/AppStateContextV2";
-import { useDocuments, Document } from "@/lib/DocumentsContextV2";
+import { useAppState } from "@/lib/AppStateContext";
+import { useDocuments, Document } from "@/lib/DocumentsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { SchoolIcon } from "@/components/icons/DuotoneIcons";
 import FileUploader from "@/components/FileUploader";

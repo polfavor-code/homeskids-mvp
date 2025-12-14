@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
-import { useAppState, CaregiverProfile, HomeProfile } from "@/lib/AppStateContextV2";
-import { useItems } from "@/lib/ItemsContextV2";
+import { useAppState, CaregiverProfile, HomeProfile } from "@/lib/AppStateContext";
+import { useItems } from "@/lib/ItemsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
 export default function HomeDetailPage() {

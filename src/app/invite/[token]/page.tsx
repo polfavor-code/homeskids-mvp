@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
@@ -28,12 +28,12 @@ export default function InvitePage() {
         const fetchInvite = async () => {
             console.log("Fetching invite with token:", token);
 
-            // First try invites_v2 (new V2 model)
+            // First try invites (new V2 model)
             const { data: v2Data, error: v2Error } = await supabase
-                .from("invites_v2")
+                .from("invites")
                 .select(`
                     *,
-                    children_v2 (
+                    child:children!child_id (
                         id,
                         name,
                         avatar_url
@@ -48,10 +48,10 @@ export default function InvitePage() {
             if (v2Data) {
                 // Get child avatar URL if exists
                 let childAvatarUrl = null;
-                if (v2Data.children_v2?.avatar_url) {
+                if (v2Data.child?.avatar_url) {
                     const { data: urlData } = supabase.storage
                         .from("avatars")
-                        .getPublicUrl(v2Data.children_v2.avatar_url);
+                        .getPublicUrl(v2Data.child.avatar_url);
                     if (urlData?.publicUrl) {
                         childAvatarUrl = urlData.publicUrl;
                     }
@@ -59,7 +59,7 @@ export default function InvitePage() {
 
                 setInvite({
                     ...v2Data,
-                    child_name: v2Data.children_v2?.name,
+                    child_name: v2Data.child?.name,
                     child_avatar_url: childAvatarUrl,
                     isV2: true,
                 });
@@ -188,7 +188,7 @@ export default function InvitePage() {
 
         // 5. Mark invite as accepted
         await supabase
-            .from("invites_v2")
+            .from("invites")
             .update({
                 status: "accepted",
                 accepted_at: new Date().toISOString(),
@@ -326,19 +326,36 @@ export default function InvitePage() {
         }
     };
 
-    // Get display name
-    const getDisplayName = () => {
-        if (invite?.child_name) {
-            return `${invite.child_name}'s care team`;
-        }
-        return invite?.families?.name || "the family";
+    // Get display name for child
+    const getChildName = () => {
+        return invite?.child_name || "your child";
+    };
+
+    // Get first name from invitee name
+    const getFirstName = () => {
+        const name = invite?.invitee_name || "";
+        return name.split(" ")[0] || "there";
+    };
+
+    // Get display label for role
+    const getRoleLabel = () => {
+        const roleMap: Record<string, string> = {
+            parent: "Parent",
+            step_parent: "Step-parent",
+            family_member: "Family member",
+            nanny: "Nanny",
+            babysitter: "Babysitter",
+            family_friend: "Family friend",
+            other: "Caregiver",
+        };
+        return roleMap[invite?.invitee_role] || "Caregiver";
     };
 
     // Get content for left panel
     const getLeftPanelContent = () => {
         if (view === "landing") {
             return {
-                description: `You've been invited to join ${getDisplayName()} on homes.kids.`,
+                description: `You've been invited to join ${getChildName()}'s homes on Homes.kids.`,
                 bullets: [
                     "One shared place for everything your child needs between homes.",
                     "Plan what moves in the bag between homes.",
@@ -431,47 +448,30 @@ export default function InvitePage() {
                     <div className="w-full max-w-sm">
                         <div className="lg:hidden text-center mb-8">
                             <Logo size="md" variant="dark" />
-                            <p className="text-textSub text-sm mt-2">Co-parenting central hub.</p>
                         </div>
 
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-teal/20 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
-                                {invite?.child_avatar_url ? (
-                                    <img
-                                        src={invite.child_avatar_url}
-                                        alt={invite.child_name || "Child"}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <UserIcon size={32} className="text-teal" />
-                                )}
-                            </div>
-                            <h2 className="font-dmSerif text-2xl text-forest mb-2">
-                                You're invited!
-                            </h2>
-                            <p className="text-textSub text-sm">
-                                Join {getDisplayName()} on homes.kids
+                        {/* Title & Subtitle */}
+                        <div className="text-center mb-8">
+                            <h1 className="font-dmSerif text-3xl text-forest mb-2">
+                                You're invited, {getFirstName()}
+                            </h1>
+                            <p className="text-textSub">
+                                Join {getChildName()}'s homes on Homes.kids
                             </p>
                         </div>
 
-                        {(invite.invitee_name || invite.invitee_label) && (
-                            <div className="bg-white border border-border rounded-xl p-4 mb-6 text-center">
-                                <p className="text-sm text-textSub">You'll be joining as</p>
-                                <p className="font-semibold text-forest">
-                                    {invite.invitee_label || invite.invitee_name}
-                                </p>
-                                {invite.invitee_name && invite.invitee_label && (
-                                    <p className="text-xs text-textSub">({invite.invitee_name})</p>
-                                )}
-                            </div>
-                        )}
-
-                        {invite.has_own_home && (
-                            <p className="text-xs text-gray-500 text-center mb-4">
-                                You'll set up your own home for {invite.child_name} after joining.
+                        {/* Context Card */}
+                        <div className="bg-white border border-border rounded-xl p-5 mb-8 text-center">
+                            <p className="text-sm text-textSub mb-1">You'll be joining as</p>
+                            <p className="font-semibold text-forest text-lg">
+                                {getRoleLabel()}
                             </p>
-                        )}
+                            <p className="text-xs text-textSub mt-2">
+                                (You can change this later)
+                            </p>
+                        </div>
 
+                        {/* Primary Action */}
                         <button
                             onClick={() => setView("signup")}
                             className="w-full py-3.5 bg-forest text-white rounded-xl font-semibold hover:bg-teal transition-colors mb-3"
@@ -479,9 +479,10 @@ export default function InvitePage() {
                             Accept invite
                         </button>
 
+                        {/* Secondary Action */}
                         <Link
                             href="/"
-                            className="block text-center text-sm text-textSub hover:text-forest transition-colors"
+                            className="block w-full py-3.5 text-center text-forest font-medium border border-border rounded-xl hover:bg-white transition-colors"
                         >
                             Decline
                         </Link>
@@ -519,7 +520,7 @@ export default function InvitePage() {
                         </div>
 
                         <h2 className="font-dmSerif text-2xl text-forest mb-2">Welcome back</h2>
-                        <p className="text-textSub text-sm mb-6">Log in to join {getDisplayName()}</p>
+                        <p className="text-textSub text-sm mb-6">Log in to join {getChildName()}'s homes</p>
 
                         <form onSubmit={handleJoin} className="space-y-4">
                             <div>
@@ -598,7 +599,7 @@ export default function InvitePage() {
                     </div>
 
                     <h2 className="font-dmSerif text-2xl text-forest mb-2">Create account</h2>
-                    <p className="text-textSub text-sm mb-6">Create an account to join {getDisplayName()}</p>
+                    <p className="text-textSub text-sm mb-6">Create an account to join {getChildName()}'s homes</p>
 
                     <form onSubmit={handleJoin} className="space-y-4">
                         <div>

@@ -4,7 +4,7 @@ import React from "react";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import Link from "next/link";
 

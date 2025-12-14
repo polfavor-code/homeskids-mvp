@@ -2,7 +2,7 @@
 
 import React from "react";
 import Avatar, { getEmojiForLabel } from "@/components/Avatar";
-import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContextV2";
+import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
 
 interface LocationHeaderProps {
     child: ChildProfile | null;

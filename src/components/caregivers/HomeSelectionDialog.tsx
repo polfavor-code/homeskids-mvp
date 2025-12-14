@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { HomeProfile } from "@/lib/AppStateContextV2";
+import { HomeProfile } from "@/lib/AppStateContext";
 
 interface HomeSelectionDialogProps {
     isOpen: boolean;

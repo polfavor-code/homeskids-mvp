@@ -1,5 +1,5 @@
 import React from "react";
-import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContextV2";
+import { CaregiverProfile, ChildProfile } from "@/lib/AppStateContext";
 
 interface JuneLocationToggleProps {
     child: ChildProfile | null;

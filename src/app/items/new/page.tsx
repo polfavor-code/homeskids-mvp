@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
 import ImageCropper from "@/components/ImageCropper";
-import { useItems } from "@/lib/ItemsContextV2";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useItems } from "@/lib/ItemsContext";
+import { useAppState } from "@/lib/AppStateContext";
 import { processImageForUpload, generateImagePaths } from "@/lib/imageUtils";
+import { supabase } from "@/lib/supabase";
 
 const CATEGORIES = [
     "Clothing",
@@ -24,7 +25,7 @@ const CATEGORIES = [
 export default function AddItemPage() {
     const router = useRouter();
     const { addItem } = useItems();
-    const { caregivers, activeHomes, homes } = useAppState();
+    const { caregivers, activeHomes, homes, child } = useAppState();
 
     const [name, setName] = useState("");
     const [category, setCategory] = useState("");
@@ -50,9 +51,7 @@ export default function AddItemPage() {
         setError("");
 
         try {
-            const { supabase } = await import("@/lib/supabase");
-
-            // Get user's family ID for family-folder structure
+            // Get user session
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.user) {
                 setError("Please log in to add items.");
@@ -60,14 +59,22 @@ export default function AddItemPage() {
                 return;
             }
 
-            const { data: familyMember } = await supabase
-                .from("family_members")
-                .select("family_id")
-                .eq("user_id", session.user.id)
-                .single();
+            // V2: Use child ID for folder structure, fallback to V1 family_members
+            let folderId = child?.id;
 
-            if (!familyMember) {
-                setError("No family found. Please complete onboarding.");
+            if (!folderId) {
+                // Fallback to V1: try family_members
+                const { data: familyMember } = await supabase
+                    .from("family_members")
+                    .select("family_id")
+                    .eq("user_id", session.user.id)
+                    .single();
+
+                folderId = familyMember?.family_id;
+            }
+
+            if (!folderId) {
+                setError("No child found. Please complete onboarding.");
                 setUploading(false);
                 return;
             }
@@ -78,7 +85,7 @@ export default function AddItemPage() {
             if (photoFile) {
                 // Process image: create original and display versions
                 const processed = await processImageForUpload(photoFile);
-                const paths = generateImagePaths(familyMember.family_id, photoFile.name);
+                const paths = generateImagePaths(folderId, photoFile.name);
 
                 console.log("[Image Upload] Original size:", processed.originalWidth, "x", processed.originalHeight);
                 console.log("[Image Upload] Display size:", processed.displayWidth, "x", processed.displayHeight);
@@ -180,7 +187,7 @@ export default function AddItemPage() {
             {/* Page header */}
             <div className="mb-6">
                 <h1 className="font-dmSerif text-2xl text-forest mt-2">Add a new item</h1>
-                <p className="text-sm text-textSub mt-1">Add one of June&apos;s things.</p>
+                <p className="text-sm text-textSub mt-1">Add one of {child?.name || "your child"}&apos;s things.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">

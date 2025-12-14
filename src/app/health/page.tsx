@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState } from "@/lib/AppStateContextV2";
-import { useHealth, DietType, HealthStatusValue } from "@/lib/HealthContextV2";
+import { useAppState } from "@/lib/AppStateContext";
+import { useHealth, DietType, HealthStatusValue } from "@/lib/HealthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { HealthIcon, AllergyIcon, MedicationIcon } from "@/components/icons/DuotoneIcons";
 import { getStatusSummaryText, HealthCategory } from "@/components/health/HealthStatusCard";

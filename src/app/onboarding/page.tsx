@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useAppState } from "@/lib/AppStateContext";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
 import MobileSelect from "@/components/MobileSelect";
@@ -143,7 +143,7 @@ export default function OnboardingPage() {
         try {
             // Create child
             const { data: newChild, error: childError } = await supabase
-                .from("children_v2")
+                .from("children")
                 .insert({
                     name: childName.trim(),
                     dob: childBirthdate || null,
@@ -197,7 +197,7 @@ export default function OnboardingPage() {
         try {
             // Create home
             const { data: newHome, error: homeError } = await supabase
-                .from("homes_v2")
+                .from("homes")
                 .insert({
                     name: homeName.trim(),
                     created_by: user.id,
@@ -313,7 +313,7 @@ export default function OnboardingPage() {
                     updatedGuardians[i] = { ...g, inviteToken: token };
 
                     const { error: inviteError } = await supabase
-                        .from("invites_v2")
+                        .from("invites")
                         .insert({
                             token: token,
                             status: "pending",
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
                 setGuardians(updatedGuardians);
 
                 if (hasInviteError) {
-                    console.warn("Some invites failed to save to database. Run the invites_v2 migration.");
+                    console.warn("Some invites failed to save to database. Run the invites migration.");
                 }
 
                 setStep(5);

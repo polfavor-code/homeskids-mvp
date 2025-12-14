@@ -4,8 +4,8 @@ import React, { useState, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import { useContacts, ContactCategory, Contact } from "@/lib/ContactsContextV2";
-import { useAppState, CaregiverProfile } from "@/lib/AppStateContextV2";
+import { useContacts, ContactCategory, Contact } from "@/lib/ContactsContext";
+import { useAppState, CaregiverProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { MedicalIcon, SchoolIcon, ContactsIcon, FamilyIcon, FriendsIcon, ActivitiesIcon, OtherIcon, GridIcon } from "@/components/icons/DuotoneIcons";
 

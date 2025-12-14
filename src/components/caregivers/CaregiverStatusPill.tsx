@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CaregiverStatus } from "@/lib/AppStateContextV2";
+import { CaregiverStatus } from "@/lib/AppStateContext";
 
 interface CaregiverStatusPillProps {
     status: CaregiverStatus;

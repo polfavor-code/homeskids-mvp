@@ -4,8 +4,8 @@ import React from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
-import { useItems } from "@/lib/ItemsContextV2";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useItems } from "@/lib/ItemsContext";
+import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
 

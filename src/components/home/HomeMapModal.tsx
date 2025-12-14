@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { HomeProfile } from "@/lib/AppStateContextV2";
+import { HomeProfile } from "@/lib/AppStateContext";
 
 interface HomeMapModalProps {
     isOpen: boolean;

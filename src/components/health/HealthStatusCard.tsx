@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { HealthStatusValue } from "@/lib/HealthContextV2";
+import { HealthStatusValue } from "@/lib/HealthContext";
 
 export type HealthCategory = "allergies" | "medication" | "dietary";
 

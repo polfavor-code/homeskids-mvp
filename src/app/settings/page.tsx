@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { SettingsIcon, UserIcon, HomeIcon } from "@/components/icons/DuotoneIcons";

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { isRouteActive } from '@/lib/navigation';
-import { useAppState } from '@/lib/AppStateContextV2';
+import { useAppState } from '@/lib/AppStateContext';
 import { useAuth } from '@/lib/AuthContext';
 import {
     ItemsIcon,

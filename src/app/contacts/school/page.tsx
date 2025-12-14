@@ -3,8 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useContacts } from "@/lib/ContactsContextV2";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useContacts } from "@/lib/ContactsContext";
+import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { SchoolIcon } from "@/components/icons/DuotoneIcons";
 

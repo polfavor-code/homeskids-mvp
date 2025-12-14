@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./AuthContext";
-import { useAppState } from "./AppStateContextV2";
+import { useAppState } from "./AppStateContext";
 
 // Alert data structure
 export interface ItemsAddedAlert {

@@ -11,8 +11,8 @@ import BagEssentialsSection from "@/components/travel-bag/BagEssentialsSection";
 import PreviousTripTab from "@/components/travel-bag/PreviousTripTab";
 import BagHistoryTab from "@/components/travel-bag/BagHistoryTab";
 import TransferDetailModal from "@/components/travel-bag/TransferDetailModal";
-import { useItems, ItemV2 } from "@/lib/ItemsContextV2";
-import { useAppState, ChildProfile } from "@/lib/AppStateContextV2";
+import { useItems, Item } from "@/lib/ItemsContext";
+import { useAppState, ChildProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useBagTransfers, BagTransfer } from "@/lib/useBagTransfers";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
@@ -75,7 +75,7 @@ function TravelBagCheckPageContent() {
     const [dismissedMissingIds, setDismissedMissingIds] = useState<Set<string>>(new Set());
 
     // State for canceled item confirmation modal
-    const [canceledItemModal, setCanceledItemModal] = useState<ItemV2 | null>(null);
+    const [canceledItemModal, setCanceledItemModal] = useState<Item | null>(null);
 
     const handleDismissMissing = (itemId: string) => {
         setDismissedMissingIds((prev) => new Set(Array.from(prev).concat(itemId)));
@@ -97,7 +97,7 @@ function TravelBagCheckPageContent() {
     };
 
     // Helper to check if item is at origin (current home where child is)
-    const isAtOrigin = (item: ItemV2) => {
+    const isAtOrigin = (item: Item) => {
         if (!originHome) return false;
 
         // If item has a locationHomeId set, use that exclusively
@@ -160,11 +160,11 @@ function TravelBagCheckPageContent() {
         }
     };
 
-    const handleRequestItem = async (item: ItemV2) => {
+    const handleRequestItem = async (item: Item) => {
         await updateItemRequested(item.id, true);
     };
 
-    const handleUnrequestItem = async (item: ItemV2) => {
+    const handleUnrequestItem = async (item: Item) => {
         // Use cancelItemRequest - if packed, it sets isRequestCanceled flag
         // so packer can confirm removal
         await cancelItemRequest(item.id);
@@ -417,20 +417,20 @@ function PackerView({
     child: ChildProfile | null;
     originHome: { name: string } | undefined;
     destinationHome: { name: string } | undefined;
-    itemsToPack: ItemV2[];
-    toPackUnpacked: ItemV2[];
-    toPackPacked: ItemV2[];
-    missingItems: ItemV2[];
-    canceledButPackedItems: ItemV2[];
-    allItemsAtOrigin: ItemV2[];
+    itemsToPack: Item[];
+    toPackUnpacked: Item[];
+    toPackPacked: Item[];
+    missingItems: Item[];
+    canceledButPackedItems: Item[];
+    allItemsAtOrigin: Item[];
     totalToPack: number;
     packedCount: number;
     progressPercent: number;
     onTogglePacked: (id: string) => void;
     onDismissMissing: (id: string) => void;
-    onShowCanceledModal: (item: ItemV2) => void;
-    onRequestItem: (item: ItemV2) => void;
-    onUnrequestItem: (item: ItemV2) => void;
+    onShowCanceledModal: (item: Item) => void;
+    onRequestItem: (item: Item) => void;
+    onUnrequestItem: (item: Item) => void;
     childId: string | undefined;
     caregivers: { id: string; name: string; isCurrentUser?: boolean }[];
     currentUserCaregiver: { id: string; name: string } | undefined;
@@ -696,15 +696,15 @@ function RequesterView({
     child: ChildProfile | null;
     originHome: { name: string } | undefined;
     destinationHome: { name: string } | undefined;
-    itemsToPack: ItemV2[];
-    toPackUnpacked: ItemV2[];
-    toPackPacked: ItemV2[];
-    allItemsAtOrigin: ItemV2[];
+    itemsToPack: Item[];
+    toPackUnpacked: Item[];
+    toPackPacked: Item[];
+    allItemsAtOrigin: Item[];
     totalToPack: number;
     packedCount: number;
     progressPercent: number;
-    onRequestItem: (item: ItemV2) => void;
-    onUnrequestItem: (item: ItemV2) => void;
+    onRequestItem: (item: Item) => void;
+    onUnrequestItem: (item: Item) => void;
     childId: string | undefined;
     caregivers: { id: string; name: string; isCurrentUser?: boolean }[];
     currentUserCaregiver: { id: string; name: string } | undefined;
@@ -906,7 +906,7 @@ function PackerItemRow({
     packedLabel,
     requestedLabel,
 }: {
-    item: ItemV2;
+    item: Item;
     isPacked: boolean;
     onTogglePacked: () => void;
     onRemove: () => void;
@@ -989,7 +989,7 @@ function RequesterItemRow({
     packedLabel,
     requestedLabel,
 }: {
-    item: ItemV2;
+    item: Item;
     isPacked: boolean;
     onUnrequest: () => void;
     packedLabel?: string;
@@ -1062,7 +1062,7 @@ function AvailableItemRow({
     item,
     onRequest,
 }: {
-    item: ItemV2;
+    item: Item;
     onRequest: () => void;
 }) {
     return (
@@ -1108,7 +1108,7 @@ function AllItemsRow({
     packedLabel,
     requestedLabel,
 }: {
-    item: ItemV2;
+    item: Item;
     isInBag: boolean;
     isPacked: boolean;
     onAdd: () => void;
@@ -1216,7 +1216,7 @@ function MissingItemBox({
     originLabel,
     onDismiss
 }: {
-    item: ItemV2;
+    item: Item;
     originLabel: string;
     onDismiss: () => void;
 }) {
@@ -1270,7 +1270,7 @@ function CanceledItemBox({
     destinationLabel,
     onReview
 }: {
-    item: ItemV2;
+    item: Item;
     destinationLabel: string;
     onReview: () => void;
 }) {

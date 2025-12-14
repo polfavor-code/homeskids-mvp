@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAppState } from "@/lib/AppStateContextV2";
+import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase, FEATURES } from "@/lib/supabase";
 import Logo from "@/components/Logo";
