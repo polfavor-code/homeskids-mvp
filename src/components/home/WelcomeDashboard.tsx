@@ -48,7 +48,7 @@ export default function WelcomeDashboard({ userName, childName }: WelcomeDashboa
                 </Link>
 
                 {/* Invite Caregiver */}
-                <Link href="/settings/caregivers" className="action-card group">
+                <Link href="/settings/caregivers?invite=true" className="action-card group">
                     <div className="card-icon">👋</div>
                     <div className="card-title">Invite a caregiver</div>
                     <div className="card-desc">Add the other parent, grandparents, or a babysitter/nanny. Everyone sees the same essential information. Stay coordinated with fewer messages.</div>

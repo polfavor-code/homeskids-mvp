@@ -83,6 +83,7 @@ export default function MobileNav() {
         caregivers, 
         children: childrenList, 
         currentChild, 
+        currentHome,
         setCurrentChildId,
         refreshData,
     } = useAppState();
@@ -211,9 +212,20 @@ export default function MobileNav() {
                             {/* Child Switcher - Show if there are children */}
                             {childrenList.length > 0 && (
                                 <div className="p-3 bg-cream/30 border-b border-gray-100">
-                                    <p className="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2 px-1">
-                                        Viewing
-                                    </p>
+                                    <div className="flex items-center justify-between mb-2 px-1">
+                                        <p className="text-[10px] font-semibold text-forest/60 uppercase tracking-wide">
+                                            Viewing
+                                        </p>
+                                        {currentHome && (
+                                            <p className="text-[10px] text-textSub flex items-center gap-1">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                                </svg>
+                                                <span>Now at {currentHome.name}</span>
+                                            </p>
+                                        )}
+                                    </div>
                                     <div className="flex gap-2 overflow-x-auto pb-1">
                                         {childrenList.map((child) => {
                                             const isActive = child.id === currentChild?.id;

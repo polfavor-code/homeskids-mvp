@@ -141,7 +141,20 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [currentChildId, setCurrentChildId] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [accessibleChildSpaceIds, setAccessibleChildSpaceIds] = useState<string[]>([]);
     const hasCompletedFetchRef = useRef(false);
+    const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    
+    // Broadcast item update to all caregivers
+    const broadcastItemUpdate = useCallback(() => {
+        if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.send({
+                type: "broadcast",
+                event: "items-updated",
+                payload: { timestamp: Date.now() },
+            });
+        }
+    }, []);
 
     // Fetch items for the user's accessible child_spaces
     const fetchItems = useCallback(async () => {
@@ -190,6 +203,9 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             }
 
             const childSpaceIds = childSpaces.map(cs => cs.id);
+            setAccessibleChildSpaceIds(childSpaceIds);
+            
+            console.log("[Items] User has access to child_space_ids:", childSpaceIds);
 
             // 3. Fetch items for these child_spaces with home information
             const { data: itemsData } = await supabase
@@ -204,13 +220,14 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 .in("child_space_id", childSpaceIds);
 
             if (itemsData) {
+                // Map items - keep raw photo_url path, ItemPhoto component handles signing
                 const mappedItems: Item[] = itemsData.map((item: any) => ({
                     id: item.id,
                     childSpaceId: item.child_space_id,
                     name: item.name,
                     category: item.category || "Other",  // V1 compatibility: default category
                     status: item.status || "at_home",
-                    photoUrl: item.photo_url,
+                    photoUrl: item.photo_url,  // Keep raw path - ItemPhoto handles signing
                     notes: item.notes,
                     createdBy: item.created_by,
                     createdAt: item.created_at,
@@ -298,29 +315,106 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
         };
     }, [fetchItems]);
 
-    // Realtime subscription for items
+    // Refresh items when user returns to the tab/app (fallback for realtime)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible" && currentUserId) {
+                console.log("[Items] Tab became visible, refreshing items");
+                fetchItems();
+            }
+        };
+
+        // Also refresh on window focus (for some mobile browsers)
+        const handleFocus = () => {
+            if (currentUserId) {
+                console.log("[Items] Window focused, refreshing items");
+                fetchItems();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [currentUserId, fetchItems]);
+
+    // Polling fallback for items sync (every 5 seconds)
+    // This ensures items stay in sync even if realtime has issues
+    useEffect(() => {
+        if (!currentUserId) return;
+
+        const pollInterval = setInterval(() => {
+            fetchItems();
+        }, 5000); // Poll every 5 seconds for faster sync
+
+        return () => {
+            clearInterval(pollInterval);
+        };
+    }, [currentUserId, fetchItems]);
+
+    // Broadcast channel for instant item sync between caregivers
     useEffect(() => {
         if (!currentChildId) return;
 
+        const broadcastChannelName = `items-broadcast-${currentChildId}`;
+        console.log("[Items] Setting up broadcast channel:", broadcastChannelName);
+
+        const broadcastChannel = supabase
+            .channel(broadcastChannelName)
+            .on("broadcast", { event: "items-updated" }, () => {
+                console.log("[Items] Received broadcast - refreshing items");
+                fetchItems();
+            })
+            .subscribe((status) => {
+                console.log("[Items] Broadcast channel status:", status);
+            });
+
+        broadcastChannelRef.current = broadcastChannel;
+
+        return () => {
+            supabase.removeChannel(broadcastChannel);
+            broadcastChannelRef.current = null;
+        };
+    }, [currentChildId, fetchItems]);
+
+    // Realtime subscription for items - listens to all item changes
+    // This is a backup to the broadcast channel
+    useEffect(() => {
+        if (!currentUserId) {
+            return;
+        }
+
+        // Create a unique channel name per user session
+        const channelName = `items-realtime-${currentUserId}-${Date.now()}`;
+        
         const channel = supabase
-            .channel(`items-v2-${currentChildId}-${Date.now()}`)
+            .channel(channelName)
             .on(
                 "postgres_changes",
                 {
-                    event: "*",
+                    event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
                     schema: "public",
                     table: "items",
                 },
-                () => {
+                (payload) => {
+                    console.log("[Items] Realtime DB event received:", payload.eventType);
+                    // Always refetch - RLS will ensure we only get items we have access to
                     fetchItems();
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                if (status === "SUBSCRIBED") {
+                    console.log("[Items] ✅ Subscribed to items realtime");
+                }
+            });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [currentChildId, fetchItems]);
+    }, [currentUserId, fetchItems]);
 
     // Add item - supports both V1 and V2 formats
     const addItem = async (item: AddItemInput): Promise<{ success: boolean; error?: string; item?: Item }> => {
@@ -457,6 +551,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             };
 
             setItems(prev => [...prev, newItem]);
+            broadcastItemUpdate(); // Notify other caregivers
             return { success: true, item: newItem };
         } catch (error) {
             return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
@@ -499,6 +594,9 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                         .eq("id", itemId);
                 }
             }
+            
+            // Broadcast update to other caregivers
+            broadcastItemUpdate();
         }
     };
 
@@ -517,6 +615,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 setItems(previousItems);
                 return { success: false, error: error.message };
             }
+            broadcastItemUpdate(); // Notify other caregivers
             return { success: true };
         } catch (error) {
             setItems(previousItems);
@@ -559,6 +658,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 requested_at: requested ? new Date().toISOString() : null,
             })
             .eq("id", itemId);
+        
+        broadcastItemUpdate();
     };
 
     // Pack item
@@ -579,6 +680,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 packed_at: packed ? new Date().toISOString() : null,
             })
             .eq("id", itemId);
+        
+        broadcastItemUpdate();
     };
 
     // Cancel request
@@ -810,6 +913,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 .from("items")
                 .update({ status: newLocation.toBeFound ? "lost" : "at_home" })
                 .eq("id", itemId);
+            
+            broadcastItemUpdate();
             return;
         }
         
@@ -854,10 +959,13 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             
             console.log("🏠 Moving item to child_space:", newChildSpace.id);
             
-            // Update the item's child_space_id
+            // Update the item's child_space_id AND set status to at_home (in case it was missing)
             const { error: updateError } = await supabase
                 .from("items")
-                .update({ child_space_id: newChildSpace.id })
+                .update({ 
+                    child_space_id: newChildSpace.id,
+                    status: "at_home"  // Clear missing status when assigning to a home
+                })
                 .eq("id", itemId);
             
             if (updateError) {
@@ -879,6 +987,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     }
                     : i
             ));
+            
+            broadcastItemUpdate();
         }
     };
 

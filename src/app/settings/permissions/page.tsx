@@ -142,7 +142,7 @@ export default function PermissionsPage() {
                         <div className="card-organic p-6 text-center">
                             <p className="text-sm text-textSub">
                                 No caregivers yet.{" "}
-                                <Link href="/settings/caregivers" className="text-teal hover:underline">
+                                <Link href="/settings/caregivers?invite=true" className="text-teal hover:underline">
                                     Invite someone
                                 </Link>
                             </p>

@@ -135,7 +135,7 @@ export default function SetupSteps({
                 description: "Add another parent, grandparent, or babysitter to share access.",
                 primaryAction: {
                     label: "Invite caregiver",
-                    href: "/settings/caregivers",
+                    href: "/settings/caregivers?invite=true",
                 },
             });
         }

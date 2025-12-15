@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
@@ -73,6 +74,7 @@ export default function CaregiversPage() {
 
     const { user, loading: authLoading } = useAuth();
     const { child, caregivers, homes, refreshData, isLoaded } = useAppState();
+    const searchParams = useSearchParams();
 
     const [expandedCaregiverId, setExpandedCaregiverId] = useState<string | null>(null);
     const [editingCaregiverId, setEditingCaregiverId] = useState<string | null>(null);
@@ -80,6 +82,13 @@ export default function CaregiversPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+
+    // Check for invite query parameter on mount
+    useEffect(() => {
+        if (searchParams.get('invite') === 'true') {
+            setShowInviteForm(true);
+        }
+    }, [searchParams]);
 
     // Confirmation dialog state
     const [confirmDialog, setConfirmDialog] = useState<{
