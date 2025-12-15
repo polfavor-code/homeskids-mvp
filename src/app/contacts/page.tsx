@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
+import { ContactActions } from "@/components/ContactPreferenceIcons";
 import { useContacts, ContactCategory, Contact } from "@/lib/ContactsContext";
 import { useAppState, CaregiverProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -173,27 +174,43 @@ function ContactsPageContent() {
                                 {contact.category}
                             </span>
 
-                            {/* Quick Actions */}
-                            <div className="flex gap-1 flex-shrink-0">
-                                {contact.phone && (
-                                    <a
-                                        href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
-                                        className="w-8 h-8 rounded-full bg-softGreen flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors"
-                                        title="Call"
-                                    >
-                                        <PhoneIcon />
-                                    </a>
-                                )}
-                                {contact.email && (
-                                    <a
-                                        href={`mailto:${contact.email}`}
-                                        className="w-8 h-8 rounded-full bg-cream flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors"
-                                        title="Email"
-                                    >
-                                        <EmailIcon />
-                                    </a>
-                                )}
-                            </div>
+{/* Quick Actions - Show preference icons or fallback to phone/email */}
+                                            <div className="flex gap-1 flex-shrink-0">
+                                                {contact.contactPreferences && contact.contactPreferences.length > 0 ? (
+                                                    <ContactActions
+                                                        preferences={contact.contactPreferences}
+                                                        phone={contact.phone}
+                                                        phoneCountryCode={contact.phoneCountryCode}
+                                                        email={contact.email}
+                                                        telegram={contact.telegram}
+                                                        instagram={contact.instagram}
+                                                        size="sm"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        {contact.phone && (
+                                                            <a
+                                                                href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
+                                                                className="w-8 h-8 rounded-full bg-softGreen flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors"
+                                                                title="Call"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <PhoneIcon />
+                                                            </a>
+                                                        )}
+                                                        {contact.email && (
+                                                            <a
+                                                                href={`mailto:${contact.email}`}
+                                                                className="w-8 h-8 rounded-full bg-cream flex items-center justify-center text-forest hover:bg-forest hover:text-white transition-colors"
+                                                                title="Email"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <EmailIcon />
+                                                            </a>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
                         </div>
                     </div>
                 ))}

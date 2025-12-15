@@ -68,9 +68,9 @@ export default function SettingsPage() {
                     <h2 className="font-bold text-forest text-lg mb-4">Settings Categories</h2>
 
                     <div className="space-y-3">
-                        {/* Child Profile */}
+                        {/* Children */}
                         <Link
-                            href="/settings/child"
+                            href="/settings/children"
                             className="flex items-center gap-4 p-4 rounded-xl bg-orange-50/50 border border-orange-100 hover:border-orange-200 transition-colors group"
                         >
                             <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
@@ -86,9 +86,9 @@ export default function SettingsPage() {
                                 )}
                             </div>
                             <div className="flex-1">
-                                <h3 className="font-semibold text-forest">Child Profile</h3>
+                                <h3 className="font-semibold text-forest">Children</h3>
                                 <p className="text-xs text-textSub mt-0.5">
-                                    {child?.name || "Set up"} &middot; Name, birthday, photo
+                                    Manage children profiles
                                 </p>
                             </div>
                             <svg className="w-5 h-5 text-textSub/50 group-hover:text-forest transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

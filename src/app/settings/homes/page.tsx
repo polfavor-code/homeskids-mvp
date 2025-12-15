@@ -9,6 +9,7 @@ import MobileSelect from "@/components/MobileSelect";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
 import PhoneInput from "@/components/PhoneInput";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
+import ChildScopeSelector, { formatSuccessMessage, ChildOption } from "@/components/ChildScopeSelector";
 
 // Type for phone entries
 interface PhoneEntry {
@@ -300,10 +301,12 @@ interface HomeFormData {
     notes: string;
     isPrimary: boolean;
     accessibleCaregiverIds: string[];
+    selectedChildIds: string[]; // Which children this home belongs to
 }
 
 // Function to get default form data with browser-detected country code
-const getDefaultFormData = (): HomeFormData => ({
+// Note: selectedChildIds is set separately based on currentChildId context
+const getDefaultFormData = (currentChildId?: string): HomeFormData => ({
     name: "",
     address: "",
     addressStreet: "",
@@ -321,6 +324,7 @@ const getDefaultFormData = (): HomeFormData => ({
     notes: "",
     isPrimary: false,
     accessibleCaregiverIds: [],
+    selectedChildIds: currentChildId ? [currentChildId] : [], // Default to current child
 });
 
 // Helper to parse stored phone data (backwards compatible)
@@ -347,7 +351,7 @@ export default function HomeSetupPage() {
     useEnsureOnboarding();
 
     const { user, loading: authLoading } = useAuth();
-    const { child, homes, activeHomes, hiddenHomes, caregivers, currentHomeId, currentChildId, refreshData, isLoaded } = useAppState();
+    const { child, children, homes, activeHomes, hiddenHomes, caregivers, currentHomeId, currentChildId, setCurrentChildId, refreshData, isLoaded } = useAppState();
     const { items } = useItems();
 
     // Count items located at each home
@@ -363,21 +367,34 @@ export default function HomeSetupPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
-    const [formData, setFormData] = useState<HomeFormData>(() => getDefaultFormData());
+    const [formData, setFormData] = useState<HomeFormData>(() => getDefaultFormData(currentChildId));
+    const [childScopeError, setChildScopeError] = useState("");
     const [showHideWarning, setShowHideWarning] = useState<string | null>(null);
 
     // Auto-show add form if ?add=true is in URL
     useEffect(() => {
         if (searchParams.get("add") === "true") {
             setShowAddForm(true);
+            // Also ensure current child is preselected
+            if (currentChildId && formData.selectedChildIds.length === 0) {
+                setFormData(prev => ({ ...prev, selectedChildIds: [currentChildId] }));
+            }
         }
-    }, [searchParams]);
+    }, [searchParams, currentChildId]);
+    
+    // Sync selectedChildIds when currentChildId changes and form is reset
+    useEffect(() => {
+        if (currentChildId && showAddForm && formData.selectedChildIds.length === 0) {
+            setFormData(prev => ({ ...prev, selectedChildIds: [currentChildId] }));
+        }
+    }, [currentChildId, showAddForm]);
 
     // Filter out pending caregivers for selection
     const activeCaregivers = caregivers.filter(c => !c.id.startsWith("pending-"));
 
     const resetForm = () => {
-        setFormData(getDefaultFormData());
+        setFormData(getDefaultFormData(currentChildId));
+        setChildScopeError("");
         setShowAddForm(false);
         setEditingHomeId(null);
     };
@@ -406,19 +423,30 @@ export default function HomeSetupPage() {
             notes: home.notes || "",
             isPrimary: home.isPrimary || false,
             accessibleCaregiverIds: home.accessibleCaregiverIds || [],
+            // For edits, child scope is not changed (managed via child_spaces table)
+            selectedChildIds: currentChildId ? [currentChildId] : [],
         });
         setError("");
+        setChildScopeError("");
     };
 
     const handleSaveHome = async (homeId?: string) => {
+        // Validate required fields
         if (!formData.name.trim()) {
             setError("Home name is required");
+            return;
+        }
+
+        // Validate child selection for new homes
+        if (!homeId && formData.selectedChildIds.length === 0) {
+            setChildScopeError("Select at least 1 child to continue.");
             return;
         }
 
         try {
             setSaving(true);
             setError("");
+            setChildScopeError("");
 
             // Get family ID
             const { data: familyMember } = await supabase
@@ -497,17 +525,26 @@ export default function HomeSetupPage() {
                 if (insertError) throw insertError;
 
                 if (newHome) {
-                    // Create child_spaces entry to link home to current child
-                    if (currentChildId) {
+                    /**
+                     * APPROACH: Create one Home, then link to multiple children via child_spaces
+                     * This is the preferred approach - Home is a shared entity, child_spaces is the join table.
+                     * Each selected child gets their own child_spaces entry pointing to the same home.
+                     */
+                    
+                    // Create child_spaces entries for ALL selected children
+                    const childSpaceEntries = formData.selectedChildIds.map(childId => ({
+                        child_id: childId,
+                        home_id: newHome.id,
+                    }));
+
+                    if (childSpaceEntries.length > 0) {
                         const { error: childSpaceError } = await supabase
                             .from("child_spaces")
-                            .insert({
-                                child_id: currentChildId,
-                                home_id: newHome.id,
-                            });
-                        
+                            .insert(childSpaceEntries);
+
                         if (childSpaceError) {
-                            console.error("Error creating child_space:", childSpaceError);
+                            console.error("Error creating child_spaces:", childSpaceError);
+                            // Don't throw - home was created, we can fix links later
                         }
                     }
 
@@ -518,7 +555,7 @@ export default function HomeSetupPage() {
                             home_id: newHome.id,
                             user_id: user?.id,
                         });
-                    
+
                     if (membershipError) {
                         console.error("Error creating home_membership:", membershipError);
                     }
@@ -533,7 +570,15 @@ export default function HomeSetupPage() {
                     }
                 }
 
-                setSuccessMessage("Home added!");
+                // Show success message with child count
+                const successMsg = formatSuccessMessage(formData.selectedChildIds, children as ChildOption[]);
+                setSuccessMessage(successMsg);
+                
+                // Switch to the first selected child so user sees the new home
+                const firstSelectedChildId = formData.selectedChildIds[0];
+                if (firstSelectedChildId && firstSelectedChildId !== currentChildId) {
+                    setCurrentChildId(firstSelectedChildId);
+                }
             }
 
             await refreshData();
@@ -801,6 +846,8 @@ export default function HomeSetupPage() {
                                 saving={saving}
                                 isNew={false}
                                 caregivers={activeCaregivers}
+                                childrenList={children as ChildOption[]}
+                                childScopeError={childScopeError}
                             />
                         </div>
                     ) : (
@@ -1078,6 +1125,8 @@ export default function HomeSetupPage() {
                         saving={saving}
                         isNew={true}
                         caregivers={activeCaregivers}
+                        childrenList={children as ChildOption[]}
+                        childScopeError={childScopeError}
                     />
                 )}
 
@@ -1302,6 +1351,8 @@ function HomeForm({
     saving,
     isNew,
     caregivers,
+    childrenList,
+    childScopeError,
 }: {
     formData: HomeFormData;
     setFormData: (data: HomeFormData) => void;
@@ -1310,11 +1361,46 @@ function HomeForm({
     saving: boolean;
     isNew: boolean;
     caregivers: CaregiverProfile[];
+    childrenList: ChildOption[];
+    childScopeError?: string;
 }) {
     const [fetchingTimeZone, setFetchingTimeZone] = useState(false);
     const [showTimeZoneOverride, setShowTimeZoneOverride] = useState(false);
 
     const hasLocation = !!(formData.addressLat && formData.addressLng);
+    
+    // Check if save should be disabled (no children selected for new homes)
+    const isSaveDisabled = isNew && formData.selectedChildIds.length === 0;
+
+    // Format the Add Home button text based on selected children
+    const getAddButtonText = (): string => {
+        if (!isNew) return "Save Changes";
+        
+        const selectedCount = formData.selectedChildIds.length;
+        const totalChildren = childrenList.length;
+        
+        if (selectedCount === 0) return "Add Home";
+        
+        // If all children are selected (and more than 1 child exists)
+        if (selectedCount === totalChildren && totalChildren > 1) {
+            return "Add home for all children";
+        }
+        
+        // Get names of selected children
+        const selectedChildren = childrenList.filter(c => formData.selectedChildIds.includes(c.id));
+        
+        if (selectedCount === 1) {
+            return `Add home for ${selectedChildren[0]?.name || "child"}`;
+        }
+        
+        if (selectedCount === 2) {
+            return `Add home for ${selectedChildren[0]?.name}, ${selectedChildren[1]?.name}`;
+        }
+        
+        // 3+ children: show first 2 names + count
+        const remainingCount = selectedCount - 2;
+        return `Add home for ${selectedChildren[0]?.name}, ${selectedChildren[1]?.name} +${remainingCount} more`;
+    };
 
     // Handle address selection and auto-fetch timezone + update phone country code
     const handleAddressSelect = async (address: AddressComponents) => {
@@ -1403,9 +1489,21 @@ function HomeForm({
 
     return (
         <div className="card-organic p-5 space-y-5">
+            {/* Header */}
             <h2 className="font-bold text-forest text-lg">
                 {isNew ? "Add Home" : "Edit Home"}
             </h2>
+
+            {/* Child Scope Selector - Only show for new homes */}
+            {isNew && (
+                <ChildScopeSelector
+                    childrenList={childrenList}
+                    selectedChildIds={formData.selectedChildIds}
+                    onChange={(selectedIds) => setFormData({ ...formData, selectedChildIds: selectedIds })}
+                    error={childScopeError}
+                    disabled={saving}
+                />
+            )}
 
             {/* Basic Info */}
             <div className="space-y-4">
@@ -1662,10 +1760,11 @@ function HomeForm({
                 </button>
                 <button
                     onClick={onSave}
-                    disabled={saving}
-                    className="btn-primary flex-1 disabled:opacity-50"
+                    disabled={saving || isSaveDisabled}
+                    className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={isSaveDisabled ? "Select a child to enable Save" : undefined}
                 >
-                    {saving ? "Saving..." : isNew ? "Add Home" : "Save Changes"}
+                    {saving ? "Saving..." : getAddButtonText()}
                 </button>
             </div>
         </div>

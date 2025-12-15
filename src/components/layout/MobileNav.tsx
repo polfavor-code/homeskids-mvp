@@ -103,13 +103,19 @@ export default function MobileNav() {
     const handleChildSwitch = async (childId: string) => {
         if (childId === currentChild?.id) {
             // Clicking active child goes to child settings
-            router.push("/settings/child");
+            router.push(`/settings/child/${childId}`);
             setShowMoreMenu(false);
             return;
         }
         
         setCurrentChildId(childId);
         await refreshData();
+        
+        // If currently on a child edit page, navigate to the new child's edit page
+        if (pathname.startsWith('/settings/child/')) {
+            router.push(`/settings/child/${childId}`);
+        }
+        
         setShowMoreMenu(false);
     };
 

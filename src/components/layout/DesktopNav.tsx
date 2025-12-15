@@ -125,12 +125,17 @@ export default function DesktopNav() {
     const handleChildSwitch = async (childId: string) => {
         if (childId === currentChild?.id) {
             // Clicking active child goes to child settings
-            router.push("/settings/child");
+            router.push(`/settings/child/${childId}`);
             return;
         }
         
         setCurrentChildId(childId);
         await refreshData();
+        
+        // If currently on a child edit page, navigate to the new child's edit page
+        if (pathname.startsWith('/settings/child/')) {
+            router.push(`/settings/child/${childId}`);
+        }
         // Home is auto-selected by AppStateContext (first accessible home or last-used)
         // No blocking redirect needed
     };
