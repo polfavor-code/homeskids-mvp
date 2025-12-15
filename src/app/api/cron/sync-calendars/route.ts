@@ -1,14 +1,19 @@
 /**
  * Calendar Sync Cron Job
  * =======================
- * Runs every 10 minutes to sync ICS calendars that are due.
+ * Runs daily at 6 AM to sync ICS calendars that are due.
  * 
  * For Vercel: Add to vercel.json with crons config.
- * Schedule: every 10 minutes
+ * Schedule: 0 6 * * * (daily at 6 AM)
  * Path: /api/cron/sync-calendars
  * 
- * Environment variable required:
+ * Environment variable REQUIRED (fail closed):
  * - CRON_SECRET: Secret key to authenticate cron requests
+ *   The endpoint will return 503 if this is not configured.
+ * 
+ * Security: This endpoint requires authentication via:
+ * - Bearer token in Authorization header, OR
+ * - x-cron-secret header
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,22 +23,32 @@ export const maxDuration = 60; // 60 seconds timeout for cron jobs
 
 export async function GET(request: NextRequest) {
     try {
-        // Verify cron secret
+        // Verify cron secret (fail closed: require secret to be configured)
         const authHeader = request.headers.get('authorization');
         const cronSecret = process.env.CRON_SECRET;
         
-        // For Vercel Cron, check the authorization header
-        if (cronSecret) {
-            const expectedAuth = `Bearer ${cronSecret}`;
-            if (authHeader !== expectedAuth) {
-                // Also check x-cron-secret header for manual triggers
-                const xCronSecret = request.headers.get('x-cron-secret');
-                if (xCronSecret !== cronSecret) {
-                    return NextResponse.json(
-                        { error: 'Unauthorized' },
-                        { status: 401 }
-                    );
-                }
+        // Fail closed: CRON_SECRET must be configured
+        if (!cronSecret) {
+            console.error('[Cron] CRON_SECRET environment variable is not configured');
+            return NextResponse.json(
+                { 
+                    error: 'Server configuration error',
+                    message: 'Cron secret not configured. Set CRON_SECRET environment variable.'
+                },
+                { status: 503 }
+            );
+        }
+        
+        // Verify authorization (Bearer token or x-cron-secret header)
+        const expectedAuth = `Bearer ${cronSecret}`;
+        if (authHeader !== expectedAuth) {
+            // Also check x-cron-secret header for manual triggers
+            const xCronSecret = request.headers.get('x-cron-secret');
+            if (xCronSecret !== cronSecret) {
+                return NextResponse.json(
+                    { error: 'Unauthorized' },
+                    { status: 401 }
+                );
             }
         }
         

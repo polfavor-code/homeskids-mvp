@@ -466,11 +466,16 @@ function getNextOccurrence(current: Date, rule: RruleParams): Date {
                 };
                 const targetDays = rule.byDay.map(d => dayMap[d.replace(/[0-9-]/g, '')]).filter(d => d !== undefined);
                 
-                do {
-                    next.setDate(next.getDate() + 1);
-                } while (!targetDays.includes(next.getDay()));
+                // Guard against infinite loop: if no valid byDay codes, fall back to interval
+                if (targetDays.length === 0) {
+                    next.setDate(next.getDate() + 7 * (rule.interval || 1));
+                } else {
+                    do {
+                        next.setDate(next.getDate() + 1);
+                    } while (!targetDays.includes(next.getDay()));
+                }
             } else {
-                next.setDate(next.getDate() + 7 * rule.interval);
+                next.setDate(next.getDate() + 7 * (rule.interval || 1));
             }
             break;
             

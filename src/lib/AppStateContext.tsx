@@ -544,7 +544,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         name,
                         address,
                         photo_url,
-                        notes
+                        notes,
+                        owner_caregiver_id
                     )
                 `)
                 .in("child_id", allChildIds);
@@ -582,6 +583,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                                 photoUrl,
                                 notes: cs.homes.notes,
                                 childSpaceId: cs.id,
+                                ownerCaregiverId: cs.homes.owner_caregiver_id, // Populate owner
                                 status: "active" as HomeStatus,
                                 isPrimary: false,
                                 accessibleCaregiverIds: [],
@@ -617,7 +619,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         name,
                         address,
                         photo_url,
-                        notes
+                        notes,
+                        owner_caregiver_id
                     )
                 `)
                 .eq("child_id", childIdToUse);
@@ -645,6 +648,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                             photoUrl,
                             notes: cs.homes.notes,
                             childSpaceId: cs.id,
+                            ownerCaregiverId: cs.homes.owner_caregiver_id, // Populate owner for isChildAtUserHome check
                             // V1 compatibility fields
                             status: "active" as HomeStatus,
                             isPrimary: loadedHomes.length === 0, // First home is primary

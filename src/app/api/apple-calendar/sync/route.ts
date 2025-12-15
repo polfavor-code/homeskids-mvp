@@ -49,11 +49,22 @@ export async function POST(request: NextRequest) {
         
         // Check for cron job trigger
         if (body.batch === true) {
-            // Verify cron secret for batch jobs
+            // Verify cron secret for batch jobs (fail closed)
             const cronSecret = request.headers.get('x-cron-secret');
             const expectedSecret = process.env.CRON_SECRET;
             
-            if (!expectedSecret || cronSecret !== expectedSecret) {
+            if (!expectedSecret) {
+                console.error('[Sync API] CRON_SECRET not configured');
+                return NextResponse.json(
+                    { 
+                        error: 'Server configuration error',
+                        message: 'Cron secret not configured'
+                    },
+                    { status: 503 }
+                );
+            }
+            
+            if (cronSecret !== expectedSecret) {
                 return NextResponse.json(
                     { error: 'Unauthorized' },
                     { status: 401 }
