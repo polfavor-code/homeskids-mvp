@@ -44,7 +44,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
         label: "Invite a caregiver",
         description: "Share access with the other parent or family.",
         ctaLabel: "Invite caregiver",
-        targetRoute: "/settings/caregivers",
+        targetRoute: "/settings/caregivers?invite=true",
     },
 ];
 

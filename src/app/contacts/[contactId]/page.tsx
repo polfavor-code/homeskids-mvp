@@ -4,8 +4,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import Avatar from "@/components/Avatar";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
-import { useContacts, Contact, ContactCategory } from "@/lib/ContactsContext";
+import ContactPreferencesSelector from "@/components/ContactPreferencesSelector";
+import { ContactActions } from "@/components/ContactPreferenceIcons";
+import { useContacts, Contact, ContactCategory, ContactMethod } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
@@ -38,6 +41,9 @@ export default function ContactDetailPage() {
     const [category, setCategory] = useState<ContactCategory>("other");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
+    const [telegram, setTelegram] = useState("");
+    const [instagram, setInstagram] = useState("");
+    const [contactPreferences, setContactPreferences] = useState<ContactMethod[]>([]);
     const [address, setAddress] = useState("");
     const [notes, setNotes] = useState("");
     const [connectedWith, setConnectedWith] = useState<string[]>([]);
@@ -101,6 +107,9 @@ export default function ContactDetailPage() {
             setCategory(contact.category);
             setPhone(contact.phone || "");
             setEmail(contact.email || "");
+            setTelegram(contact.telegram || "");
+            setInstagram(contact.instagram || "");
+            setContactPreferences(contact.contactPreferences || []);
             setAddress(contact.address || "");
             setNotes(contact.notes || "");
             setConnectedWith(parseConnectedWith(contact.connectedWith));
@@ -122,6 +131,9 @@ export default function ContactDetailPage() {
             category,
             phone: phone.trim() || undefined,
             email: email.trim() || undefined,
+            telegram: telegram.trim() || undefined,
+            instagram: instagram.trim() || undefined,
+            contactPreferences: contactPreferences.length > 0 ? contactPreferences : undefined,
             address: address.trim() || undefined,
             notes: notes.trim() || undefined,
             connectedWith: connectedWith.length > 0 ? connectedWith.join(",") : undefined,
@@ -214,9 +226,12 @@ export default function ContactDetailPage() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-border mb-4">
                 <div className="flex items-start gap-4">
                     {/* Large Avatar */}
-                    <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center text-forest font-bold text-2xl flex-shrink-0">
-                        {contact.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar
+                        storagePath={contact.avatarUrl}
+                        initial={contact.name.charAt(0).toUpperCase()}
+                        size={64}
+                        bgColor="#F5F5DC"
+                    />
 
                     <div className="flex-1 min-w-0">
                         {isEditing ? (
@@ -302,6 +317,9 @@ export default function ContactDetailPage() {
                                     setCategory(contact.category);
                                     setPhone(contact.phone || "");
                                     setEmail(contact.email || "");
+                                    setTelegram(contact.telegram || "");
+                                    setInstagram(contact.instagram || "");
+                                    setContactPreferences(contact.contactPreferences || []);
                                     setAddress(contact.address || "");
                                     setNotes(contact.notes || "");
                                     setConnectedWith(parseConnectedWith(contact.connectedWith));
@@ -322,25 +340,41 @@ export default function ContactDetailPage() {
                 </div>
             </div>
 
-            {/* Quick Actions */}
-            {!isEditing && (contact.phone || contact.email) && (
-                <div className="flex gap-2 mb-4">
-                    {contact.phone && (
-                        <a
-                            href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
-                            className="flex-1 py-3 bg-softGreen text-forest rounded-xl font-medium text-center hover:bg-forest hover:text-white transition-colors"
-                        >
-                            Call
-                        </a>
-                    )}
-                    {contact.email && (
-                        <a
-                            href={`mailto:${contact.email}`}
-                            className="flex-1 py-3 bg-cream text-forest rounded-xl font-medium text-center hover:bg-forest hover:text-white transition-colors"
-                        >
-                            Email
-                        </a>
-                    )}
+            {/* Quick Actions - Show preference-based actions or fallback to phone/email */}
+            {!isEditing && (
+                <div className="mb-4">
+                    {contact.contactPreferences && contact.contactPreferences.length > 0 ? (
+                        <div className="flex gap-2 flex-wrap">
+                            <ContactActions
+                                preferences={contact.contactPreferences}
+                                phone={contact.phone}
+                                phoneCountryCode={contact.phoneCountryCode}
+                                email={contact.email}
+                                telegram={contact.telegram}
+                                instagram={contact.instagram}
+                                size="lg"
+                            />
+                        </div>
+                    ) : (contact.phone || contact.email) ? (
+                        <div className="flex gap-2">
+                            {contact.phone && (
+                                <a
+                                    href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
+                                    className="flex-1 py-3 bg-softGreen text-forest rounded-xl font-medium text-center hover:bg-forest hover:text-white transition-colors"
+                                >
+                                    Call
+                                </a>
+                            )}
+                            {contact.email && (
+                                <a
+                                    href={`mailto:${contact.email}`}
+                                    className="flex-1 py-3 bg-cream text-forest rounded-xl font-medium text-center hover:bg-forest hover:text-white transition-colors"
+                                >
+                                    Email
+                                </a>
+                            )}
+                        </div>
+                    ) : null}
                 </div>
             )}
 
@@ -383,6 +417,39 @@ export default function ContactDetailPage() {
                         <p className="text-sm text-forest">
                             {contact.email || <span className="text-textSub/50">Not provided</span>}
                         </p>
+                    )}
+                </div>
+
+                {/* Contact Preferences */}
+                <div className="p-4 border-b border-border/50">
+                    <label className="block text-xs text-textSub mb-2">Preferred ways to contact</label>
+                    {isEditing ? (
+                        <ContactPreferencesSelector
+                            selectedMethods={contactPreferences}
+                            onMethodsChange={setContactPreferences}
+                            phone={phone}
+                            email={email}
+                            telegram={telegram}
+                            instagram={instagram}
+                            onTelegramChange={setTelegram}
+                            onInstagramChange={setInstagram}
+                        />
+                    ) : (
+                        <div>
+                            {contact.contactPreferences && contact.contactPreferences.length > 0 ? (
+                                <ContactActions
+                                    preferences={contact.contactPreferences}
+                                    phone={contact.phone}
+                                    phoneCountryCode={contact.phoneCountryCode}
+                                    email={contact.email}
+                                    telegram={contact.telegram}
+                                    instagram={contact.instagram}
+                                    size="md"
+                                />
+                            ) : (
+                                <span className="text-sm text-textSub/50">No preference</span>
+                            )}
+                        </div>
                     )}
                 </div>
 

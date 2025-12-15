@@ -17,6 +17,9 @@ import { supabase, FEATURES } from "@/lib/supabase";
 
 export type ContactCategory = "medical" | "school" | "family" | "friends" | "activities" | "other";
 
+// Contact preference methods - how this contact prefers to be reached
+export type ContactMethod = "whatsapp" | "phone" | "sms" | "email" | "telegram" | "instagram";
+
 // Legacy contact type (general contacts like doctors, schools)
 export interface Contact {
     id: string;
@@ -26,6 +29,9 @@ export interface Contact {
     phone?: string;
     phoneCountryCode?: string;
     email?: string;
+    telegram?: string;
+    instagram?: string;
+    contactPreferences?: ContactMethod[]; // Preferred contact methods
     address?: string;
     addressStreet?: string;
     addressCity?: string;
@@ -225,6 +231,9 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                         phone: c.phone,
                         phoneCountryCode: c.phone_country_code,
                         email: c.email,
+                        telegram: c.telegram,
+                        instagram: c.instagram,
+                        contactPreferences: c.contact_preferences || [],
                         address: c.address,
                         addressStreet: c.address_street,
                         addressCity: c.address_city,
@@ -273,29 +282,41 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
             if (!childId) return { success: false, error: "No child found" };
 
+            // Build insert object - only include new fields if they have values
+            // This ensures backwards compatibility before migration is run
+            const insertData: any = {
+                child_id: childId,
+                name: contact.name,
+                role: contact.role,
+                category: contact.category,
+                phone: contact.phone || null,
+                phone_country_code: contact.phoneCountryCode || null,
+                email: contact.email || null,
+                address: contact.address || null,
+                address_street: contact.addressStreet || null,
+                address_city: contact.addressCity || null,
+                address_state: contact.addressState || null,
+                address_zip: contact.addressZip || null,
+                address_country: contact.addressCountry || null,
+                address_lat: contact.addressLat || null,
+                address_lng: contact.addressLng || null,
+                notes: contact.notes || null,
+                is_favorite: contact.isFavorite,
+                connected_with: contact.connectedWith || null,
+                avatar_url: contact.avatarUrl || null,
+            };
+
+            // Add new preference fields only if they have values
+            // These columns may not exist if migration hasn't been run
+            if (contact.telegram) insertData.telegram = contact.telegram;
+            if (contact.instagram) insertData.instagram = contact.instagram;
+            if (contact.contactPreferences && contact.contactPreferences.length > 0) {
+                insertData.contact_preferences = contact.contactPreferences;
+            }
+
             const { data, error } = await supabase
                 .from("contacts")
-                .insert({
-                    child_id: childId,
-                    name: contact.name,
-                    role: contact.role,
-                    category: contact.category,
-                    phone: contact.phone || null,
-                    phone_country_code: contact.phoneCountryCode || null,
-                    email: contact.email || null,
-                    address: contact.address || null,
-                    address_street: contact.addressStreet || null,
-                    address_city: contact.addressCity || null,
-                    address_state: contact.addressState || null,
-                    address_zip: contact.addressZip || null,
-                    address_country: contact.addressCountry || null,
-                    address_lat: contact.addressLat || null,
-                    address_lng: contact.addressLng || null,
-                    notes: contact.notes || null,
-                    is_favorite: contact.isFavorite,
-                    connected_with: contact.connectedWith || null,
-                    avatar_url: contact.avatarUrl || null,
-                })
+                .insert(insertData)
                 .select()
                 .single();
 
@@ -312,6 +333,9 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 phone: data.phone,
                 phoneCountryCode: data.phone_country_code,
                 email: data.email,
+                telegram: data.telegram,
+                instagram: data.instagram,
+                contactPreferences: data.contact_preferences || [],
                 address: data.address,
                 addressStreet: data.address_street,
                 addressCity: data.address_city,
@@ -360,6 +384,13 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
             if (updates.isFavorite !== undefined) dbUpdates.is_favorite = updates.isFavorite;
             if (updates.connectedWith !== undefined) dbUpdates.connected_with = updates.connectedWith || null;
             if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl || null;
+            // New preference fields - only include if explicitly set with values
+            // These columns may not exist if migration hasn't been run
+            if (updates.telegram) dbUpdates.telegram = updates.telegram;
+            if (updates.instagram) dbUpdates.instagram = updates.instagram;
+            if (updates.contactPreferences && updates.contactPreferences.length > 0) {
+                dbUpdates.contact_preferences = updates.contactPreferences;
+            }
 
             const { error } = await supabase
                 .from("contacts")

@@ -26,7 +26,7 @@ const CATEGORIES = [
 export default function AddItemPage() {
     const router = useRouter();
     const { addItem } = useItems();
-    const { caregivers, activeHomes, homes, child, children, currentHomeId } = useAppState();
+    const { caregivers, activeHomes, homes, child, children, currentHomeId, accessibleHomes } = useAppState();
 
     const [name, setName] = useState("");
     const [category, setCategory] = useState("");
@@ -47,6 +47,13 @@ export default function AddItemPage() {
     const [showCropper, setShowCropper] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string>("");
 
+    // Find the current user's caregiver profile
+    const currentUserCaregiver = caregivers.find(c => c.isCurrentUser);
+    
+    // Get the first home that the current user has access to
+    // accessibleHomes is filtered from AppStateContext based on the user's accessibleHomeIds
+    const userFirstAccessibleHome = accessibleHomes.length > 0 ? accessibleHomes[0] : null;
+
     // Auto-select child if only one exists
     useEffect(() => {
         if (children.length === 1 && selectedChildIds.length === 0) {
@@ -54,12 +61,42 @@ export default function AddItemPage() {
         }
     }, [children, selectedChildIds.length]);
 
-    // Default origin home to current home
+    // Default location to the user's first accessible home
+    // Priority: first accessible home for this user > currentHomeId > first active home
     useEffect(() => {
-        if (currentHomeId && !originHomeId) {
-            setOriginHomeId(currentHomeId);
+        // Wait for homes to be loaded
+        if (activeHomes.length === 0) return;
+        
+        // Only set if not already set
+        if (!location) {
+            if (userFirstAccessibleHome) {
+                // Use the first home the user has access to
+                setLocation(userFirstAccessibleHome.id);
+            } else if (currentHomeId) {
+                setLocation(currentHomeId);
+            } else if (activeHomes.length >= 1) {
+                setLocation(activeHomes[0].id);
+            }
         }
-    }, [currentHomeId, originHomeId]);
+    }, [currentHomeId, location, activeHomes, userFirstAccessibleHome]);
+
+    // Default origin home to the user's first accessible home (same logic)
+    useEffect(() => {
+        // Wait for homes to be loaded
+        if (activeHomes.length === 0) return;
+        
+        // Only set if not already set
+        if (!originHomeId) {
+            if (userFirstAccessibleHome) {
+                // Use the first home the user has access to
+                setOriginHomeId(userFirstAccessibleHome.id);
+            } else if (currentHomeId) {
+                setOriginHomeId(currentHomeId);
+            } else if (activeHomes.length >= 1) {
+                setOriginHomeId(activeHomes[0].id);
+            }
+        }
+    }, [currentHomeId, originHomeId, activeHomes, userFirstAccessibleHome]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -176,11 +213,12 @@ export default function AddItemPage() {
             }
 
             const isMissing = location === "Missing";
+            const isUnassigned = location === "Unassigned";
             // Use home-based location - find the selected home from ALL homes (in case item is at hidden home)
             const selectedHome = homes.find((h) => h.id === location);
-            const locationHomeId = isMissing ? null : (selectedHome?.id || null);
+            const locationHomeId = (isMissing || isUnassigned) ? null : (selectedHome?.id || null);
             // Keep legacy caregiver ID for backwards compatibility
-            const locationCaregiverId = isMissing
+            const locationCaregiverId = (isMissing || isUnassigned)
                 ? (caregivers[0]?.id || "")
                 : (selectedHome?.ownerCaregiverId || caregivers[0]?.id || "");
 
@@ -280,7 +318,7 @@ export default function AddItemPage() {
                     ) : (
                         <label
                             htmlFor="photo-upload"
-                            className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-2xl bg-cream/50 cursor-pointer hover:border-forest/50 hover:bg-cream transition-all"
+                            className="flex flex-col items-center justify-center min-h-[160px] p-8 border-2 border-dashed border-border rounded-2xl bg-cream/50 cursor-pointer hover:border-forest/50 hover:bg-cream transition-all"
                         >
                             <div className="text-2xl mb-2">📷</div>
                             <span className="text-sm font-medium text-teal">Add photo</span>
@@ -349,11 +387,13 @@ export default function AddItemPage() {
                         value={location}
                         onChange={setLocation}
                         options={[
+                            // Only show "Unassigned" / "No home yet" when there are no active homes
+                            ...(activeHomes.length === 0 ? [{ value: "Unassigned", label: "No home yet" }] : []),
                             ...activeHomes.map((home) => ({ value: home.id, label: home.name })),
                             { value: "Missing", label: "Missing" }
                         ]}
-                        placeholder="Select home"
-                        title="Select home"
+                        placeholder={activeHomes.length === 0 ? "Select location" : "Select home"}
+                        title={activeHomes.length === 0 ? "Select location" : "Select home"}
                         required
                     />
                 </div>
@@ -403,7 +443,7 @@ export default function AddItemPage() {
                         title="Where did this item come from?"
                     />
                     <p className="text-xs text-textSub mt-1">
-                        Where this item originally came from (used for packing/returns)
+                        Original home of this item
                     </p>
                 </div>
 

@@ -109,12 +109,27 @@ export default function DesktopNav() {
     const { 
         caregivers, 
         children: childrenList, 
-        currentChild, 
+        currentChild,
+        currentHome,
         setCurrentChildId,
         refreshData,
     } = useAppState();
     const { user } = useAuth();
-    const [isCollapsed, setIsCollapsed] = useState(true);
+    
+    // Persist sidebar collapsed state in localStorage
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        if (typeof window === "undefined") return true;
+        const saved = localStorage.getItem("desktop-nav-collapsed");
+        return saved !== "false"; // Default to true (collapsed) if not set
+    });
+    
+    // Save collapsed state to localStorage whenever it changes
+    React.useEffect(() => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem("desktop-nav-collapsed", String(isCollapsed));
+        }
+    }, [isCollapsed]);
+    
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [isChildSwitcherOpen, setIsChildSwitcherOpen] = useState(false);
 
@@ -125,12 +140,17 @@ export default function DesktopNav() {
     const handleChildSwitch = async (childId: string) => {
         if (childId === currentChild?.id) {
             // Clicking active child goes to child settings
-            router.push("/settings/child");
+            router.push(`/settings/child/${childId}`);
             return;
         }
         
         setCurrentChildId(childId);
         await refreshData();
+        
+        // If currently on a child edit page, navigate to the new child's edit page
+        if (pathname.startsWith('/settings/child/')) {
+            router.push(`/settings/child/${childId}`);
+        }
         // Home is auto-selected by AppStateContext (first accessible home or last-used)
         // No blocking redirect needed
     };
@@ -301,7 +321,7 @@ export default function DesktopNav() {
                                                 ? 'ring-2 ring-forest ring-offset-2 ring-offset-cream rounded-full'
                                                 : 'opacity-50 hover:opacity-100'
                                         }`}
-                                        title={`${isActive ? 'Viewing' : 'Switch to'} ${child.name}`}
+                                        title={`${isActive ? 'Viewing' : 'Switch to'} ${child.name}${isActive && currentHome ? ` — now at ${currentHome.name}` : ''}`}
                                     >
                                         <Avatar
                                             src={child.avatarUrl}
@@ -341,6 +361,15 @@ export default function DesktopNav() {
                                 <div className="flex-1 text-left min-w-0">
                                     <p className="text-[10px] text-textSub font-medium uppercase tracking-wide">Viewing</p>
                                     <p className="text-sm font-semibold text-forest truncate">{currentChild?.name}'s Space</p>
+                                    {currentHome && (
+                                        <p className="text-xs text-textSub flex items-center gap-1 mt-0.5">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                            </svg>
+                                            <span className="truncate">Now at {currentHome.name}</span>
+                                        </p>
+                                    )}
                                 </div>
                                 {childrenList.length > 1 && (
                                     <div className={`flex items-center gap-1 text-teal transition-transform ${isChildSwitcherOpen ? 'rotate-180' : ''}`}>
@@ -373,6 +402,7 @@ export default function DesktopNav() {
                                                             handleChildSwitch(child.id);
                                                             setIsChildSwitcherOpen(false);
                                                         }}
+                                                        title={isActive && currentHome ? `Now at ${currentHome.name}` : undefined}
                                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                                                             isActive
                                                                 ? 'bg-softGreen border border-forest/20'
@@ -385,11 +415,22 @@ export default function DesktopNav() {
                                                             size={32}
                                                             bgColor={isActive ? "#4A7C59" : "#9CA3AF"}
                                                         />
-                                                        <span className={`flex-1 text-left text-sm truncate ${
-                                                            isActive ? 'font-semibold text-forest' : 'font-medium text-forest'
-                                                        }`}>
-                                                            {child.name}
-                                                        </span>
+                                                        <div className="flex-1 text-left min-w-0">
+                                                            <span className={`block text-sm truncate ${
+                                                                isActive ? 'font-semibold text-forest' : 'font-medium text-forest'
+                                                            }`}>
+                                                                {child.name}
+                                                            </span>
+                                                            {isActive && currentHome && (
+                                                                <span className="text-[10px] text-textSub flex items-center gap-1">
+                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                                                    </svg>
+                                                                    Now at {currentHome.name}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         {isActive && (
                                                             <div className="w-5 h-5 rounded-full bg-forest flex items-center justify-center flex-shrink-0">
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
@@ -420,6 +461,7 @@ export default function DesktopNav() {
                             ? 'bg-softGreen'
                             : 'hover:bg-black/5'
                         }`}
+                    title={isCollapsed ? `${userLabel}` : undefined}
                 >
                     <Avatar
                         src={userAvatarUrl}

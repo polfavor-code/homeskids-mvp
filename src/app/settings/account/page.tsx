@@ -74,10 +74,14 @@ export default function MyAccountPage() {
             setSaving(true);
             setError("");
 
+            // Get first name for the label (used in navigation menus)
+            const firstName = name.trim().split(' ')[0];
+            
             const { error: updateError } = await supabase
                 .from("profiles")
                 .update({
                     name: name.trim(),
+                    label: firstName, // Update label so menu shows correct name
                     avatar_initials: name.trim()[0].toUpperCase(),
                 })
                 .eq("id", user?.id);

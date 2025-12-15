@@ -8,7 +8,8 @@ import PhoneInput from "@/components/PhoneInput";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
 import ImageCropper from "@/components/ImageCropper";
-import { useContacts, ContactCategory } from "@/lib/ContactsContext";
+import ContactPreferencesSelector from "@/components/ContactPreferencesSelector";
+import { useContacts, ContactCategory, ContactMethod } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
@@ -38,6 +39,9 @@ export default function NewContactPage() {
     const [phone, setPhone] = useState("");
     const [phoneCountryCode, setPhoneCountryCode] = useState("+1");
     const [email, setEmail] = useState("");
+    const [telegram, setTelegram] = useState("");
+    const [instagram, setInstagram] = useState("");
+    const [contactPreferences, setContactPreferences] = useState<ContactMethod[]>([]);
     const [addressStreet, setAddressStreet] = useState("");
     const [addressCity, setAddressCity] = useState("");
     const [addressState, setAddressState] = useState("");
@@ -252,6 +256,9 @@ export default function NewContactPage() {
             phone: phone.trim() || undefined,
             phoneCountryCode: phoneCountryCode || undefined,
             email: email.trim() || undefined,
+            telegram: telegram.trim() || undefined,
+            instagram: instagram.trim() || undefined,
+            contactPreferences: contactPreferences.length > 0 ? contactPreferences : undefined,
             address: fullAddress || undefined,
             addressStreet: addressStreet.trim() || undefined,
             addressCity: addressCity.trim() || undefined,
@@ -482,6 +489,23 @@ export default function NewContactPage() {
                                     />
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Contact Preferences Card */}
+                        <div className="bg-white rounded-2xl p-5 border border-border">
+                            <h3 className="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">
+                                Preferred ways to contact
+                            </h3>
+                            <ContactPreferencesSelector
+                                selectedMethods={contactPreferences}
+                                onMethodsChange={setContactPreferences}
+                                phone={phone}
+                                email={email}
+                                telegram={telegram}
+                                instagram={instagram}
+                                onTelegramChange={setTelegram}
+                                onInstagramChange={setInstagram}
+                            />
                         </div>
 
                         {/* Address Card */}

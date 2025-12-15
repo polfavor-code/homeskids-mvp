@@ -1,12 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import MobileSelect from "@/components/MobileSelect";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
+import PhoneInput from "@/components/PhoneInput";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
+import ChildScopeSelector, { formatSuccessMessage, ChildOption } from "@/components/ChildScopeSelector";
+
+// Type for phone entries
+interface PhoneEntry {
+    countryCode: string;
+    number: string;
+}
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContext";
 import { useItems } from "@/lib/ItemsContext";
@@ -18,11 +27,261 @@ const TIME_ZONE_OPTIONS = [
     { value: "Europe/Madrid", label: "Europe/Madrid (CET)" },
     { value: "Europe/Amsterdam", label: "Europe/Amsterdam (CET)" },
     { value: "Europe/London", label: "Europe/London (GMT)" },
+    { value: "Europe/Paris", label: "Europe/Paris (CET)" },
+    { value: "Europe/Berlin", label: "Europe/Berlin (CET)" },
+    { value: "Europe/Rome", label: "Europe/Rome (CET)" },
     { value: "America/New_York", label: "America/New York (EST)" },
     { value: "America/Los_Angeles", label: "America/Los Angeles (PST)" },
     { value: "America/Chicago", label: "America/Chicago (CST)" },
+    { value: "America/Denver", label: "America/Denver (MST)" },
+    { value: "America/Phoenix", label: "America/Phoenix (MST)" },
+    { value: "America/Toronto", label: "America/Toronto (EST)" },
+    { value: "America/Vancouver", label: "America/Vancouver (PST)" },
+    { value: "America/Mexico_City", label: "America/Mexico City (CST)" },
+    { value: "America/Sao_Paulo", label: "America/São Paulo (BRT)" },
+    { value: "Asia/Tokyo", label: "Asia/Tokyo (JST)" },
+    { value: "Asia/Shanghai", label: "Asia/Shanghai (CST)" },
+    { value: "Asia/Singapore", label: "Asia/Singapore (SGT)" },
+    { value: "Asia/Dubai", label: "Asia/Dubai (GST)" },
+    { value: "Australia/Sydney", label: "Australia/Sydney (AEST)" },
+    { value: "Pacific/Auckland", label: "Pacific/Auckland (NZST)" },
     { value: "UTC", label: "UTC" },
 ];
+
+// Helper to get timezone from coordinates using Google Time Zone API
+async function getTimeZoneFromCoordinates(lat: number, lng: number): Promise<string | null> {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return null;
+    
+    try {
+        const timestamp = Math.floor(Date.now() / 1000);
+        const response = await fetch(
+            `https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lng}&timestamp=${timestamp}&key=${apiKey}`
+        );
+        const data = await response.json();
+        
+        if (data.status === "OK" && data.timeZoneId) {
+            return data.timeZoneId;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching timezone:", error);
+        return null;
+    }
+}
+
+// Helper to format timezone for display with local time
+function formatTimeZone(timeZoneId: string): string {
+    try {
+        const now = new Date();
+        
+        // For auto, use browser's timezone
+        const effectiveTimeZone = timeZoneId === "auto" 
+            ? Intl.DateTimeFormat().resolvedOptions().timeZone 
+            : timeZoneId;
+        
+        // Get time in that timezone
+        const timeFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: effectiveTimeZone,
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        const localTime = timeFormatter.format(now);
+        
+        // Get timezone abbreviation
+        const tzFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: effectiveTimeZone,
+            timeZoneName: 'short'
+        });
+        const parts = tzFormatter.formatToParts(now);
+        const tzAbbr = parts.find(p => p.type === 'timeZoneName')?.value || '';
+        
+        if (timeZoneId === "auto") {
+            return `Browser default — ${localTime} (${tzAbbr})`;
+        }
+        
+        return `${timeZoneId.replace(/_/g, ' ')} — ${localTime} (${tzAbbr})`;
+    } catch {
+        return timeZoneId === "auto" ? "Detected automatically (browser default)" : timeZoneId;
+    }
+}
+
+// Country to phone code mapping
+const COUNTRY_TO_PHONE_CODE: Record<string, string> = {
+    // Europe
+    "Spain": "+34",
+    "ES": "+34",
+    "Netherlands": "+31",
+    "NL": "+31",
+    "Germany": "+49",
+    "DE": "+49",
+    "France": "+33",
+    "FR": "+33",
+    "Italy": "+39",
+    "IT": "+39",
+    "United Kingdom": "+44",
+    "UK": "+44",
+    "GB": "+44",
+    "Portugal": "+351",
+    "PT": "+351",
+    "Belgium": "+32",
+    "BE": "+32",
+    "Austria": "+43",
+    "AT": "+43",
+    "Switzerland": "+41",
+    "CH": "+41",
+    "Ireland": "+353",
+    "IE": "+353",
+    "Poland": "+48",
+    "PL": "+48",
+    "Sweden": "+46",
+    "SE": "+46",
+    "Norway": "+47",
+    "NO": "+47",
+    "Denmark": "+45",
+    "DK": "+45",
+    "Finland": "+358",
+    "FI": "+358",
+    "Greece": "+30",
+    "GR": "+30",
+    // Americas
+    "United States": "+1",
+    "USA": "+1",
+    "US": "+1",
+    "Canada": "+1",
+    "CA": "+1",
+    "Mexico": "+52",
+    "MX": "+52",
+    "Brazil": "+55",
+    "BR": "+55",
+    "Argentina": "+54",
+    "AR": "+54",
+    "Colombia": "+57",
+    "CO": "+57",
+    "Chile": "+56",
+    "CL": "+56",
+    // Asia Pacific
+    "Australia": "+61",
+    "AU": "+61",
+    "New Zealand": "+64",
+    "NZ": "+64",
+    "Japan": "+81",
+    "JP": "+81",
+    "China": "+86",
+    "CN": "+86",
+    "South Korea": "+82",
+    "KR": "+82",
+    "India": "+91",
+    "IN": "+91",
+    "Singapore": "+65",
+    "SG": "+65",
+    "Hong Kong": "+852",
+    "HK": "+852",
+    "Thailand": "+66",
+    "TH": "+66",
+    "Indonesia": "+62",
+    "ID": "+62",
+    "Philippines": "+63",
+    "PH": "+63",
+    "Malaysia": "+60",
+    "MY": "+60",
+    "Vietnam": "+84",
+    "VN": "+84",
+    // Middle East
+    "United Arab Emirates": "+971",
+    "UAE": "+971",
+    "AE": "+971",
+    "Saudi Arabia": "+966",
+    "SA": "+966",
+    "Israel": "+972",
+    "IL": "+972",
+    "Turkey": "+90",
+    "TR": "+90",
+    // Africa
+    "South Africa": "+27",
+    "ZA": "+27",
+    "Egypt": "+20",
+    "EG": "+20",
+    "Morocco": "+212",
+    "MA": "+212",
+    "Nigeria": "+234",
+    "NG": "+234",
+};
+
+// Get phone code from country name or code
+function getPhoneCodeFromCountry(country: string): string {
+    if (!country) return "+1";
+    
+    // Try direct match
+    const directMatch = COUNTRY_TO_PHONE_CODE[country];
+    if (directMatch) return directMatch;
+    
+    // Try uppercase match
+    const upperMatch = COUNTRY_TO_PHONE_CODE[country.toUpperCase()];
+    if (upperMatch) return upperMatch;
+    
+    // Try partial match (e.g., "Spain, Europe" -> "Spain")
+    const firstPart = country.split(',')[0].trim();
+    const partialMatch = COUNTRY_TO_PHONE_CODE[firstPart];
+    if (partialMatch) return partialMatch;
+    
+    return "+1"; // Default fallback
+}
+
+// Detect country from browser locale/timezone
+function detectBrowserCountryCode(): string {
+    try {
+        // Try to get country from timezone
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // Map common timezones to countries
+        if (timeZone.startsWith("Europe/Madrid") || timeZone.startsWith("Atlantic/Canary")) return "+34";
+        if (timeZone.startsWith("Europe/Amsterdam")) return "+31";
+        if (timeZone.startsWith("Europe/Berlin")) return "+49";
+        if (timeZone.startsWith("Europe/Paris")) return "+33";
+        if (timeZone.startsWith("Europe/Rome")) return "+39";
+        if (timeZone.startsWith("Europe/London")) return "+44";
+        if (timeZone.startsWith("Europe/Lisbon")) return "+351";
+        if (timeZone.startsWith("Europe/Brussels")) return "+32";
+        if (timeZone.startsWith("Europe/Vienna")) return "+43";
+        if (timeZone.startsWith("Europe/Zurich")) return "+41";
+        if (timeZone.startsWith("Europe/Dublin")) return "+353";
+        if (timeZone.startsWith("Europe/Warsaw")) return "+48";
+        if (timeZone.startsWith("Europe/Stockholm")) return "+46";
+        if (timeZone.startsWith("Europe/Oslo")) return "+47";
+        if (timeZone.startsWith("Europe/Copenhagen")) return "+45";
+        if (timeZone.startsWith("Europe/Helsinki")) return "+358";
+        if (timeZone.startsWith("Europe/Athens")) return "+30";
+        if (timeZone.startsWith("America/New_York") || 
+            timeZone.startsWith("America/Chicago") || 
+            timeZone.startsWith("America/Denver") || 
+            timeZone.startsWith("America/Los_Angeles") ||
+            timeZone.startsWith("America/Phoenix")) return "+1";
+        if (timeZone.startsWith("America/Toronto") || timeZone.startsWith("America/Vancouver")) return "+1";
+        if (timeZone.startsWith("America/Mexico_City")) return "+52";
+        if (timeZone.startsWith("America/Sao_Paulo")) return "+55";
+        if (timeZone.startsWith("Australia/")) return "+61";
+        if (timeZone.startsWith("Pacific/Auckland")) return "+64";
+        if (timeZone.startsWith("Asia/Tokyo")) return "+81";
+        if (timeZone.startsWith("Asia/Shanghai") || timeZone.startsWith("Asia/Hong_Kong")) return "+86";
+        if (timeZone.startsWith("Asia/Seoul")) return "+82";
+        if (timeZone.startsWith("Asia/Kolkata")) return "+91";
+        if (timeZone.startsWith("Asia/Singapore")) return "+65";
+        if (timeZone.startsWith("Asia/Dubai")) return "+971";
+        
+        // Try navigator language as fallback
+        const lang = navigator.language || "";
+        const region = lang.split('-')[1]?.toUpperCase();
+        if (region && COUNTRY_TO_PHONE_CODE[region]) {
+            return COUNTRY_TO_PHONE_CODE[region];
+        }
+        
+        return "+1"; // Default
+    } catch {
+        return "+1";
+    }
+}
 
 interface HomeFormData {
     name: string;
@@ -35,15 +294,19 @@ interface HomeFormData {
     addressLat: number | null;
     addressLng: number | null;
     timeZone: string;
-    homePhone: string;
+    timeZoneManuallySet: boolean; // Track if user manually overrode the timezone
+    homePhones: PhoneEntry[];
     wifiName: string;
     wifiPassword: string;
     notes: string;
     isPrimary: boolean;
     accessibleCaregiverIds: string[];
+    selectedChildIds: string[]; // Which children this home belongs to
 }
 
-const defaultFormData: HomeFormData = {
+// Function to get default form data with browser-detected country code
+// Note: selectedChildIds is set separately based on currentChildId context
+const getDefaultFormData = (currentChildId?: string): HomeFormData => ({
     name: "",
     address: "",
     addressStreet: "",
@@ -54,19 +317,41 @@ const defaultFormData: HomeFormData = {
     addressLat: null,
     addressLng: null,
     timeZone: "auto",
-    homePhone: "",
+    timeZoneManuallySet: false,
+    homePhones: [{ countryCode: detectBrowserCountryCode(), number: "" }],
     wifiName: "",
     wifiPassword: "",
     notes: "",
     isPrimary: false,
     accessibleCaregiverIds: [],
+    selectedChildIds: currentChildId ? [currentChildId] : [], // Default to current child
+});
+
+// Helper to parse stored phone data (backwards compatible)
+const parseHomePhones = (homePhone: string | null): PhoneEntry[] => {
+    if (!homePhone) return [{ countryCode: "+1", number: "" }];
+    try {
+        const parsed = JSON.parse(homePhone);
+        if (Array.isArray(parsed)) return parsed;
+    } catch {
+        // Legacy format - single phone string
+        return [{ countryCode: "+1", number: homePhone }];
+    }
+    return [{ countryCode: "+1", number: "" }];
+};
+
+// Helper to serialize phone data for storage
+const serializeHomePhones = (phones: PhoneEntry[]): string | null => {
+    const validPhones = phones.filter(p => p.number.trim());
+    if (validPhones.length === 0) return null;
+    return JSON.stringify(validPhones);
 };
 
 export default function HomeSetupPage() {
     useEnsureOnboarding();
 
     const { user, loading: authLoading } = useAuth();
-    const { child, homes, activeHomes, hiddenHomes, caregivers, currentHomeId, refreshData, isLoaded } = useAppState();
+    const { child, children, homes, activeHomes, hiddenHomes, caregivers, currentHomeId, currentChildId, setCurrentChildId, refreshData, isLoaded } = useAppState();
     const { items } = useItems();
 
     // Count items located at each home
@@ -74,20 +359,42 @@ export default function HomeSetupPage() {
         return items.filter(item => item.locationHomeId === homeId).length;
     };
 
+    const searchParams = useSearchParams();
+    
     const [expandedHomeId, setExpandedHomeId] = useState<string | null>(null);
     const [editingHomeId, setEditingHomeId] = useState<string | null>(null);
     const [showAddForm, setShowAddForm] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
-    const [formData, setFormData] = useState<HomeFormData>(defaultFormData);
+    const [formData, setFormData] = useState<HomeFormData>(() => getDefaultFormData(currentChildId));
+    const [childScopeError, setChildScopeError] = useState("");
     const [showHideWarning, setShowHideWarning] = useState<string | null>(null);
+
+    // Auto-show add form if ?add=true is in URL
+    useEffect(() => {
+        if (searchParams.get("add") === "true") {
+            setShowAddForm(true);
+            // Also ensure current child is preselected
+            if (currentChildId && formData.selectedChildIds.length === 0) {
+                setFormData(prev => ({ ...prev, selectedChildIds: [currentChildId] }));
+            }
+        }
+    }, [searchParams, currentChildId]);
+    
+    // Sync selectedChildIds when currentChildId changes and form is reset
+    useEffect(() => {
+        if (currentChildId && showAddForm && formData.selectedChildIds.length === 0) {
+            setFormData(prev => ({ ...prev, selectedChildIds: [currentChildId] }));
+        }
+    }, [currentChildId, showAddForm]);
 
     // Filter out pending caregivers for selection
     const activeCaregivers = caregivers.filter(c => !c.id.startsWith("pending-"));
 
     const resetForm = () => {
-        setFormData(defaultFormData);
+        setFormData(getDefaultFormData(currentChildId));
+        setChildScopeError("");
         setShowAddForm(false);
         setEditingHomeId(null);
     };
@@ -95,6 +402,9 @@ export default function HomeSetupPage() {
     const handleEditHome = (home: HomeProfile) => {
         setEditingHomeId(home.id);
         setExpandedHomeId(home.id);
+        // Determine if timezone was manually set (not auto and not matching a location-derived one)
+        const hasAddress = !!(home.addressLat && home.addressLng);
+        const isManuallySet = home.timeZone && home.timeZone !== "auto" && hasAddress;
         setFormData({
             name: home.name,
             address: home.address || "",
@@ -106,25 +416,37 @@ export default function HomeSetupPage() {
             addressLat: home.addressLat || null,
             addressLng: home.addressLng || null,
             timeZone: home.timeZone || "auto",
-            homePhone: home.homePhone || "",
+            timeZoneManuallySet: !!isManuallySet,
+            homePhones: parseHomePhones(home.homePhone || null),
             wifiName: home.wifiName || "",
             wifiPassword: home.wifiPassword || "",
             notes: home.notes || "",
             isPrimary: home.isPrimary || false,
             accessibleCaregiverIds: home.accessibleCaregiverIds || [],
+            // For edits, child scope is not changed (managed via child_spaces table)
+            selectedChildIds: currentChildId ? [currentChildId] : [],
         });
         setError("");
+        setChildScopeError("");
     };
 
     const handleSaveHome = async (homeId?: string) => {
+        // Validate required fields
         if (!formData.name.trim()) {
             setError("Home name is required");
+            return;
+        }
+
+        // Validate child selection for new homes
+        if (!homeId && formData.selectedChildIds.length === 0) {
+            setChildScopeError("Select at least 1 child to continue.");
             return;
         }
 
         try {
             setSaving(true);
             setError("");
+            setChildScopeError("");
 
             // Get family ID
             const { data: familyMember } = await supabase
@@ -156,12 +478,12 @@ export default function HomeSetupPage() {
                 address_lat: formData.addressLat || null,
                 address_lng: formData.addressLng || null,
                 time_zone: formData.timeZone || "auto",
-                home_phone: formData.homePhone.trim() || null,
+                home_phone: serializeHomePhones(formData.homePhones),
                 wifi_name: formData.wifiName.trim() || null,
                 wifi_password: formData.wifiPassword.trim() || null,
                 notes: formData.notes.trim() || null,
                 is_primary: formData.isPrimary,
-                accessible_caregiver_ids: formData.accessibleCaregiverIds,
+                // Note: accessible_caregiver_ids is managed through child_space_access table
             };
 
             if (homeId) {
@@ -202,15 +524,61 @@ export default function HomeSetupPage() {
 
                 if (insertError) throw insertError;
 
-                if (newHome && formData.accessibleCaregiverIds.length > 0) {
-                    const accessEntries = formData.accessibleCaregiverIds.map(caregiverId => ({
+                if (newHome) {
+                    /**
+                     * APPROACH: Create one Home, then link to multiple children via child_spaces
+                     * This is the preferred approach - Home is a shared entity, child_spaces is the join table.
+                     * Each selected child gets their own child_spaces entry pointing to the same home.
+                     */
+                    
+                    // Create child_spaces entries for ALL selected children
+                    const childSpaceEntries = formData.selectedChildIds.map(childId => ({
+                        child_id: childId,
                         home_id: newHome.id,
-                        caregiver_id: caregiverId,
                     }));
-                    await supabase.from("home_access").insert(accessEntries);
+
+                    if (childSpaceEntries.length > 0) {
+                        const { error: childSpaceError } = await supabase
+                            .from("child_spaces")
+                            .insert(childSpaceEntries);
+
+                        if (childSpaceError) {
+                            console.error("Error creating child_spaces:", childSpaceError);
+                            // Don't throw - home was created, we can fix links later
+                        }
+                    }
+
+                    // Add current user to home_memberships so they have access
+                    const { error: membershipError } = await supabase
+                        .from("home_memberships")
+                        .insert({
+                            home_id: newHome.id,
+                            user_id: user?.id,
+                        });
+
+                    if (membershipError) {
+                        console.error("Error creating home_membership:", membershipError);
+                    }
+
+                    // Handle additional caregiver access if specified
+                    if (formData.accessibleCaregiverIds.length > 0) {
+                        const accessEntries = formData.accessibleCaregiverIds.map(caregiverId => ({
+                            home_id: newHome.id,
+                            caregiver_id: caregiverId,
+                        }));
+                        await supabase.from("home_access").insert(accessEntries);
+                    }
                 }
 
-                setSuccessMessage("Home added!");
+                // Show success message with child count
+                const successMsg = formatSuccessMessage(formData.selectedChildIds, children as ChildOption[]);
+                setSuccessMessage(successMsg);
+                
+                // Switch to the first selected child so user sees the new home
+                const firstSelectedChildId = formData.selectedChildIds[0];
+                if (firstSelectedChildId && firstSelectedChildId !== currentChildId) {
+                    setCurrentChildId(firstSelectedChildId);
+                }
             }
 
             await refreshData();
@@ -478,6 +846,8 @@ export default function HomeSetupPage() {
                                 saving={saving}
                                 isNew={false}
                                 caregivers={activeCaregivers}
+                                childrenList={children as ChildOption[]}
+                                childScopeError={childScopeError}
                             />
                         </div>
                     ) : (
@@ -526,9 +896,11 @@ export default function HomeSetupPage() {
 
                             {/* Time Zone */}
                             <div>
-                                <h4 className="text-sm font-semibold text-forest mb-2">Time Zone</h4>
+                                <h4 className="text-sm font-semibold text-forest mb-2">
+                                    {home.addressLat && home.addressLng ? "Time Zone (based on location)" : "Time Zone"}
+                                </h4>
                                 <p className="text-sm text-textSub">
-                                    {TIME_ZONE_OPTIONS.find(tz => tz.value === home.timeZone)?.label || "Auto-detect"}
+                                    {formatTimeZone(home.timeZone || "auto")}
                                 </p>
                             </div>
 
@@ -536,9 +908,14 @@ export default function HomeSetupPage() {
                             {home.homePhone && (
                                 <div>
                                     <h4 className="text-sm font-semibold text-forest mb-2">Contact Info</h4>
-                                    <p className="text-sm text-textSub">
-                                        <span className="text-forest/70">Phone:</span> {home.homePhone}
-                                    </p>
+                                    {parseHomePhones(home.homePhone).filter(p => p.number).map((phone, idx) => (
+                                        <p key={idx} className="text-sm text-textSub">
+                                            <span className="text-forest/70">Phone:</span>{" "}
+                                            <a href={`tel:${phone.countryCode}${phone.number}`} className="hover:text-forest">
+                                                {phone.countryCode} {phone.number}
+                                            </a>
+                                        </p>
+                                    ))}
                                 </div>
                             )}
 
@@ -546,16 +923,14 @@ export default function HomeSetupPage() {
                             {(home.wifiName || home.wifiPassword) && (
                                 <div>
                                     <h4 className="text-sm font-semibold text-forest mb-2">WiFi</h4>
-                                    <div className="space-y-1">
+                                    <div className="space-y-2">
                                         {home.wifiName && (
                                             <p className="text-sm text-textSub">
                                                 <span className="text-forest/70">Network:</span> {home.wifiName}
                                             </p>
                                         )}
                                         {home.wifiPassword && (
-                                            <p className="text-sm text-textSub">
-                                                <span className="text-forest/70">Password:</span> {home.wifiPassword}
-                                            </p>
+                                            <WiFiPasswordDisplay password={home.wifiPassword} />
                                         )}
                                     </div>
                                 </div>
@@ -750,6 +1125,8 @@ export default function HomeSetupPage() {
                         saving={saving}
                         isNew={true}
                         caregivers={activeCaregivers}
+                        childrenList={children as ChildOption[]}
+                        childScopeError={childScopeError}
                     />
                 )}
 
@@ -793,7 +1170,7 @@ export default function HomeSetupPage() {
                             <line x1="12" y1="5" x2="12" y2="19" />
                             <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        Add another home
+                        {homes.length === 0 ? "Add your first home" : "Add another home"}
                     </button>
                 )}
 
@@ -815,12 +1192,8 @@ export default function HomeSetupPage() {
                 {/* Info Section */}
                 <div className="card-organic p-4 bg-softGreen/50">
                     <div className="flex items-start gap-3">
-                        <div className="text-forest mt-0.5">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="16" x2="12" y2="12" />
-                                <line x1="12" y1="8" x2="12.01" y2="8" />
-                            </svg>
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-forest flex items-center justify-center mt-0.5">
+                            <span className="text-forest text-xs font-semibold leading-none">i</span>
                         </div>
                         <div>
                             <p className="text-sm text-forest font-medium mb-1">About Homes</p>
@@ -837,6 +1210,138 @@ export default function HomeSetupPage() {
     );
 }
 
+// WiFi Password Display Component with mask/show toggle and copy button
+function WiFiPasswordDisplay({ password }: { password: string }) {
+    const [isVisible, setIsVisible] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(password);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error("Failed to copy:", err);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            <p className="text-sm text-textSub flex-1">
+                <span className="text-forest/70">Password:</span>{" "}
+                <span className="font-mono">{isVisible ? password : "••••••••"}</span>
+            </p>
+            <button
+                type="button"
+                onClick={() => setIsVisible(!isVisible)}
+                className="p-1.5 text-textSub hover:text-forest rounded transition-colors"
+                title={isVisible ? "Hide password" : "Show password"}
+            >
+                {isVisible ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                )}
+            </button>
+            <button
+                type="button"
+                onClick={handleCopy}
+                className={`p-1.5 rounded transition-colors ${copied ? "text-green-600" : "text-textSub hover:text-forest"}`}
+                title={copied ? "Copied!" : "Copy password"}
+            >
+                {copied ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                )}
+            </button>
+        </div>
+    );
+}
+
+// WiFi Password Input Component with show/hide toggle and copy button
+function WiFiPasswordInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+    const [isVisible, setIsVisible] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+        if (!value) return;
+        try {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error("Failed to copy:", err);
+        }
+    };
+
+    return (
+        <div>
+            <label className="block text-sm font-medium text-forest mb-1.5">
+                WiFi Password
+            </label>
+            <div className="relative">
+                <input
+                    type={isVisible ? "text" : "password"}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-full px-4 py-3 pr-20 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                    placeholder="Password"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                    <button
+                        type="button"
+                        onClick={() => setIsVisible(!isVisible)}
+                        className="p-1.5 text-textSub hover:text-forest rounded transition-colors"
+                        title={isVisible ? "Hide password" : "Show password"}
+                    >
+                        {isVisible ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleCopy}
+                        className={`p-1.5 rounded transition-colors ${copied ? "text-green-600" : "text-textSub hover:text-forest"}`}
+                        title={copied ? "Copied!" : "Copy password"}
+                        disabled={!value}
+                    >
+                        {copied ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Home Form Component
 function HomeForm({
     formData,
@@ -846,6 +1351,8 @@ function HomeForm({
     saving,
     isNew,
     caregivers,
+    childrenList,
+    childScopeError,
 }: {
     formData: HomeFormData;
     setFormData: (data: HomeFormData) => void;
@@ -854,12 +1361,149 @@ function HomeForm({
     saving: boolean;
     isNew: boolean;
     caregivers: CaregiverProfile[];
+    childrenList: ChildOption[];
+    childScopeError?: string;
 }) {
+    const [fetchingTimeZone, setFetchingTimeZone] = useState(false);
+    const [showTimeZoneOverride, setShowTimeZoneOverride] = useState(false);
+
+    const hasLocation = !!(formData.addressLat && formData.addressLng);
+    
+    // Check if save should be disabled (no children selected for new homes)
+    const isSaveDisabled = isNew && formData.selectedChildIds.length === 0;
+
+    // Format the Add Home button text based on selected children
+    const getAddButtonText = (): string => {
+        if (!isNew) return "Save Changes";
+        
+        const selectedCount = formData.selectedChildIds.length;
+        const totalChildren = childrenList.length;
+        
+        if (selectedCount === 0) return "Add Home";
+        
+        // If all children are selected (and more than 1 child exists)
+        if (selectedCount === totalChildren && totalChildren > 1) {
+            return "Add home for all children";
+        }
+        
+        // Get names of selected children
+        const selectedChildren = childrenList.filter(c => formData.selectedChildIds.includes(c.id));
+        
+        if (selectedCount === 1) {
+            return `Add home for ${selectedChildren[0]?.name || "child"}`;
+        }
+        
+        if (selectedCount === 2) {
+            return `Add home for ${selectedChildren[0]?.name}, ${selectedChildren[1]?.name}`;
+        }
+        
+        // 3+ children: show first 2 names + count
+        const remainingCount = selectedCount - 2;
+        return `Add home for ${selectedChildren[0]?.name}, ${selectedChildren[1]?.name} +${remainingCount} more`;
+    };
+
+    // Handle address selection and auto-fetch timezone + update phone country code
+    const handleAddressSelect = async (address: AddressComponents) => {
+        // Get phone code from address country
+        const phoneCodeFromAddress = address.country ? getPhoneCodeFromCountry(address.country) : null;
+        
+        // Update phone country codes for empty phone entries
+        const updatedPhones = formData.homePhones.map(phone => {
+            // Only update if phone number is empty (not manually entered)
+            if (!phone.number && phoneCodeFromAddress) {
+                return { ...phone, countryCode: phoneCodeFromAddress };
+            }
+            return phone;
+        });
+        
+        // Update address fields
+        const newFormData: HomeFormData = {
+            ...formData,
+            address: address.formattedAddress,
+            addressStreet: address.street,
+            addressCity: address.city,
+            addressState: address.state,
+            addressZip: address.zip,
+            addressCountry: address.country,
+            addressLat: address.lat,
+            addressLng: address.lng,
+            homePhones: updatedPhones,
+        };
+
+        // Auto-fetch timezone if not manually set
+        if (!formData.timeZoneManuallySet && address.lat && address.lng) {
+            setFetchingTimeZone(true);
+            try {
+                const timeZoneId = await getTimeZoneFromCoordinates(address.lat, address.lng);
+                if (timeZoneId) {
+                    newFormData.timeZone = timeZoneId;
+                    newFormData.timeZoneManuallySet = false;
+                }
+            } catch (error) {
+                console.error("Failed to fetch timezone:", error);
+            } finally {
+                setFetchingTimeZone(false);
+            }
+        }
+
+        setFormData(newFormData);
+    };
+
+    // Handle manual timezone change
+    const handleTimeZoneChange = (value: string) => {
+        setFormData({ 
+            ...formData, 
+            timeZone: value, 
+            timeZoneManuallySet: true 
+        });
+        setShowTimeZoneOverride(false);
+    };
+
+    // Reset to auto-detected timezone
+    const handleResetTimeZone = async () => {
+        if (formData.addressLat && formData.addressLng) {
+            setFetchingTimeZone(true);
+            try {
+                const timeZoneId = await getTimeZoneFromCoordinates(formData.addressLat, formData.addressLng);
+                if (timeZoneId) {
+                    setFormData({ 
+                        ...formData, 
+                        timeZone: timeZoneId, 
+                        timeZoneManuallySet: false 
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch timezone:", error);
+            } finally {
+                setFetchingTimeZone(false);
+            }
+        } else {
+            setFormData({ 
+                ...formData, 
+                timeZone: "auto", 
+                timeZoneManuallySet: false 
+            });
+        }
+        setShowTimeZoneOverride(false);
+    };
+
     return (
         <div className="card-organic p-5 space-y-5">
+            {/* Header */}
             <h2 className="font-bold text-forest text-lg">
                 {isNew ? "Add Home" : "Edit Home"}
             </h2>
+
+            {/* Child Scope Selector - Only show for new homes */}
+            {isNew && (
+                <ChildScopeSelector
+                    childrenList={childrenList}
+                    selectedChildIds={formData.selectedChildIds}
+                    onChange={(selectedIds) => setFormData({ ...formData, selectedChildIds: selectedIds })}
+                    error={childScopeError}
+                    disabled={saving}
+                />
+            )}
 
             {/* Basic Info */}
             <div className="space-y-4">
@@ -898,19 +1542,7 @@ function HomeForm({
                         Address
                     </label>
                     <GooglePlacesAutocomplete
-                        onAddressSelect={(address: AddressComponents) => {
-                            setFormData({
-                                ...formData,
-                                address: address.formattedAddress,
-                                addressStreet: address.street,
-                                addressCity: address.city,
-                                addressState: address.state,
-                                addressZip: address.zip,
-                                addressCountry: address.country,
-                                addressLat: address.lat,
-                                addressLng: address.lng,
-                            });
-                        }}
+                        onAddressSelect={handleAddressSelect}
                         initialAddress={{
                             formattedAddress: formData.address,
                             street: formData.addressStreet,
@@ -931,16 +1563,66 @@ function HomeForm({
 
             {/* Time Zone */}
             <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-forest border-b border-border/30 pb-2">Time Zone</h3>
+                <h3 className="text-sm font-semibold text-forest border-b border-border/30 pb-2">
+                    {hasLocation ? "Time Zone (based on home location)" : "Time Zone"}
+                </h3>
                 <div>
-                    <MobileSelect
-                        value={formData.timeZone}
-                        onChange={(value) => setFormData({ ...formData, timeZone: value })}
-                        options={TIME_ZONE_OPTIONS}
-                        title="Select time zone"
-                    />
-                    <p className="text-xs text-textSub mt-1">
-                        This defines the local time shown for this home.
+                    {fetchingTimeZone ? (
+                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-cream/30">
+                            <div className="w-4 h-4 border-2 border-forest/30 border-t-forest rounded-full animate-spin" />
+                            <span className="text-sm text-textSub">Detecting time zone from location...</span>
+                        </div>
+                    ) : showTimeZoneOverride ? (
+                        <div className="space-y-2">
+                            <MobileSelect
+                                value={formData.timeZone}
+                                onChange={handleTimeZoneChange}
+                                options={TIME_ZONE_OPTIONS}
+                                title="Select time zone"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowTimeZoneOverride(false)}
+                                className="text-xs text-textSub hover:text-forest"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-border bg-cream/30">
+                            <div className="flex-1">
+                                <p className="text-sm text-forest font-medium">
+                                    {formatTimeZone(formData.timeZone)}
+                                </p>
+                                {formData.timeZoneManuallySet && (
+                                    <p className="text-xs text-textSub mt-0.5">Manually set</p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {formData.timeZoneManuallySet && hasLocation && (
+                                    <button
+                                        type="button"
+                                        onClick={handleResetTimeZone}
+                                        className="text-xs text-teal hover:text-forest font-medium"
+                                    >
+                                        Reset
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTimeZoneOverride(true)}
+                                    className="text-xs text-teal hover:text-forest font-medium"
+                                >
+                                    Change
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <p className="text-xs text-textSub mt-1.5">
+                        {hasLocation 
+                            ? "Time zone is automatically detected from the home address."
+                            : "Will update automatically once an address is added."
+                        }
                     </p>
                 </div>
             </div>
@@ -948,17 +1630,62 @@ function HomeForm({
             {/* Contact Info */}
             <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-forest border-b border-border/30 pb-2">Contact Info</h3>
-                <div>
-                    <label className="block text-sm font-medium text-forest mb-1.5">
-                        Home Phone
+                <div className="space-y-3">
+                    <label className="block text-sm font-medium text-forest">
+                        Home Phone(s)
                     </label>
-                    <input
-                        type="tel"
-                        value={formData.homePhone}
-                        onChange={(e) => setFormData({ ...formData, homePhone: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                        placeholder="+1 555 123 4567"
-                    />
+                    {formData.homePhones.map((phone, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                            <div className="flex-1">
+                                <PhoneInput
+                                    value={phone.number}
+                                    countryCode={phone.countryCode}
+                                    onChange={(newNumber, newCountryCode) => {
+                                        const newPhones = [...formData.homePhones];
+                                        newPhones[index] = { countryCode: newCountryCode, number: newNumber };
+                                        setFormData({ ...formData, homePhones: newPhones });
+                                    }}
+                                    placeholder="Phone number"
+                                />
+                            </div>
+                            {formData.homePhones.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const newPhones = formData.homePhones.filter((_, i) => i !== index);
+                                        setFormData({ ...formData, homePhones: newPhones });
+                                    }}
+                                    className="p-2 text-textSub hover:text-red-500 transition-colors"
+                                    title="Remove phone"
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            // Use address country code, or existing first phone's code, or browser detection
+                            const newCountryCode = formData.addressCountry 
+                                ? getPhoneCodeFromCountry(formData.addressCountry)
+                                : (formData.homePhones[0]?.countryCode || detectBrowserCountryCode());
+                            setFormData({
+                                ...formData,
+                                homePhones: [...formData.homePhones, { countryCode: newCountryCode, number: "" }]
+                            });
+                        }}
+                        className="text-sm text-teal hover:text-forest font-medium flex items-center gap-1 transition-colors"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add another phone
+                    </button>
                 </div>
             </div>
 
@@ -978,18 +1705,10 @@ function HomeForm({
                             placeholder="Network name"
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-forest mb-1.5">
-                            WiFi Password
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.wifiPassword}
-                            onChange={(e) => setFormData({ ...formData, wifiPassword: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                            placeholder="Password"
-                        />
-                    </div>
+                    <WiFiPasswordInput
+                        value={formData.wifiPassword}
+                        onChange={(value) => setFormData({ ...formData, wifiPassword: value })}
+                    />
                 </div>
             </div>
 
@@ -1041,10 +1760,11 @@ function HomeForm({
                 </button>
                 <button
                     onClick={onSave}
-                    disabled={saving}
-                    className="btn-primary flex-1 disabled:opacity-50"
+                    disabled={saving || isSaveDisabled}
+                    className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={isSaveDisabled ? "Select a child to enable Save" : undefined}
                 >
-                    {saving ? "Saving..." : isNew ? "Add Home" : "Save Changes"}
+                    {saving ? "Saving..." : getAddButtonText()}
                 </button>
             </div>
         </div>

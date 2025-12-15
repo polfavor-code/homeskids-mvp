@@ -169,6 +169,7 @@ interface AppStateContextType {
     // Current home (where child is now)
     currentHomeId: string;
     setCurrentHomeId: (homeId: string) => void;
+    currentHome: HomeProfile | null;
     currentChildSpace: ChildSpace | null;
 
     // V1 compatibility: legacy caregiver ID
@@ -780,10 +781,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         (sa: any) => sa.user_id === ca.user_id
                     ) || [];
 
-                    // Guardians have access to all child_spaces
-                    const accessibleChildSpaceIds = ca.role_type === "guardian"
-                        ? childSpaceIds
-                        : userSpaceAccess.map((sa: any) => sa.child_space_id);
+                    // Determine accessible child_spaces:
+                    // - If user has explicit child_space_access records, use those (respects invite scoping)
+                    // - If user is a guardian with NO explicit records (legacy), give them all homes
+                    // - Helpers only get their explicitly granted access
+                    let accessibleChildSpaceIds: string[];
+                    if (userSpaceAccess.length > 0) {
+                        // User has explicit access records - use those
+                        accessibleChildSpaceIds = userSpaceAccess.map((sa: any) => sa.child_space_id);
+                    } else if (ca.role_type === "guardian") {
+                        // Legacy guardian with no explicit access - give all homes for backwards compatibility
+                        accessibleChildSpaceIds = childSpaceIds;
+                    } else {
+                        // Helper with no access - empty list
+                        accessibleChildSpaceIds = [];
+                    }
 
                     // V1 compatibility: derive accessibleHomeIds from child_space_ids
                     const accessibleHomeIds = accessibleChildSpaceIds.map((csId: string) => {
@@ -1021,6 +1033,69 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         refreshData();
     }, [user]);
 
+    // Track current home ID in a ref to avoid stale closure issues in realtime callback
+    const currentHomeIdRef = useRef<string>(currentHomeId);
+    useEffect(() => {
+        currentHomeIdRef.current = currentHomeId;
+    }, [currentHomeId]);
+
+    // Realtime subscription for child's current_home_id changes
+    // This ensures all connected users see the same home state
+    useEffect(() => {
+        if (!user || !currentChildId) return;
+
+        console.log("[AppState] Setting up child home sync subscription for:", {
+            userId: user.id,
+            childId: currentChildId,
+            currentHomeId: currentHomeIdRef.current
+        });
+
+        const channelName = `child-home-sync-${currentChildId}-${Date.now()}`;
+        
+        const channel = supabase
+            .channel(channelName)
+            .on(
+                "postgres_changes",
+                {
+                    event: "UPDATE",
+                    schema: "public",
+                    table: "children",
+                    filter: `id=eq.${currentChildId}`,
+                },
+                (payload) => {
+                    console.log("[AppState] Received realtime update for children table:", payload);
+                    const newData = payload.new as any;
+                    const newHomeId = newData?.current_home_id;
+                    
+                    console.log("[AppState] New home ID from realtime:", newHomeId, "Current:", currentHomeIdRef.current);
+                    
+                    // If the home changed, update local state to match
+                    // Use ref to get current value without stale closure
+                    if (newHomeId && newHomeId !== currentHomeIdRef.current) {
+                        console.log("[AppState] Child home changed via realtime - updating state:", newHomeId);
+                        setCurrentHomeIdState(newHomeId);
+                        // Persist to localStorage
+                        if (typeof window !== "undefined" && user?.id) {
+                            const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+                            if (homeKey) localStorage.setItem(homeKey, newHomeId);
+                        }
+                        // Refresh data to get updated items, etc.
+                        refreshData();
+                    } else {
+                        console.log("[AppState] Ignoring realtime update - no change or same home");
+                    }
+                }
+            )
+            .subscribe((status) => {
+                console.log("[AppState] Child home sync subscription status:", status, "for child:", currentChildId);
+            });
+
+        return () => {
+            console.log("[AppState] Removing child home sync channel for:", currentChildId);
+            supabase.removeChannel(channel);
+        };
+    }, [user, currentChildId]);
+
     // Contextual bag visibility helpers (F10 requirement)
     // Show bag/packing for a home only when:
     // - Child is currently at that home, OR
@@ -1148,6 +1223,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     .eq("child_space_id", currentCs.id);
             }
 
+            // Update the child's current_home_id in the database
+            // This triggers realtime updates for all connected users
+            console.log("[AppState] Updating child current_home_id:", {
+                childId: currentChildId,
+                newHomeId: targetHomeId
+            });
+            const { error: updateChildError, data: updateData } = await supabase
+                .from("children")
+                .update({ current_home_id: targetHomeId })
+                .eq("id", currentChildId)
+                .select();
+            
+            if (updateChildError) {
+                console.error("[AppState] Error updating child current_home_id:", updateChildError);
+            } else {
+                console.log("[AppState] Successfully updated child current_home_id:", updateData);
+            }
+
             // Update local state and persist
             setCurrentHomeIdState(targetHomeId);
             if (typeof window !== "undefined" && user?.id) {
@@ -1194,6 +1287,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 childSpaces,
                 currentHomeId,
                 setCurrentHomeId,
+                currentHome,
                 currentChildSpace,
                 isChildAtUserHome,
                 currentUserPermissions,

@@ -177,7 +177,7 @@ export default function Home() {
                         Add the homes where {child?.name || "your child"} stays to start tracking their things.
                     </p>
                     <Link
-                        href="/settings/homes"
+                        href="/settings/homes?add=true"
                         className="btn-primary"
                     >
                         Add your first home
@@ -303,7 +303,7 @@ export default function Home() {
                         </Link>
                     )}
                     <Link
-                        href="/settings/caregivers"
+                        href="/settings/caregivers?invite=true"
                         className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
                     >
                         Invite caregiver
