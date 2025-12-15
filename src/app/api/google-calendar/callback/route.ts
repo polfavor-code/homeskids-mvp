@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
         }
         
         const userInfo = await userInfoResponse.json();
-        console.log('Got Google user info:', userInfo.email);
+        // Note: Not logging email (PII) - user info retrieved successfully
         
         // Calculate token expiration
         const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);

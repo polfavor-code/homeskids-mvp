@@ -132,14 +132,26 @@ export async function getValidAccessToken(): Promise<{
         }
         
         // Token expired - need to refresh via API
+        // Get the current session token for authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.access_token) {
+            return { accessToken: null, connectionId: connection.id, error: 'No session - please log in again' };
+        }
+        
         const refreshResponse = await fetch('/api/google-calendar/refresh', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+            },
             body: JSON.stringify({ connectionId: connection.id }),
         });
         
         if (!refreshResponse.ok) {
-            return { accessToken: null, connectionId: connection.id, error: 'Token refresh failed - please reconnect' };
+            const errorData = await refreshResponse.json().catch(() => ({}));
+            const errorMessage = errorData.error || 'Token refresh failed - please reconnect';
+            return { accessToken: null, connectionId: connection.id, error: errorMessage };
         }
         
         const refreshData = await refreshResponse.json();

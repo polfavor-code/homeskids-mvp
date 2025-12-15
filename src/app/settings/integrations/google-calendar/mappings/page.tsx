@@ -27,19 +27,27 @@ export default function GoogleCalendarMappingsPage() {
     useEffect(() => {
         async function load() {
             setLoading(true);
+            setError(null);
             
             const [mappingsResult, candidatesResult] = await Promise.all([
                 getMappingRules(),
                 getHomeStayCandidates(),
             ]);
             
+            // Handle mappings result
             if (mappingsResult.error) {
                 setError(mappingsResult.error);
             } else {
                 setMappings(mappingsResult.mappings);
             }
             
-            setCandidateCount(candidatesResult.groups.length);
+            // Handle candidates result
+            if (candidatesResult.error) {
+                setError(prev => prev ? `${prev}; ${candidatesResult.error}` : candidatesResult.error);
+            } else {
+                setCandidateCount(candidatesResult.groups.length);
+            }
+            
             setLoading(false);
         }
         load();

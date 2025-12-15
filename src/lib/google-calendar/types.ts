@@ -328,18 +328,18 @@ export function parseGoogleEventDates(event: GoogleCalendarEvent): { startAt: Da
 
     if (allDay) {
         // All-day events use date strings (YYYY-MM-DD)
+        // Parse as UTC midnight by appending 'Z' to avoid local timezone issues
         // Google end dates are exclusive (e.g., single day Dec 16 = start: Dec 16, end: Dec 17)
-        startAt = new Date(event.start.date + 'T00:00:00');
+        startAt = new Date(event.start.date + 'T00:00:00Z');
         
         // For end, use the actual end date Google provides (which is exclusive)
-        // and set it to 00:00:00 of that day (so Dec 17 00:00:00 for a Dec 16 event)
+        // and set it to UTC midnight of that day (so Dec 17 00:00:00Z for a Dec 16 event)
         // This ensures end > start always
-        endAt = new Date(event.end.date + 'T00:00:00');
+        endAt = new Date(event.end.date + 'T00:00:00Z');
         
-        // If somehow end <= start (shouldn't happen but safety check), add 1 day
+        // If somehow end <= start (shouldn't happen but safety check), add 1 day in milliseconds
         if (endAt <= startAt) {
-            endAt = new Date(startAt);
-            endAt.setDate(endAt.getDate() + 1);
+            endAt = new Date(startAt.getTime() + 24 * 60 * 60 * 1000);
         }
     } else {
         startAt = new Date(event.start.dateTime!);

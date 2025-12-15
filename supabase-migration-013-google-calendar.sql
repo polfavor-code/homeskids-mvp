@@ -131,6 +131,11 @@ CREATE INDEX IF NOT EXISTS idx_calendar_events_external
 ON calendar_events(external_provider, external_calendar_id, external_event_id) 
 WHERE external_event_id IS NOT NULL;
 
+-- Unique index to prevent duplicate imports (same external event for same child)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_events_external_unique
+ON calendar_events(external_provider, external_calendar_id, external_event_id, child_id)
+WHERE external_event_id IS NOT NULL;
+
 -- Index for finding candidates
 CREATE INDEX IF NOT EXISTS idx_calendar_events_candidates 
 ON calendar_events(child_id, is_home_stay_candidate) 
@@ -230,7 +235,7 @@ BEGIN
         SELECT 1 FROM google_calendar_connections
         WHERE user_id = p_user_id
         AND revoked_at IS NULL
-        AND token_expires_at > NOW() - INTERVAL '7 days'
+        AND token_expires_at > NOW()
     );
 END;
 $$;

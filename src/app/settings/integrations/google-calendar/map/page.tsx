@@ -49,7 +49,7 @@ export default function GoogleCalendarMapPage() {
                 // Initialize default choices (keep as event)
                 const initialChoices = new Map<string, MappingChoice>();
                 result.groups.forEach(group => {
-                    const key = `${group.title}::${group.calendarId}`;
+                    const key = `${group.childId}::${group.title}::${group.calendarId}`;
                     initialChoices.set(key, {
                         homeId: null,
                         matchType: group.suggestedMatchType,
@@ -65,14 +65,23 @@ export default function GoogleCalendarMapPage() {
     }, []);
     
     const currentGroup = candidateGroups[currentIndex];
-    const currentKey = currentGroup ? `${currentGroup.title}::${currentGroup.calendarId}` : '';
+    const currentKey = currentGroup ? `${currentGroup.childId}::${currentGroup.title}::${currentGroup.calendarId}` : '';
     const currentChoice = choices.get(currentKey);
     
+    // Default choice if not found (safety fallback)
+    const defaultChoice: MappingChoice = {
+        homeId: null,
+        matchType: currentGroup?.suggestedMatchType || 'title_exact',
+        autoConfirm: false,
+    };
+    const safeCurrentChoice = currentChoice || defaultChoice;
+    
     const setHomeChoice = (homeId: string | null) => {
+        if (!currentKey) return;
         setChoices(prev => {
             const newChoices = new Map(prev);
             newChoices.set(currentKey, {
-                ...currentChoice!,
+                ...safeCurrentChoice,
                 homeId,
             });
             return newChoices;
@@ -80,10 +89,11 @@ export default function GoogleCalendarMapPage() {
     };
     
     const setMatchType = (matchType: MatchType) => {
+        if (!currentKey) return;
         setChoices(prev => {
             const newChoices = new Map(prev);
             newChoices.set(currentKey, {
-                ...currentChoice!,
+                ...safeCurrentChoice,
                 matchType,
             });
             return newChoices;
@@ -114,7 +124,7 @@ export default function GoogleCalendarMapPage() {
         let eventsUpdated = 0;
         
         for (const group of candidateGroups) {
-            const key = `${group.title}::${group.calendarId}`;
+            const key = `${group.childId}::${group.title}::${group.calendarId}`;
             const choice = choices.get(key);
             
             if (!choice) continue;
@@ -143,8 +153,15 @@ export default function GoogleCalendarMapPage() {
                 eventsUpdated += result.eventsUpdated;
             } else {
                 // Ignore these events
-                await ignoreCandidatesByTitle(group.title, group.calendarId, group.childId);
-                ignored++;
+                const ignoreResult = await ignoreCandidatesByTitle(group.title, group.calendarId, group.childId);
+                
+                if (ignoreResult.error) {
+                    console.error('Failed to ignore candidates:', ignoreResult.error);
+                    // Continue processing other groups but track the failure
+                    // Don't increment ignored count for failed operations
+                } else {
+                    ignored++;
+                }
             }
         }
         
@@ -278,7 +295,7 @@ export default function GoogleCalendarMapPage() {
                             {/* Home options */}
                             <div className="space-y-2">
                                 {activeHomes.map(home => {
-                                    const isSelected = currentChoice?.homeId === home.id;
+                                    const isSelected = safeCurrentChoice.homeId === home.id;
                                     const homeColor = getHomeColor(home.name);
                                     
                                     return (
@@ -315,7 +332,7 @@ export default function GoogleCalendarMapPage() {
                                     onClick={() => setHomeChoice(null)}
                                     className={`
                                         w-full p-4 rounded-xl border-2 text-left transition-all
-                                        ${currentChoice?.homeId === null 
+                                        ${safeCurrentChoice.homeId === null 
                                             ? 'border-gray-400 bg-gray-50' 
                                             : 'border-border hover:border-textSub'
                                         }
@@ -329,7 +346,7 @@ export default function GoogleCalendarMapPage() {
                                                 Not a home stay, just a calendar event
                                             </p>
                                         </div>
-                                        {currentChoice?.homeId === null && (
+                                        {safeCurrentChoice.homeId === null && (
                                             <svg className="ml-auto w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                                                 <polyline points="20 6 9 17 4 12" />
                                             </svg>
@@ -339,7 +356,7 @@ export default function GoogleCalendarMapPage() {
                             </div>
                             
                             {/* Match type options */}
-                            {currentChoice?.homeId && currentGroup.candidates.length > 1 && (
+                            {safeCurrentChoice.homeId && currentGroup.candidates.length > 1 && (
                                 <div className="mt-4 pt-4 border-t border-border">
                                     <p className="text-sm font-medium text-forest mb-2">Apply this rule to:</p>
                                     <div className="flex gap-2">
@@ -347,7 +364,7 @@ export default function GoogleCalendarMapPage() {
                                             onClick={() => setMatchType('title_exact')}
                                             className={`
                                                 flex-1 py-2 px-3 rounded-lg text-sm transition-colors
-                                                ${currentChoice.matchType === 'title_exact'
+                                                ${safeCurrentChoice.matchType === 'title_exact'
                                                     ? 'bg-terracotta text-white'
                                                     : 'bg-gray-100 text-forest hover:bg-gray-200'
                                                 }
@@ -359,7 +376,7 @@ export default function GoogleCalendarMapPage() {
                                             onClick={() => setMatchType('event_id')}
                                             className={`
                                                 flex-1 py-2 px-3 rounded-lg text-sm transition-colors
-                                                ${currentChoice.matchType === 'event_id'
+                                                ${safeCurrentChoice.matchType === 'event_id'
                                                     ? 'bg-terracotta text-white'
                                                     : 'bg-gray-100 text-forest hover:bg-gray-200'
                                                 }

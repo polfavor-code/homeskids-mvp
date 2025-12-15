@@ -427,7 +427,7 @@ export async function ignoreCandidatesByTitle(
             .eq('child_id', childId)
             .eq('external_calendar_id', calendarId)
             .ilike('title', title)
-            .select('*', { count: 'exact' });
+            .select('id');
         
         if (error) {
             return { success: false, count: 0, error: 'Failed to update events' };
