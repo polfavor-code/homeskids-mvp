@@ -29,7 +29,7 @@ export async function fetchGoogleCalendars(): Promise<{
             return { calendars: [], error: 'Not authenticated' };
         }
         
-        const { accessToken, error: tokenError } = await getValidAccessToken(user.id);
+        const { accessToken, error: tokenError } = await getValidAccessToken();
         
         if (tokenError || !accessToken) {
             return { calendars: [], error: tokenError || 'No access token' };
@@ -289,7 +289,7 @@ export async function syncCalendarSource(
         }
         
         // Get valid access token
-        const { accessToken, error: tokenError } = await getValidAccessToken(user.id);
+        const { accessToken, error: tokenError } = await getValidAccessToken();
         
         if (tokenError || !accessToken) {
             result.errors.push(tokenError || 'No access token');
