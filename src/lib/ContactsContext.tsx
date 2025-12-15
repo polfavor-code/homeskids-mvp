@@ -237,7 +237,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 // Fetch creator names for contacts that have created_by_user_id
                 let creatorNames: Record<string, string> = {};
                 if (contactsData) {
-                    const creatorIds = [...new Set(contactsData.filter(c => c.created_by_user_id).map(c => c.created_by_user_id))];
+                    const creatorIds = Array.from(new Set(contactsData.filter(c => c.created_by_user_id).map(c => c.created_by_user_id)));
                     if (creatorIds.length > 0) {
                         const { data: profiles } = await supabase
                             .from("profiles")
