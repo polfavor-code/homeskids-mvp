@@ -62,7 +62,7 @@ export async function getHomeStayCandidates(
         }
         
         // Fetch calendar source names for lookup
-        const calendarIds = [...new Set(candidates.map(c => c.external_calendar_id).filter(Boolean))];
+        const calendarIds = Array.from(new Set(candidates.map(c => c.external_calendar_id).filter(Boolean)));
         const { data: sources } = await supabase
             .from('google_calendar_sources')
             .select('google_calendar_id, google_calendar_name')
