@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design 1: Minimal Caregivers - June</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a1a;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        
+        .header {
+            margin-bottom: 48px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+        
+        .header p {
+            font-size: 15px;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+        
+        .add-caregiver-btn {
+            background: #2c5f5d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 32px;
+            transition: background 0.2s;
+        }
+        
+        .add-caregiver-btn:hover {
+            background: #234948;
+        }
+        
+        .caregivers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .caregiver-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s;
+        }
+        
+        .caregiver-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #2c5f5d;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .avatar.image {
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .caregiver-info {
+            flex: 1;
+        }
+        
+        .caregiver-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        
+        .caregiver-name .you-badge {
+            display: inline-block;
+            background: #2c5f5d;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .caregiver-details {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .caregiver-role {
+            display: inline-block;
+            background: #f3f4f6;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #4b5563;
+            margin-top: 6px;
+        }
+        
+        .caregiver-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            background: none;
+            border: 1px solid #e5e7eb;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+        
+        .action-btn:hover {
+            border-color: #2c5f5d;
+            color: #2c5f5d;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            margin-bottom: 24px;
+        }
+        
+        .modal-header h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .modal-header p {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2c5f5d;
+        }
+        
+        .home-access {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .home-access-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #374151;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .checkbox-item:hover {
+            background: #f9fafb;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+        
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: 15px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn-primary {
+            background: #2c5f5d;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #234948;
+        }
+        
+        .info-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+        
+        .info-box h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #0369a1;
+        }
+        
+        .info-box p {
+            font-size: 13px;
+            color: #075985;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>June's Caregivers</h1>
+            <p>People who help take care of June and have access to her information.</p>
+        </div>
+        
+        <button class="add-caregiver-btn" onclick="document.querySelector('.modal').classList.add('active')">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 5V15M5 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Add Caregiver
+        </button>
+        
+        <div class="caregivers-list">
+            <div class="caregiver-card">
+                <div class="avatar image" style="background-image: url('https://i.pravatar.cc/150?img=1')"></div>
+                <div class="caregiver-info">
+                    <div class="caregiver-name">
+                        mommy
+                        <span class="you-badge">You</span>
+                    </div>
+                    <div class="caregiver-details">Ellia den Hartog</div>
+                    <div class="caregiver-role">Parent</div>
+                </div>
+                <div class="caregiver-actions">
+                    <button class="action-btn">Edit</button>
+                </div>
+            </div>
+            
+            <div class="caregiver-card">
+                <div class="avatar">P</div>
+                <div class="caregiver-info">
+                    <div class="caregiver-name">Daddy</div>
+                    <div class="caregiver-details">Paul Somers</div>
+                    <div class="caregiver-role">Parent</div>
+                </div>
+                <div class="caregiver-actions">
+                    <button class="action-btn">Edit</button>
+                    <button class="action-btn">Remove</button>
+                </div>
+            </div>
+            
+            <div class="caregiver-card">
+                <div class="avatar">P</div>
+                <div class="caregiver-info">
+                    <div class="caregiver-name">Patrick</div>
+                    <div class="caregiver-details">Patrick Stenburg</div>
+                    <div class="caregiver-role">Parent</div>
+                </div>
+                <div class="caregiver-actions">
+                    <button class="action-btn">Edit</button>
+                    <button class="action-btn">Remove</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <h4>About Caregivers</h4>
+            <p>Caregivers can access June's information based on the homes they're connected to. You can manage their access at any time.</p>
+        </div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Caregiver</h2>
+                <p>Enter the details of the person you'd like to invite.</p>
+            </div>
+            
+            <form>
+                <div class="form-group">
+                    <label>Their Name</label>
+                    <input type="text" placeholder="e.g., Ellis">
+                </div>
+                
+                <div class="form-group">
+                    <label>Role</label>
+                    <select>
+                        <option value="">Select role...</option>
+                        <option value="parent">Parent</option>
+                        <option value="babysitter">Babysitter</option>
+                        <option value="helper">Helper</option>
+                    </select>
+                </div>
+                
+                <div class="home-access">
+                    <div class="home-access-title">Give them access to:</div>
+                    
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="home1" checked>
+                        <label for="home1">Mommy's home</label>
+                    </div>
+                    
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="home2">
+                        <label for="home2">Patrick's home</label>
+                    </div>
+                    
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="home3">
+                        <label for="home3">Patrick's home in Belgium</label>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="document.querySelector('.modal').classList.remove('active')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send Invite</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

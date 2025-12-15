@@ -84,77 +84,94 @@ export default function AddItemPage() {
                 return;
             }
 
-            // V2: Use child ID for folder structure, fallback to V1 family_members
-            let folderId = child?.id;
+            // Get folder ID for storage - use family_id for consistency with bucket policies
+            // First try family_members (V1), then fall back to child.id (V2)
+            let folderId: string | undefined;
 
-            if (!folderId) {
-                // Fallback to V1: try family_members
-                const { data: familyMember } = await supabase
-                    .from("family_members")
-                    .select("family_id")
-                    .eq("user_id", session.user.id)
-                    .single();
+            // Try V1: family_members.family_id
+            const { data: familyMember } = await supabase
+                .from("family_members")
+                .select("family_id")
+                .eq("user_id", session.user.id)
+                .single();
 
-                folderId = familyMember?.family_id;
+            if (familyMember?.family_id) {
+                folderId = familyMember.family_id;
+            } else if (child?.id) {
+                // Fallback to V2: child.id
+                folderId = child.id;
             }
 
             if (!folderId) {
-                setError("No child found. Please complete onboarding.");
+                setError("No family or child found. Please complete onboarding.");
                 setUploading(false);
                 return;
             }
+            
+            console.log("[Image Upload] Using folder ID:", folderId);
 
             let photoUrl = "";
 
             // Upload photo if selected
             if (photoFile) {
-                // Process image: create original and display versions
-                const processed = await processImageForUpload(photoFile);
-                const paths = generateImagePaths(folderId, photoFile.name);
+                try {
+                    console.log("[Image Upload] Starting upload for file:", photoFile.name, "size:", photoFile.size);
+                    
+                    // Process image: create original and display versions
+                    const processed = await processImageForUpload(photoFile);
+                    const paths = generateImagePaths(folderId, photoFile.name);
 
-                console.log("[Image Upload] Original size:", processed.originalWidth, "x", processed.originalHeight);
-                console.log("[Image Upload] Display size:", processed.displayWidth, "x", processed.displayHeight);
-                console.log("[Image Upload] Needs resize:", processed.needsResize);
-                console.log("[Image Upload] Original path:", paths.originalPath);
-                console.log("[Image Upload] Display path:", paths.displayPath);
+                    console.log("[Image Upload] Original size:", processed.originalWidth, "x", processed.originalHeight);
+                    console.log("[Image Upload] Display size:", processed.displayWidth, "x", processed.displayHeight);
+                    console.log("[Image Upload] Needs resize:", processed.needsResize);
+                    console.log("[Image Upload] Original path:", paths.originalPath);
+                    console.log("[Image Upload] Display path:", paths.displayPath);
 
-                // Upload original (full resolution)
-                const { error: originalError } = await supabase.storage
-                    .from("item-photos")
-                    .upload(paths.originalPath, processed.original, {
-                        cacheControl: "31536000", // 1 year cache for originals
-                        upsert: false,
-                    });
-
-                if (originalError) {
-                    console.error("Original upload error:", originalError);
-                    setError("Failed to upload photo. Please try again.");
-                    setUploading(false);
-                    return;
-                }
-                console.log("[Image Upload] Original uploaded successfully");
-
-                // Upload display version (max 1024px) - only if different from original
-                if (processed.needsResize) {
-                    const { error: displayError } = await supabase.storage
+                    // Upload original (full resolution)
+                    const { error: originalError, data: originalData } = await supabase.storage
                         .from("item-photos")
-                        .upload(paths.displayPath, processed.display, {
-                            cacheControl: "3600", // 1 hour cache for display
+                        .upload(paths.originalPath, processed.original, {
+                            cacheControl: "31536000", // 1 year cache for originals
                             upsert: false,
                         });
 
-                    if (displayError) {
-                        console.error("Display upload error:", displayError);
-                        // Continue anyway - we have the original
-                    } else {
-                        console.log("[Image Upload] Display uploaded successfully");
+                    if (originalError) {
+                        console.error("[Image Upload] Original upload error:", originalError);
+                        setError(`Failed to upload photo: ${originalError.message}`);
+                        setUploading(false);
+                        return;
                     }
-                    // Use display path when resized
-                    photoUrl = paths.displayPath;
-                } else {
-                    // No resize needed - use original path for display too
-                    console.log("[Image Upload] No resize needed, using original as display");
-                    photoUrl = paths.originalPath;
+                    console.log("[Image Upload] Original uploaded successfully:", originalData);
+
+                    // Upload display version (max 300px) - only if different from original
+                    if (processed.needsResize) {
+                        const { error: displayError } = await supabase.storage
+                            .from("item-photos")
+                            .upload(paths.displayPath, processed.display, {
+                                cacheControl: "3600", // 1 hour cache for display
+                                upsert: false,
+                            });
+
+                        if (displayError) {
+                            console.error("[Image Upload] Display upload error:", displayError);
+                            // Continue anyway - we have the original
+                        } else {
+                            console.log("[Image Upload] Display uploaded successfully");
+                        }
+                        // Use display path when resized
+                        photoUrl = paths.displayPath;
+                    } else {
+                        // No resize needed - use original path for display too
+                        console.log("[Image Upload] No resize needed, using original as display");
+                        photoUrl = paths.originalPath;
+                    }
+                    
+                    console.log("[Image Upload] Final photoUrl to save:", photoUrl);
+                } catch (uploadError) {
+                    console.error("[Image Upload] Unexpected error:", uploadError);
+                    setError("Failed to process photo. Please try again.");
+                    setUploading(false);
+                    return;
                 }
             }
 
@@ -185,7 +202,9 @@ export default function AddItemPage() {
                 originHomeId: originHomeId || locationHomeId || undefined,
             };
 
+            console.log("[Create Item] Saving item with photoUrl:", newItem.photoUrl);
             const result = await addItem(newItem);
+            console.log("[Create Item] Result:", result);
 
             if (!result.success) {
                 setError(result.error || "Failed to create item. Please try again.");

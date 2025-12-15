@@ -178,14 +178,11 @@ export default function GoogleCalendarMapPage() {
             <div className="space-y-6">
                 {/* Header */}
                 <div>
-                    <Link 
-                        href="/settings/integrations" 
-                        className="text-sm text-terracotta hover:underline inline-flex items-center gap-1"
+                    <Link
+                        href="/settings/integrations"
+                        className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-2"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="15 18 9 12 15 6" />
-                        </svg>
-                        Integrations
+                        ← Integrations
                     </Link>
                     <h1 className="font-dmSerif text-2xl text-forest mt-2">Link Events to Homes</h1>
                     <p className="text-sm text-textSub mt-1">

@@ -20,6 +20,11 @@ export const FEATURES = {
     // Calendar feature - Enable after running migration 012
     // Tables: calendar_events, calendar_notifications
     CALENDAR: true,           // Set to true after running supabase-v2-migration-012-calendar-events.sql
+    
+    // Apple Calendar (ICS) integration - Enable after running migration 014
+    // Tables: external_calendar_sources, ics_sources
+    // Required env var: ENCRYPTION_KEY (32 bytes hex)
+    APPLE_CALENDAR: true,    // Set to true after running supabase-migration-014-apple-calendar.sql
 };
 
 if (!supabaseUrl) {

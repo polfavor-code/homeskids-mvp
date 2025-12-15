@@ -405,6 +405,25 @@ export default function EventDetailPanel() {
                                 </div>
                             )}
                             
+                            {/* Imported from Apple Calendar indicator */}
+                            {selectedEvent.source === 'ics' && (
+                                <div className="p-3 bg-red-50 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" fill="#FF3B30"/>
+                                            <rect x="3" y="4" width="18" height="5" fill="#D12F26"/>
+                                            <text x="12" y="17" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">31</text>
+                                        </svg>
+                                        <span className="text-sm text-red-800">Imported from Apple Calendar</span>
+                                    </div>
+                                    {selectedEvent.isReadOnly && (
+                                        <p className="text-xs text-red-600 mt-1">
+                                            This event is read-only. Edit it in Apple Calendar.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                            
                             {/* Meta info */}
                             <div className="text-xs text-textSub pt-2 border-t border-border">
                                 <p>Created: {selectedEvent.createdAt.toLocaleDateString()}</p>

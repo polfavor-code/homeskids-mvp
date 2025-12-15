@@ -296,10 +296,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const currentUserCaregiver = caregivers.find(c => c.isCurrentUser);
 
     // Derived: is child at user's home?
+    // Check if the current home is owned by the current user
+    const currentHome = homes.find(h => h.id === currentHomeId);
     const isChildAtUserHome = !!(
         currentHomeId &&
         currentUserCaregiver &&
-        currentUserCaregiver.accessibleChildSpaceIds.includes(currentChildSpace?.id || "")
+        currentHome?.ownerCaregiverId === currentUserCaregiver.id
     );
 
     // Derived: current user's permissions

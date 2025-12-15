@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import { CalendarProvider, useCalendar } from "@/lib/calendar/CalendarContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -14,11 +15,52 @@ import {
 } from "@/components/calendar";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import { CalendarIcon } from "@/components/icons/DuotoneIcons";
+import { getGoogleCalendarConnectionStatus } from "@/lib/google-calendar";
+import { hasAppleCalendarConnected } from "@/lib/apple-calendar";
+
+// Google Calendar Icon
+function GoogleCalendarIcon({ size = 14 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="18" rx="2" fill="#4285F4"/>
+            <rect x="3" y="4" width="18" height="5" fill="#1967D2"/>
+            <rect x="6" y="12" width="3" height="3" fill="white"/>
+            <rect x="10.5" y="12" width="3" height="3" fill="white"/>
+            <rect x="15" y="12" width="3" height="3" fill="white"/>
+        </svg>
+    );
+}
+
+// Apple Calendar Icon
+function AppleCalendarIcon({ size = 14 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="18" rx="2" fill="#FF3B30"/>
+            <rect x="3" y="4" width="18" height="5" fill="#D12F26"/>
+            <text x="12" y="17" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">31</text>
+        </svg>
+    );
+}
 
 function CalendarContent() {
     const { view, error, isLoading } = useCalendar();
     const { currentChild, isLoaded: appLoaded } = useAppState();
     const [showAddModal, setShowAddModal] = useState(false);
+    
+    // Calendar sync status
+    const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
+    const [appleConnected, setAppleConnected] = useState<boolean | null>(null);
+    
+    useEffect(() => {
+        async function checkConnections() {
+            const googleResult = await getGoogleCalendarConnectionStatus();
+            setGoogleConnected(googleResult.connected);
+            
+            const appleResult = await hasAppleCalendarConnected();
+            setAppleConnected(appleResult.connected);
+        }
+        checkConnections();
+    }, []);
     
     // Show loading state while app state loads
     if (!appLoaded) {
@@ -63,6 +105,37 @@ function CalendarContent() {
                 
                 {/* Calendar view */}
                 {view === 'month' ? <MonthView /> : <AgendaView />}
+                
+                {/* Calendar sync status footer */}
+                {(googleConnected !== null || appleConnected !== null) && (
+                    <div className="flex items-center justify-center gap-4 text-xs text-textSub pt-4 border-t border-border/50">
+                        <Link 
+                            href="/settings/integrations"
+                            className="inline-flex items-center gap-1.5 hover:text-forest transition-colors"
+                        >
+                            <GoogleCalendarIcon size={14} />
+                            <span>Google Calendar</span>
+                            <span>-</span>
+                            <span className={googleConnected ? "text-green-600" : ""}>
+                                {googleConnected ? "connected" : "not connected"}
+                            </span>
+                        </Link>
+                        
+                        <span className="text-textSub/30">|</span>
+                        
+                        <Link 
+                            href="/settings/integrations/apple-calendar"
+                            className="inline-flex items-center gap-1.5 hover:text-forest transition-colors"
+                        >
+                            <AppleCalendarIcon size={14} />
+                            <span>Apple Calendar</span>
+                            <span>-</span>
+                            <span className={appleConnected ? "text-green-600" : ""}>
+                                {appleConnected ? "connected" : "not connected"}
+                            </span>
+                        </Link>
+                    </div>
+                )}
                 
                 {/* Add event modal */}
                 <AddEventModal 
