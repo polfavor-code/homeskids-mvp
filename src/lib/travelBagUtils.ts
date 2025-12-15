@@ -27,8 +27,8 @@ export function getPackedItems(items: Item[]): Item[] {
 }
 
 /**
- * Get items that are missing
+ * Get items that are awaiting location confirmation
  */
-export function getToBeFoundItems(items: Item[]): Item[] {
+export function getAwaitingLocationItems(items: Item[]): Item[] {
     return items.filter((item) => item.isMissing);
 }

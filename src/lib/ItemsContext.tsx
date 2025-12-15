@@ -33,7 +33,7 @@ export type Item = {
     // V1 compatibility
     locationCaregiverId: string | null;
     locationHomeId: string | null;
-    isMissing: boolean;  // Required for V1 compatibility
+    isMissing: boolean;  // True = "Awaiting location" (location not confirmed yet)
 };
 
 // Transfer request - request to move an item to a different home
@@ -899,7 +899,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     ) => {
         console.log("🏠 updateItemLocation called:", { itemId, newLocation });
         
-        // Handle "Missing" status
+        // Handle "Awaiting location" status (toBeFound = true means location not confirmed)
         if (newLocation.toBeFound !== undefined) {
             const isMissing = newLocation.toBeFound;
             const status = isMissing ? "lost" as const : "at_home" as const;
@@ -959,12 +959,12 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             
             console.log("🏠 Moving item to child_space:", newChildSpace.id);
             
-            // Update the item's child_space_id AND set status to at_home (in case it was missing)
+            // Update the item's child_space_id AND set status to at_home (confirms location)
             const { error: updateError } = await supabase
                 .from("items")
                 .update({ 
                     child_space_id: newChildSpace.id,
-                    status: "at_home"  // Clear missing status when assigning to a home
+                    status: "at_home"  // Confirm location when assigning to a home
                 })
                 .eq("id", itemId);
             

@@ -138,7 +138,7 @@ function TravelBagCheckPageContent() {
             !item.isMissing
     );
 
-    const missingItems = items.filter((item) => item.isMissing && !dismissedMissingIds.has(item.id));
+    const awaitingLocationItems = items.filter((item) => item.isMissing && !dismissedMissingIds.has(item.id));
 
     // Items where requester canceled but still packed - packer needs to confirm removal
     const canceledButPackedItems = items.filter(
@@ -183,8 +183,8 @@ function TravelBagCheckPageContent() {
 
     const isPacker = viewMode === "packer";
 
-    // Count missing items for badge
-    const missingItemsCount = items.filter((item) => item.isMissing).length;
+    // Count items awaiting location for badge
+    const awaitingLocationCount = items.filter((item) => item.isMissing).length;
 
     return (
         <AppShell>
@@ -226,13 +226,13 @@ function TravelBagCheckPageContent() {
                     <TravelBagIcon size={16} />
                     Travel bag
                 </Link>
-                {missingItemsCount > 0 && (
+                {awaitingLocationCount > 0 && (
                     <Link
-                        href="/items/missing"
+                        href="/items/awaiting-location"
                         className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
                     >
                         <SearchIcon size={16} />
-                        Missing ({missingItemsCount})
+                        Awaiting location ({awaitingLocationCount})
                     </Link>
                 )}
             </div>
@@ -246,7 +246,7 @@ function TravelBagCheckPageContent() {
             {activeTab === "current" ? (
                 /* CURRENT PACKLIST TAB */
                 <div>
-                    {totalItems === 0 && missingItems.length === 0 ? (
+                    {totalItems === 0 && awaitingLocationItems.length === 0 ? (
                         <div className="bg-white rounded-2xl p-8 shadow-sm border border-border text-center">
                             <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
                                 📦
@@ -271,7 +271,7 @@ function TravelBagCheckPageContent() {
                             itemsToPack={itemsToPack}
                             toPackUnpacked={toPackUnpacked}
                             toPackPacked={toPackPacked}
-                            missingItems={missingItems}
+                            awaitingLocationItems={awaitingLocationItems}
                             canceledButPackedItems={canceledButPackedItems}
                             allItemsAtOrigin={allItemsAtOrigin}
                             totalToPack={totalToPack}
@@ -399,7 +399,7 @@ function PackerView({
     itemsToPack,
     toPackUnpacked,
     toPackPacked,
-    missingItems,
+    awaitingLocationItems,
     canceledButPackedItems,
     allItemsAtOrigin,
     totalToPack,
@@ -420,7 +420,7 @@ function PackerView({
     itemsToPack: Item[];
     toPackUnpacked: Item[];
     toPackPacked: Item[];
-    missingItems: Item[];
+    awaitingLocationItems: Item[];
     canceledButPackedItems: Item[];
     allItemsAtOrigin: Item[];
     totalToPack: number;
@@ -585,18 +585,18 @@ function PackerView({
                 </div>
             </div>
 
-            {/* Missing Items - Aggregated Alert Card (soft terracotta/organic style) */}
-            {missingItems.length > 0 && (
-                <div className="bg-terracotta/10 border border-terracotta/20 rounded-2xl p-4 shadow-sm">
+            {/* Awaiting Location Items - Info Card (neutral style) */}
+            {awaitingLocationItems.length > 0 && (
+                <div className="bg-gray-100 border border-gray-200 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-lg flex-shrink-0">⚠️</span>
+                            <span className="text-lg flex-shrink-0">📍</span>
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-forest">
-                                    {missingItems.length} item{missingItems.length !== 1 ? "s" : ""} missing at {originHome?.name || "this home"}
+                                    {awaitingLocationItems.length} item{awaitingLocationItems.length !== 1 ? "s" : ""} awaiting location
                                 </p>
                                 <p className="text-xs text-textSub">
-                                    Not found where we expected.
+                                    Location not yet confirmed.
                                 </p>
                             </div>
                         </div>
@@ -604,14 +604,14 @@ function PackerView({
                             onClick={() => setShowMissingItems(!showMissingItems)}
                             className="flex-shrink-0 px-3 py-1.5 bg-white/60 hover:bg-white text-forest text-xs font-semibold rounded-lg transition-colors border border-border/50"
                         >
-                            {showMissingItems ? "Hide" : "View missing items"}
+                            {showMissingItems ? "Hide" : "View items"}
                         </button>
                     </div>
 
-                    {/* Expandable missing items list */}
+                    {/* Expandable awaiting location items list */}
                     {showMissingItems && (
-                        <div className="mt-4 pt-4 border-t border-terracotta/20 space-y-2">
-                            {missingItems.map((item) => (
+                        <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                            {awaitingLocationItems.map((item) => (
                                 <div
                                     key={item.id}
                                     className="flex items-center gap-3 p-2 bg-white/60 rounded-xl"
@@ -1210,18 +1210,16 @@ function AllItemsRow({
     );
 }
 
-// Missing item box - dashed border style
-function MissingItemBox({
+// Awaiting location item box - neutral dashed border style
+function AwaitingLocationItemBox({
     item,
-    originLabel,
     onDismiss
 }: {
     item: Item;
-    originLabel: string;
     onDismiss: () => void;
 }) {
     return (
-        <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-dashed border-red-400">
+        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-dashed border-gray-300">
             <Link
                 href={`/items/${item.id}`}
                 className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
@@ -1240,11 +1238,11 @@ function MissingItemBox({
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <strong className="block text-red-700 text-sm font-bold">
-                        Missing: {item.name}
+                    <strong className="block text-gray-700 text-sm font-medium">
+                        {item.name}
                     </strong>
-                    <span className="text-xs text-red-600/80">
-                        Not found at {originLabel}'s. Check car?
+                    <span className="text-xs text-gray-500">
+                        Location not confirmed
                     </span>
                 </div>
             </Link>
@@ -1253,7 +1251,7 @@ function MissingItemBox({
                     e.stopPropagation();
                     onDismiss();
                 }}
-                className="flex-shrink-0 text-red-300 hover:text-red-500 hover:bg-red-100 p-1.5 rounded-lg transition-colors"
+                className="flex-shrink-0 text-gray-300 hover:text-gray-500 hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
                 title="Dismiss for this session"
             >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

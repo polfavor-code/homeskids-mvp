@@ -190,87 +190,72 @@ export default function PhoneInput({
                 </div>
             )}
 
-            {/* Mobile Bottom Sheet */}
+            {/* Mobile Full Screen Overlay - avoids keyboard issues */}
             {isOpen && (
-                <div className="sm:hidden fixed inset-0 z-50">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/30"
-                        onClick={handleClose}
-                    />
+                <div className="sm:hidden fixed inset-0 z-50 bg-white flex flex-col">
+                    {/* Header - fixed at top */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-white safe-area-top">
+                        <h2 className="text-lg font-dmSerif text-forest">Select country</h2>
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="p-2 text-textSub hover:text-forest rounded-full hover:bg-cream transition-colors"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
 
-                    {/* Sheet */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[80vh] overflow-hidden animate-slide-up">
-                        {/* Handle */}
-                        <div className="flex justify-center pt-3 pb-2">
-                            <div className="w-10 h-1 bg-gray-300 rounded-full" />
-                        </div>
+                    {/* Search - sticky below header */}
+                    <div className="px-4 py-3 border-b border-border bg-cream/30">
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search country..."
+                            className="w-full px-4 py-3 text-base border border-border rounded-xl bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                        />
+                    </div>
 
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
-                            <h2 className="text-lg font-dmSerif text-forest">Select country</h2>
-                            <button
-                                type="button"
-                                onClick={handleClose}
-                                className="p-2 text-textSub hover:text-forest rounded-full hover:bg-cream transition-colors"
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        {/* Search */}
-                        <div className="p-4 border-b border-border bg-cream/30">
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search country..."
-                                className="w-full px-4 py-3 text-base border border-border rounded-xl bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                                autoComplete="off"
-                                autoCorrect="off"
-                            />
-                        </div>
-
-                        {/* Country List */}
-                        <div className="overflow-y-auto max-h-[50vh]">
-                            {filteredCountries.length === 0 ? (
-                                <div className="px-4 py-6 text-center text-textSub">No countries found</div>
-                            ) : (
-                                filteredCountries.map((country, index) => (
-                                    <button
-                                        key={`mobile-${country.shortCode}-${index}`}
-                                        type="button"
-                                        onClick={() => handleCountrySelect(country)}
-                                        className={`w-full flex items-center gap-4 px-4 py-4 border-b border-border/50 active:bg-cream transition-colors text-left ${
-                                            country.code === countryCode ? "bg-softGreen" : "bg-white"
-                                        }`}
-                                    >
-                                        <span className="text-2xl">{country.flag}</span>
-                                        <span className="flex-1 text-base text-forest">{country.name}</span>
-                                        <span className="text-base text-textSub font-medium">{country.code}</span>
-                                    </button>
-                                ))
-                            )}
-                        </div>
+                    {/* Country List - scrollable, fills remaining space */}
+                    <div className="flex-1 overflow-y-auto overscroll-contain">
+                        {filteredCountries.length === 0 ? (
+                            <div className="px-4 py-6 text-center text-textSub">No countries found</div>
+                        ) : (
+                            filteredCountries.map((country, index) => (
+                                <button
+                                    key={`mobile-${country.shortCode}-${index}`}
+                                    type="button"
+                                    onClick={() => handleCountrySelect(country)}
+                                    className={`w-full flex items-center gap-4 px-4 py-4 border-b border-border/50 active:bg-cream transition-colors text-left ${
+                                        country.code === countryCode ? "bg-softGreen" : "bg-white"
+                                    }`}
+                                >
+                                    <span className="text-2xl">{country.flag}</span>
+                                    <span className="flex-1 text-base text-forest">{country.name}</span>
+                                    <span className="text-base text-textSub font-medium">{country.code}</span>
+                                </button>
+                            ))
+                        )}
+                        {/* Extra padding at bottom for safe area */}
+                        <div className="h-8 safe-area-bottom" />
                     </div>
                 </div>
             )}
 
-            {/* Animation styles */}
+            {/* Safe area styles for mobile */}
             <style jsx>{`
-                @keyframes slide-up {
-                    from {
-                        transform: translateY(100%);
-                    }
-                    to {
-                        transform: translateY(0);
-                    }
+                .safe-area-top {
+                    padding-top: env(safe-area-inset-top, 0);
                 }
-                .animate-slide-up {
-                    animation: slide-up 0.3s ease-out;
+                .safe-area-bottom {
+                    padding-bottom: env(safe-area-inset-bottom, 0);
                 }
             `}</style>
         </div>

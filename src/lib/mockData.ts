@@ -123,7 +123,7 @@ export const MOCK_ITEMS: Item[] = [
         isMissing: false,
         isRequestCanceled: false,
     },
-    // Missing Item
+    // Item awaiting location confirmation
     {
         id: "i7",
         name: "Left Mitten",
@@ -132,7 +132,7 @@ export const MOCK_ITEMS: Item[] = [
         locationHomeId: null,
         isRequestedForNextVisit: false,
         isPacked: false,
-        isMissing: true,
+        isMissing: true, // isMissing = true means "awaiting location"
         isRequestCanceled: false,
     },
 ];

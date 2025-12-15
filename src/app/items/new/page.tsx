@@ -100,7 +100,7 @@ export default function AddItemPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !category || !location) {
+        if (!name || !category) {
             setError("Please fill in all required fields.");
             return;
         }
@@ -212,13 +212,13 @@ export default function AddItemPage() {
                 }
             }
 
-            const isMissing = location === "Missing";
+            const isAwaitingLocation = location === "AWAITING_LOCATION" || !location;
             const isUnassigned = location === "Unassigned";
             // Use home-based location - find the selected home from ALL homes (in case item is at hidden home)
             const selectedHome = homes.find((h) => h.id === location);
-            const locationHomeId = (isMissing || isUnassigned) ? null : (selectedHome?.id || null);
+            const locationHomeId = (isAwaitingLocation || isUnassigned) ? null : (selectedHome?.id || null);
             // Keep legacy caregiver ID for backwards compatibility
-            const locationCaregiverId = (isMissing || isUnassigned)
+            const locationCaregiverId = (isAwaitingLocation || isUnassigned)
                 ? (caregivers[0]?.id || "")
                 : (selectedHome?.ownerCaregiverId || caregivers[0]?.id || "");
 
@@ -230,7 +230,7 @@ export default function AddItemPage() {
                 locationHomeId,
                 isRequestedForNextVisit: false,
                 isPacked: false,
-                isMissing,
+                isMissing: isAwaitingLocation, // "Awaiting location" uses this flag
                 isRequestCanceled: false,
                 photoUrl: photoUrl || undefined,
                 notes: notes || undefined,
@@ -381,21 +381,24 @@ export default function AddItemPage() {
                 {/* Location */}
                 <div>
                     <label className="block text-xs font-semibold text-forest mb-1.5">
-                        Location <span className="text-terracotta">*</span>
+                        Location
                     </label>
                     <MobileSelect
                         value={location}
                         onChange={setLocation}
                         options={[
+                            // "Awaiting location" is always first - for items whose home is not yet confirmed
+                            { value: "AWAITING_LOCATION", label: "Awaiting location" },
                             // Only show "Unassigned" / "No home yet" when there are no active homes
                             ...(activeHomes.length === 0 ? [{ value: "Unassigned", label: "No home yet" }] : []),
                             ...activeHomes.map((home) => ({ value: home.id, label: home.name })),
-                            { value: "Missing", label: "Missing" }
                         ]}
-                        placeholder={activeHomes.length === 0 ? "Select location" : "Select home"}
-                        title={activeHomes.length === 0 ? "Select location" : "Select home"}
-                        required
+                        placeholder="Select location"
+                        title="Where is this item?"
                     />
+                    <p className="text-xs text-textSub mt-1">
+                        Use &quot;Awaiting location&quot; if you&apos;re not sure where this item is right now.
+                    </p>
                 </div>
 
                 {/* Belongs to (Child selection) */}
@@ -466,7 +469,7 @@ export default function AddItemPage() {
                 <button
                     type="submit"
                     className="w-full py-3.5 bg-forest text-white font-semibold rounded-xl hover:bg-forest/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={uploading || !name || !category || !location || selectedChildIds.length === 0}
+                    disabled={uploading || !name || !category || selectedChildIds.length === 0}
                 >
                     {uploading ? "Saving..." : "Save item"}
                 </button>

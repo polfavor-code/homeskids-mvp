@@ -19,13 +19,20 @@ export const metadata: Metadata = {
     title: "homes.kids",
     description: "Everything your child needs between homes.",
     manifest: "/manifest.webmanifest",
-    icons: {
-        icon: "/icons/icon-192.png",
-        apple: "/icons/icon-192.png",
-    },
     appleWebApp: {
         statusBarStyle: "default",
         title: "homes.kids",
+    },
+    openGraph: {
+        title: "homes.kids",
+        description: "Everything your child needs between homes.",
+        siteName: "homes.kids",
+        type: "website",
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "homes.kids",
+        description: "Everything your child needs between homes.",
     },
 };
 

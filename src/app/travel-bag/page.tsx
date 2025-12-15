@@ -29,7 +29,7 @@ export default function TravelBagPage() {
             item.locationCaregiverId === currentJuneCaregiverId
     );
 
-    const missingItems = items.filter((item) => item.isMissing);
+    const awaitingLocationItems = items.filter((item) => item.isMissing);
 
     // Sort into groups based on packed state
     const toPackItems = requestedItems.filter((item) => !packedIds.has(item.id));
@@ -142,25 +142,25 @@ export default function TravelBagPage() {
                         </div>
                     )}
 
-                    {/* Missing Items Section */}
-                    {missingItems.length > 0 && (
+                    {/* Awaiting Location Items Section */}
+                    {awaitingLocationItems.length > 0 && (
                         <div>
                             <div className="flex items-center gap-2 mb-3">
-                                <h2 className="font-bold text-gray-900">Missing</h2>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    {missingItems.length}
+                                <h2 className="font-bold text-gray-900">Awaiting location</h2>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                    {awaitingLocationItems.length}
                                 </span>
                             </div>
 
                             <div className="space-y-2">
-                                {missingItems.map((item) => (
+                                {awaitingLocationItems.map((item) => (
                                     <Link
                                         key={item.id}
                                         href={`/items/${item.id}`}
-                                        className="flex items-center gap-3 p-2 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+                                        className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                                     >
                                         {/* Thumbnail */}
-                                        <div className="w-10 h-10 rounded-lg bg-yellow-200 flex items-center justify-center text-sm font-bold text-yellow-700 flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-500 flex-shrink-0">
                                             {item.name.charAt(0)}
                                         </div>
 
@@ -169,7 +169,7 @@ export default function TravelBagPage() {
                                             <h3 className="font-medium text-gray-900 text-sm truncate">
                                                 {item.name}
                                             </h3>
-                                            <p className="text-xs text-yellow-700">Reported missing</p>
+                                            <p className="text-xs text-gray-500">Location not confirmed</p>
                                         </div>
                                     </Link>
                                 ))}
@@ -178,7 +178,7 @@ export default function TravelBagPage() {
                     )}
 
                     {/* Empty state */}
-                    {toPackItems.length === 0 && packedItems.length === 0 && missingItems.length === 0 && (
+                    {toPackItems.length === 0 && packedItems.length === 0 && awaitingLocationItems.length === 0 && (
                         <div className="text-center py-8 text-gray-400">
                             <p className="mb-2">Nothing to pack right now.</p>
                             <p className="text-xs">Items will appear here when they're requested.</p>
