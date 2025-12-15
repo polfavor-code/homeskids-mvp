@@ -41,7 +41,7 @@ export async function listChildEvents(
             .from('calendar_events')
             .select(`
                 *,
-                homes (id, name),
+                homes!calendar_events_home_id_fkey (id, name),
                 created_by_profile:profiles!calendar_events_created_by_fkey (id, name),
                 proposed_by_profile:profiles!calendar_events_proposed_by_fkey (id, name),
                 confirmed_by_profile:profiles!calendar_events_confirmed_by_fkey (id, name),
@@ -436,7 +436,7 @@ export async function confirmHomeDay(
             .eq('id', eventId)
             .select(`
                 *,
-                homes (id, name),
+                homes!calendar_events_home_id_fkey (id, name),
                 created_by_profile:profiles!calendar_events_created_by_fkey (id, name),
                 proposed_by_profile:profiles!calendar_events_proposed_by_fkey (id, name)
             `)
@@ -546,7 +546,7 @@ export async function updateEvent(
             .eq('id', eventId)
             .select(`
                 *,
-                homes (id, name)
+                homes!calendar_events_home_id_fkey (id, name)
             `)
             .single();
 
@@ -625,7 +625,7 @@ export async function getPendingNotifications(): Promise<{
                 *,
                 calendar_events (
                     id, title, start_at, end_at, event_type, status,
-                    homes (id, name)
+                    homes!calendar_events_home_id_fkey (id, name)
                 )
             `)
             .eq('user_id', user.id)

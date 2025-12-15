@@ -397,28 +397,28 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                 </div>
                 {/* Custom location input (shown when "Other" or nothing selected and homes exist) */}
                 {!selectedHomeId && (
-                    <input
-                        type="text"
-                        value={customLocation}
-                        onChange={e => setCustomLocation(e.target.value)}
-                        placeholder={placeholder}
-                        className="w-full px-3 py-2 border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30"
-                    />
+                                    <input
+                                        type="text"
+                                        value={customLocation}
+                                        onChange={e => setCustomLocation(e.target.value)}
+                                        placeholder={placeholder}
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                    />
                 )}
             </div>
         </div>
     );
     
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center sm:justify-center pt-8 sm:pt-0 sm:p-4">
             {/* Backdrop */}
             <div 
                 className="absolute inset-0 bg-black/40"
                 onClick={handleClose}
             />
             
-            {/* Modal */}
-            <div className="relative bg-white rounded-card shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            {/* Modal - Full screen on mobile (with space for nav), centered card on desktop */}
+            <div className="relative bg-white w-full sm:rounded-card shadow-xl sm:max-w-md max-h-[calc(100%-6rem)] sm:max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-card mx-4 sm:mx-0">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
                     <h2 className="font-dmSerif text-xl text-forest">Add to Calendar</h2>
@@ -486,7 +486,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                     Travel
                                 </span>
                                 <p className="text-[10px] text-textSub mt-0.5 leading-tight">
-                                    Moving between homes or locations
+                                    Trip, holiday, or time away
                                 </p>
                             </div>
                         </button>
@@ -586,7 +586,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                                 setHomeDayEndDate(e.target.value);
                                             }
                                         }}
-                                        className="w-full px-3 py-2 border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                     />
                                     {!homeDayAllDay && (
                                         <input
@@ -606,7 +606,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                         value={homeDayEndDate}
                                         min={homeDayStartDate}
                                         onChange={e => setHomeDayEndDate(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                     />
                                     {!homeDayAllDay && (
                                         <input
@@ -632,6 +632,11 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                     {tab === 'travel' && (
                         /* Travel Form */
                         <>
+                            {/* Helper text */}
+                            <p className="text-sm text-textSub">
+                                Use Travel for holidays, trips, or visiting family.
+                            </p>
+                            
                             {/* From location */}
                             <LocationSelector
                                 label="From"
@@ -639,7 +644,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                 setSelectedHomeId={setTravelFromHomeId}
                                 customLocation={travelFromLocation}
                                 setCustomLocation={setTravelFromLocation}
-                                placeholder="e.g., School, Airport, Grandma's house"
+                                placeholder="e.g., Home, School, Airport"
                             />
                             
                             {/* To location */}
@@ -649,7 +654,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                 setSelectedHomeId={setTravelToHomeId}
                                 customLocation={travelToLocation}
                                 setCustomLocation={setTravelToLocation}
-                                placeholder="e.g., School, Airport, Grandma's house"
+                                placeholder="e.g., Holiday location, Hotel, Grandma's house"
                             />
                             
                             {/* Auto-generated title (editable) */}
@@ -662,7 +667,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                         type="text"
                                         value={travelTitle}
                                         onChange={e => setTravelTitle(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                     />
                                 </div>
                             )}
@@ -682,7 +687,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                                 setTravelEndDate(e.target.value);
                                             }
                                         }}
-                                        className="w-full px-3 py-2 border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                     />
                                     <input
                                         type="time"
@@ -700,7 +705,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                         value={travelEndDate}
                                         min={travelStartDate}
                                         onChange={e => setTravelEndDate(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                     />
                                     <input
                                         type="time"
@@ -721,7 +726,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                     value={travelWith}
                                     onChange={e => setTravelWith(e.target.value)}
                                     placeholder="e.g., Mom, Dad, Both parents, Grandma"
-                                    className="w-full px-3 py-2 border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                    className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                 />
                             </div>
                             
@@ -735,15 +740,15 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                     onChange={e => setTravelNotes(e.target.value)}
                                     placeholder="Flight details, pickup instructions..."
                                     rows={2}
-                                    className="w-full px-3 py-2 border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30 resize-none"
+                                    className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30 resize-none"
                                 />
                             </div>
                             
                             {/* Info note */}
                             <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
-                                <p className="font-medium">🚗 During travel, {currentChild?.name} is "in transit"</p>
+                                <p className="font-medium">✈️ During this trip, {currentChild?.name} will be marked as traveling</p>
                                 <p className="text-blue-600 mt-1">
-                                    After arrival, their location updates to the destination.
+                                    Their location will update when the trip ends.
                                 </p>
                             </div>
                         </>
@@ -762,7 +767,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                     value={eventTitle}
                                     onChange={e => setEventTitle(e.target.value)}
                                     placeholder="e.g., Soccer practice, Doctor appointment"
-                                    className="w-full px-3 py-2 border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                    className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                 />
                             </div>
                             
@@ -792,7 +797,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                                 setEventEndDate(e.target.value);
                                             }
                                         }}
-                                        className="w-full px-3 py-2 border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                     />
                                     {!eventAllDay && (
                                         <input
@@ -812,7 +817,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                         value={eventEndDate}
                                         min={eventStartDate}
                                         onChange={e => setEventEndDate(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest focus:outline-none focus:ring-2 focus:ring-terracotta/30"
                                     />
                                     {!eventAllDay && (
                                         <input
@@ -835,7 +840,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                     onChange={e => setEventDescription(e.target.value)}
                                     placeholder="Add notes..."
                                     rows={3}
-                                    className="w-full px-3 py-2 border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30 resize-none"
+                                    className="w-full px-3 py-2 bg-white border border-border rounded-lg text-forest placeholder:text-textSub focus:outline-none focus:ring-2 focus:ring-terracotta/30 resize-none"
                                 />
                             </div>
                         </>
@@ -843,7 +848,7 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                 </div>
                 
                 {/* Footer */}
-                <div className="p-4 border-t border-border space-y-3">
+                <div className="p-4 border-t border-border space-y-3 bg-white sticky bottom-0 safe-area-bottom">
                     <div className="flex gap-3">
                         <button
                             onClick={handleClose}
@@ -893,6 +898,23 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                     </div>
                 </div>
             </div>
+            
+            {/* Safe area and input styles */}
+            <style jsx>{`
+                .safe-area-top {
+                    padding-top: env(safe-area-inset-top, 0);
+                }
+                .safe-area-bottom {
+                    padding-bottom: env(safe-area-inset-bottom, 0);
+                }
+            `}</style>
+            <style jsx global>{`
+                input[type="date"],
+                input[type="time"] {
+                    color-scheme: light;
+                    -webkit-appearance: none;
+                }
+            `}</style>
         </div>
     );
 }
