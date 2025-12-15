@@ -120,9 +120,9 @@ export default function ChildScopeSelector({
                             `}
                         >
                             <Avatar
-                                name={child.name}
-                                storagePath={child.avatarUrl}
-                                size="xs"
+                                src={child.avatarUrl}
+                                initial={child.avatarInitials || child.name?.charAt(0)}
+                                size={24}
                                 className={isSelected ? "ring-2 ring-white/30" : ""}
                             />
                             <span className="text-sm font-medium">{child.name}</span>
