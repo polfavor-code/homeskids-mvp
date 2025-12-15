@@ -420,6 +420,7 @@ export default function DesktopNav() {
                             ? 'bg-softGreen'
                             : 'hover:bg-black/5'
                         }`}
+                    title={isCollapsed ? `${userLabel}` : undefined}
                 >
                     <Avatar
                         src={userAvatarUrl}

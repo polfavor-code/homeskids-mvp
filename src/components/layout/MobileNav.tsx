@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { isRouteActive } from '@/lib/navigation';
 import { useAppState } from '@/lib/AppStateContext';
 import { useAuth } from '@/lib/AuthContext';
+import Avatar from '@/components/Avatar';
 import {
     ItemsIcon,
     CalendarIcon,
@@ -77,7 +78,14 @@ function LogoIcon({ size = 24, isActive = false }: { size?: number; isActive?: b
 
 export default function MobileNav() {
     const pathname = usePathname();
-    const { caregivers } = useAppState();
+    const router = useRouter();
+    const { 
+        caregivers, 
+        children: childrenList, 
+        currentChild, 
+        setCurrentChildId,
+        refreshData,
+    } = useAppState();
     const { user } = useAuth();
     const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -90,6 +98,20 @@ export default function MobileNav() {
     const isMoreActive = isRouteActive(pathname, '/documents') ||
         isRouteActive(pathname, '/health') ||
         isRouteActive(pathname, '/settings');
+
+    // Handle child switch
+    const handleChildSwitch = async (childId: string) => {
+        if (childId === currentChild?.id) {
+            // Clicking active child goes to child settings
+            router.push("/settings/child");
+            setShowMoreMenu(false);
+            return;
+        }
+        
+        setCurrentChildId(childId);
+        await refreshData();
+        setShowMoreMenu(false);
+    };
 
     return (
         <>
@@ -180,6 +202,46 @@ export default function MobileNav() {
                     {/* Menu Panel - positioned above the nav bar, accounting for elevated home button */}
                     <div className="lg:hidden fixed left-0 right-0 bottom-[82px] z-40 animate-slide-up">
                         <div className="mx-3 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                            {/* Child Switcher - Show if there are children */}
+                            {childrenList.length > 0 && (
+                                <div className="p-3 bg-cream/30 border-b border-gray-100">
+                                    <p className="text-[10px] font-semibold text-forest/60 uppercase tracking-wide mb-2 px-1">
+                                        Viewing
+                                    </p>
+                                    <div className="flex gap-2 overflow-x-auto pb-1">
+                                        {childrenList.map((child) => {
+                                            const isActive = child.id === currentChild?.id;
+                                            return (
+                                                <button
+                                                    key={child.id}
+                                                    onClick={() => handleChildSwitch(child.id)}
+                                                    className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl transition-all flex-shrink-0 ${
+                                                        isActive
+                                                            ? 'bg-softGreen border-2 border-forest/20'
+                                                            : 'bg-white border border-gray-200 hover:border-forest/20'
+                                                    }`}
+                                                >
+                                                    <Avatar
+                                                        src={child.avatarUrl}
+                                                        initial={child.avatarInitials}
+                                                        size={40}
+                                                        bgColor={isActive ? "#4A7C59" : "#9CA3AF"}
+                                                    />
+                                                    <span className={`text-xs font-medium ${
+                                                        isActive ? 'text-forest' : 'text-gray-700'
+                                                    }`}>
+                                                        {child.name}
+                                                    </span>
+                                                    {isActive && (
+                                                        <div className="w-1 h-1 rounded-full bg-forest" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Menu Items */}
                             <div className="p-2">
                                 {/* Documents */}
