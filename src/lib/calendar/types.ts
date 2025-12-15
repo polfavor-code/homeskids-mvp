@@ -10,6 +10,9 @@ export type EventType = 'home_day' | 'event';
 // Status for home day confirmation workflow
 export type EventStatus = 'confirmed' | 'proposed' | 'rejected';
 
+// Event source (manual or external)
+export type EventSource = 'manual' | 'google' | 'apple' | 'outlook';
+
 // Calendar event as stored in database
 export interface CalendarEvent {
     id: string;
@@ -38,6 +41,14 @@ export interface CalendarEvent {
     rejectedAt: Date | null;
     proposalReason: string | null;
     
+    // External event tracking (for Google Calendar imports)
+    source: EventSource;
+    externalProvider: string | null;
+    externalCalendarId: string | null;
+    externalEventId: string | null;
+    externalHtmlLink: string | null;
+    isReadOnly: boolean;
+    
     // Audit
     createdBy: string;
     createdAt: Date;
@@ -64,6 +75,12 @@ export interface CalendarEventRow {
     rejected_at: string | null;
     proposal_reason: string | null;
     is_deleted: boolean;
+    source: EventSource;
+    external_provider: string | null;
+    external_calendar_id: string | null;
+    external_event_id: string | null;
+    external_html_link: string | null;
+    is_read_only: boolean;
     created_by: string;
     created_at: string;
     updated_at: string;
@@ -217,6 +234,12 @@ export function rowToEvent(row: CalendarEventRow): CalendarEvent {
         rejectedBy: row.rejected_by,
         rejectedAt: row.rejected_at ? new Date(row.rejected_at) : null,
         proposalReason: row.proposal_reason,
+        source: row.source || 'manual',
+        externalProvider: row.external_provider,
+        externalCalendarId: row.external_calendar_id,
+        externalEventId: row.external_event_id,
+        externalHtmlLink: row.external_html_link,
+        isReadOnly: row.is_read_only || false,
         createdBy: row.created_by,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),

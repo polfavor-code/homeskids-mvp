@@ -148,12 +148,189 @@ src/components/calendar/
 - [x] Non-parent cannot confirm/reject
 - [x] Single guardian auto-confirm works
 
+---
+
+# Google Calendar Integration - MVP Phase 2
+
+## Overview
+
+One-way sync from Google Calendar into Homes.kids with explicit user-defined mapping rules. Events are imported as regular calendar events, and users create rules to convert specific events into Home Stays.
+
+## Key Principles
+
+1. **No automatic guessing** - All semantic meaning (Home Stay vs Event) is assigned via explicit user mapping rules
+2. **One-way sync** - Events flow from Google → Homes.kids, never the other way
+3. **Read-only imports** - Imported events cannot be edited in Homes.kids
+4. **Confirmation still required** - Home Stays created from imports still need confirmation
+
+## Setup
+
+### 1. Google Cloud Console
+
+1. Create a project at https://console.cloud.google.com
+2. Enable the Google Calendar API
+3. Create OAuth 2.0 credentials (Web application)
+4. Add authorized redirect URI: `https://yourdomain.com/api/google-calendar/callback`
+5. Note your Client ID and Client Secret
+
+### 2. Environment Variables
+
+```env
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
+```
+
+### 3. Run Migration
+
+```bash
+# In Supabase SQL Editor, run:
+supabase-migration-013-google-calendar.sql
+```
+
+## User Flow
+
+### 1. Connect Google Account
+- Go to Settings → Integrations
+- Click "Connect Google Calendar"
+- Authorize read-only calendar access
+- Redirected back to calendar selection
+
+### 2. Select Calendars
+- See list of all calendars in Google account
+- Select which calendars to import
+- Map each calendar to ONE child
+- Example: "June's Schedule" → June
+
+### 3. Initial Import
+- Events from past 6 months to future 12 months are imported
+- All-day and multi-day events are flagged as potential Home Stays
+- Events appear in the child's calendar as regular events
+
+### 4. Create Mapping Rules
+- Review detected Home Stay candidates
+- For each event type (e.g., "Daddy Days"):
+  - Select which home it represents
+  - Choose to apply to all events with same title
+- Rules are applied immediately and to future syncs
+
+### 5. Ongoing Sync
+- Google Calendar changes sync automatically
+- New events matching rules become Home Stays
+- Home Stays still require confirmation from destination home member
+
+## How Mapping Rules Work
+
+### Match Types
+- **Event ID**: Matches exactly one specific event
+- **Title Exact**: Matches all events with exact title match
+- **Title Contains**: Matches all events containing a keyword
+
+### Example Rules
+```
+"Daddy Days" in "June's Calendar" → Paul's Home (Home Stay)
+"Swimming Lessons" → Keep as Event
+"Grandma visit" → Grandma's Home (Home Stay, auto-confirm)
+```
+
+### Rule Priority
+1. Event ID matches take highest priority
+2. Exact title matches next
+3. Contains matches last
+
+## Database Tables
+
+```sql
+-- OAuth tokens
+google_calendar_connections (
+  id, user_id, google_account_email,
+  access_token, refresh_token, token_expires_at,
+  granted_scopes, connected_at, revoked_at
+)
+
+-- Calendar to child mapping
+google_calendar_sources (
+  id, user_id, connection_id,
+  google_calendar_id, google_calendar_name,
+  child_id, active, sync_token, last_synced_at
+)
+
+-- Rules for converting events
+calendar_event_mappings (
+  id, source, google_calendar_id, child_id,
+  match_type, match_value,
+  home_id, resulting_event_type,
+  auto_confirm, active, created_by
+)
+
+-- Extended calendar_events fields
+source: 'manual' | 'google',
+external_provider, external_calendar_id,
+external_event_id, external_html_link,
+is_home_stay_candidate, candidate_reason,
+mapping_rule_id, is_read_only
+```
+
+## API / Server Actions
+
+```typescript
+// OAuth
+getGoogleOAuthUrl()
+getGoogleCalendarConnectionStatus()
+disconnectGoogleCalendar()
+
+// Calendars
+fetchGoogleCalendars()
+saveCalendarSources(payload)
+getCalendarSources()
+
+// Sync
+syncCalendarSource(sourceId)
+syncAllCalendarSources()
+performInitialImport()
+
+// Mappings
+getHomeStayCandidates(childId?)
+createMappingRule(payload)
+getMappingRules(childId?)
+deleteMappingRule(mappingId)
+ignoreCandidates(eventIds)
+ignoreCandidatesByTitle(title, calendarId, childId)
+```
+
+## UI Components
+
+```
+src/app/settings/integrations/
+├── page.tsx                          # Main integrations page
+└── google-calendar/
+    ├── select/page.tsx               # Calendar selection
+    ├── map/page.tsx                  # Mapping wizard
+    └── mappings/page.tsx             # Manage mapping rules
+```
+
+## Permissions & Safety
+
+- Only parents/guardians can:
+  - Connect Google Calendar
+  - Create mapping rules
+  - Confirm imported Home Stays
+- Non-parents can view imported events but not map or confirm
+- Imported events are read-only (no edit/delete in Homes.kids)
+
+## UI Indicators
+
+- Imported events show a small Google icon
+- Event detail panel shows "Imported from Google Calendar"
+- "View in Google Calendar" link opens event in new tab
+- Read-only notice if user tries to edit
+
 ## Not Included (Future Phases)
 - Combined view across all children
-- External calendar sync (Google, Apple)
+- Apple Calendar / Outlook integration
+- Two-way sync (optional)
 - Email/push notifications
-- Recurring events
-- Timezone conversion display
+- Recurring event patterns
 
 ## File Locations
 
@@ -164,8 +341,22 @@ src/
 │   ├── actions.ts        # Server actions
 │   ├── CalendarContext.tsx
 │   └── index.ts
+├── lib/google-calendar/
+│   ├── types.ts          # Google Calendar types
+│   ├── oauth.ts          # OAuth flow
+│   ├── sync.ts           # Sync engine
+│   ├── mappings.ts       # Mapping rules
+│   └── index.ts
 ├── components/calendar/   # UI components
 ├── app/calendar/page.tsx  # Main page
+├── app/api/google-calendar/callback/route.ts  # OAuth callback
+├── app/settings/integrations/
+│   ├── page.tsx
+│   └── google-calendar/
+│       ├── select/page.tsx
+│       ├── map/page.tsx
+│       └── mappings/page.tsx
 
-supabase-v2-migration-012-calendar-events.sql  # Database migration
+supabase-migration-012-calendar-events.sql     # Phase 1 migration
+supabase-migration-013-google-calendar.sql     # Phase 2 migration
 ```
