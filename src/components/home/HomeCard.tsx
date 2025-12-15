@@ -11,8 +11,8 @@ interface HomeCardProps {
 }
 
 export default function HomeCard({ caregiver, child, items, isChildHere, caregivers }: HomeCardProps & { caregivers: CaregiverProfile[] }) {
-    // Count missing items at this location
-    const missingItems = items.filter(item => item.isMissing);
+    // Count items awaiting location at this location
+    const awaitingLocationItems = items.filter(item => item.isMissing);
 
     return (
         <div className="bg-white rounded-2xl overflow-hidden border border-border" style={{ boxShadow: '0 4px 20px rgba(44, 62, 45, 0.05)' }}>
@@ -57,8 +57,8 @@ export default function HomeCard({ caregiver, child, items, isChildHere, caregiv
                             <span>🎒</span>
                             <span>
                                 {items.length} items here
-                                {missingItems.length > 0 && (
-                                    <span className="text-terracotta font-semibold"> · {missingItems.length} missing</span>
+                                {awaitingLocationItems.length > 0 && (
+                                    <span className="text-gray-500 font-medium"> · {awaitingLocationItems.length} awaiting location</span>
                                 )}
                             </span>
                         </div>

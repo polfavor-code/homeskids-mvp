@@ -68,9 +68,9 @@ function ItemsPageContent() {
         }
     };
 
-    // Helper to get location label - prefers home, shows "No home yet" when no homes exist
+    // Helper to get location label - prefers home, shows "Awaiting location" for unconfirmed items
     const getLocationLabel = (item: { locationHomeId?: string | null; locationCaregiverId?: string | null; isMissing?: boolean; status?: string }) => {
-        if (item.isMissing || item.status === "lost") return "Missing";
+        if (item.isMissing || item.status === "lost") return "Awaiting location";
         if (item.locationHomeId) {
             const home = homes.find((h) => h.id === item.locationHomeId);
             if (home) return home.name;
@@ -83,11 +83,14 @@ function ItemsPageContent() {
         return caregiver ? `${caregiver.label}'s Home` : "No home yet";
     };
 
-    // Filter items by home
+    // Filter items by home or status
     const getFilteredItems = () => {
         let filtered = items;
 
-        if (homeFilter !== "all") {
+        if (homeFilter === "awaiting-location") {
+            // Filter to show only items awaiting location
+            filtered = filtered.filter((item) => item.isMissing);
+        } else if (homeFilter !== "all") {
             filtered = filtered.filter((item) => {
                 if (item.isMissing) return false;
                 if (item.locationHomeId) {
@@ -107,7 +110,7 @@ function ItemsPageContent() {
     const filteredItems = getFilteredItems();
 
     // Calculate counts
-    const missingCount = items.filter((item) => item.isMissing).length;
+    const awaitingLocationCount = items.filter((item) => item.isMissing).length;
     const totalCount = items.length;
     const unassignedCount = items.filter((item) => !item.isMissing && !item.locationHomeId).length;
     
@@ -140,6 +143,7 @@ function ItemsPageContent() {
     // Get current filter label
     const getCurrentFilterLabel = () => {
         if (homeFilter === "all") return "All homes";
+        if (homeFilter === "awaiting-location") return "Awaiting location";
         const home = homes.find((h) => h.id === homeFilter);
         return home?.name || "All homes";
     };
@@ -244,13 +248,13 @@ function ItemsPageContent() {
                     <TravelBagIcon size={16} />
                     Travel bag
                 </Link>
-                {missingCount > 0 && (
+                {awaitingLocationCount > 0 && (
                     <Link
-                        href="/items/missing"
+                        href="/items/awaiting-location"
                         className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-bold transition-colors bg-transparent border border-forest text-forest hover:bg-forest hover:text-white"
                     >
                         <SearchIcon size={16} />
-                        Missing ({missingCount})
+                        Awaiting location ({awaitingLocationCount})
                     </Link>
                 )}
             </div>
@@ -316,6 +320,16 @@ function ItemsPageContent() {
                                 {home.name} ({getHomeItemCount(home.id)})
                             </button>
                         ))}
+                        {awaitingLocationCount > 0 && (
+                            <button
+                                onClick={() => handleFilterChange("awaiting-location")}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                    homeFilter === "awaiting-location" ? "text-forest font-semibold bg-softGreen/30" : "text-gray-700"
+                                }`}
+                            >
+                                Awaiting location ({awaitingLocationCount})
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
@@ -373,6 +387,19 @@ function ItemsPageContent() {
                                     <span className="text-sm text-gray-500">{getHomeItemCount(home.id)} items</span>
                                 </button>
                             ))}
+                            {awaitingLocationCount > 0 && (
+                                <button
+                                    onClick={() => handleFilterChange("awaiting-location")}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
+                                        homeFilter === "awaiting-location"
+                                            ? "bg-softGreen text-forest font-semibold"
+                                            : "text-gray-700 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    <span>Awaiting location</span>
+                                    <span className="text-sm text-gray-500">{awaitingLocationCount} items</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -413,8 +440,8 @@ function ItemsPageContent() {
 
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                     {item.isMissing ? (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            Missing
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                            Awaiting location
                                         </span>
                                     ) : item.isPacked ? (
                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-softGreen text-forest">

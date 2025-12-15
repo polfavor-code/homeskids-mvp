@@ -38,7 +38,7 @@ export default function HomeDetailPage() {
     const getHomeItems = () => {
         if (!home) return [];
         return items.filter((item) => {
-            if (item.isMissing) return false;
+            if (item.isMissing) return false; // Exclude items awaiting location
             if (item.locationHomeId === homeId) return true;
             if (home.ownerCaregiverId && item.locationCaregiverId === home.ownerCaregiverId) return true;
             return false;

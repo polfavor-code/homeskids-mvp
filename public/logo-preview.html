@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>homes.kids Logo Preview</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 40px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #2C3E2D;
+        }
+        h2 {
+            margin: 30px 0 20px;
+            color: #2C3E2D;
+            border-bottom: 2px solid #4CA1AF;
+            padding-bottom: 10px;
+        }
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .preview-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .preview-item {
+            text-align: center;
+        }
+        .preview-item label {
+            display: block;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .browser-tab {
+            background: #e8e8e8;
+            border-radius: 8px 8px 0 0;
+            padding: 8px 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #555;
+        }
+        .favicon-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .whatsapp-preview {
+            background: #075E54;
+            border-radius: 12px;
+            padding: 10px;
+            max-width: 350px;
+        }
+        .whatsapp-card {
+            background: #054640;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+        }
+        .whatsapp-image {
+            width: 90px;
+            height: 90px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .whatsapp-content {
+            padding: 10px 14px;
+            color: #fff;
+        }
+        .whatsapp-title {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+        .whatsapp-desc {
+            font-size: 13px;
+            opacity: 0.85;
+            margin-bottom: 6px;
+        }
+        .whatsapp-link {
+            font-size: 12px;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .og-image-preview {
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1200 / 630;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .note {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 16px;
+            margin-top: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        .note strong {
+            color: #b45309;
+        }
+        .dark-bg {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-text {
+            font-family: 'DM Serif Display', serif;
+            background: linear-gradient(135deg, #2C3E2D 0%, #4CA1AF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .logo-text-white {
+            font-family: 'DM Serif Display', serif;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏠 homes.kids Logo & Icon Preview</h1>
+
+    <!-- Current Logo -->
+    <div class="section">
+        <h2>Your Logo (3 Houses Design)</h2>
+        <div class="preview-row">
+            <div class="preview-item">
+                <div style="background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #eee;">
+                    <div class="logo-container">
+                        <svg width="120" height="100" viewBox="0 0 120 100">
+                            <defs>
+                                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#2C3E2D" />
+                                    <stop offset="100%" stop-color="#4CA1AF" />
+                                </linearGradient>
+                            </defs>
+                            <!-- House 1 (Left, Back) -->
+                            <path d="M15 45V75H45V45L30 30Z" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#logoGrad)" fill-opacity="0.15" opacity="0.6"/>
+                            <!-- House 2 (Right, Back) -->
+                            <path d="M75 45V75H105V45L90 30Z" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#logoGrad)" fill-opacity="0.15" opacity="0.6"/>
+                            <!-- House 3 (Center, Front) -->
+                            <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#logoGrad)" fill-opacity="0.15"/>
+                            <!-- Ground Line -->
+                            <path d="M10 85H110" stroke="url(#logoGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        </svg>
+                        <span class="logo-text" style="font-size: 28px;">homes.kids</span>
+                    </div>
+                </div>
+                <label>Dark variant (for light backgrounds)</label>
+            </div>
+            <div class="preview-item">
+                <div class="dark-bg">
+                    <div class="logo-container">
+                        <svg width="120" height="100" viewBox="0 0 120 100">
+                            <defs>
+                                <linearGradient id="logoGradLight" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#FFFFFF" />
+                                    <stop offset="100%" stop-color="#FFFFFF" />
+                                </linearGradient>
+                            </defs>
+                            <!-- House 1 (Left, Back) -->
+                            <path d="M15 45V75H45V45L30 30Z" stroke="url(#logoGradLight)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#logoGradLight)" fill-opacity="0.3" opacity="0.6"/>
+                            <!-- House 2 (Right, Back) -->
+                            <path d="M75 45V75H105V45L90 30Z" stroke="url(#logoGradLight)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#logoGradLight)" fill-opacity="0.3" opacity="0.6"/>
+                            <!-- House 3 (Center, Front) -->
+                            <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#logoGradLight)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#logoGradLight)" fill-opacity="0.3"/>
+                            <!-- Ground Line -->
+                            <path d="M10 85H110" stroke="url(#logoGradLight)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        </svg>
+                        <span class="logo-text-white" style="font-size: 28px;">homes.kids</span>
+                    </div>
+                </div>
+                <label>Light variant (for dark backgrounds)</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Favicon Preview -->
+    <div class="section">
+        <h2>Favicon Preview (Browser Tab)</h2>
+        <p style="margin-bottom: 20px; color: #666;">Logo fills the icon, perfectly centered.</p>
+        <div class="preview-row">
+            <div class="preview-item">
+                <div class="browser-tab">
+                    <!-- 16x16 favicon - logo fills the space, centered -->
+                    <svg width="16" height="16" viewBox="5 20 110 70">
+                        <defs>
+                            <linearGradient id="fav16" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#2C3E2D" />
+                                <stop offset="100%" stop-color="#4CA1AF" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M15 45V75H45V45L30 30Z" stroke="url(#fav16)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav16)" fill-opacity="0.25" opacity="0.7"/>
+                        <path d="M75 45V75H105V45L90 30Z" stroke="url(#fav16)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav16)" fill-opacity="0.25" opacity="0.7"/>
+                        <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#fav16)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav16)" fill-opacity="0.25"/>
+                        <path d="M5 88H115" stroke="url(#fav16)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    homes.kids
+                </div>
+                <label>16x16 Favicon in browser tab</label>
+            </div>
+            <div class="preview-item">
+                <!-- 32x32 actual size box -->
+                <div class="favicon-box" style="width: 32px; height: 32px;">
+                    <svg width="32" height="32" viewBox="5 20 110 70">
+                        <defs>
+                            <linearGradient id="fav32" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#2C3E2D" />
+                                <stop offset="100%" stop-color="#4CA1AF" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M15 45V75H45V45L30 30Z" stroke="url(#fav32)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav32)" fill-opacity="0.2" opacity="0.7"/>
+                        <path d="M75 45V75H105V45L90 30Z" stroke="url(#fav32)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav32)" fill-opacity="0.2" opacity="0.7"/>
+                        <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#fav32)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav32)" fill-opacity="0.2"/>
+                        <path d="M5 88H115" stroke="url(#fav32)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                </div>
+                <label>32x32 Favicon (actual size)</label>
+            </div>
+            <div class="preview-item">
+                <!-- 32x32 enlarged preview -->
+                <div class="favicon-box" style="width: 64px; height: 64px;">
+                    <svg width="64" height="64" viewBox="5 20 110 70">
+                        <defs>
+                            <linearGradient id="fav32x" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#2C3E2D" />
+                                <stop offset="100%" stop-color="#4CA1AF" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M15 45V75H45V45L30 30Z" stroke="url(#fav32x)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav32x)" fill-opacity="0.2" opacity="0.7"/>
+                        <path d="M75 45V75H105V45L90 30Z" stroke="url(#fav32x)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav32x)" fill-opacity="0.2" opacity="0.7"/>
+                        <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#fav32x)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="url(#fav32x)" fill-opacity="0.2"/>
+                        <path d="M5 88H115" stroke="url(#fav32x)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                </div>
+                <label>32x32 Favicon (2x enlarged)</label>
+            </div>
+            <div class="preview-item">
+                <!-- 192x192 PWA icon -->
+                <div class="favicon-box" style="width: 96px; height: 96px; border-radius: 16px;">
+                    <svg width="96" height="96" viewBox="5 20 110 70">
+                        <defs>
+                            <linearGradient id="pwa192" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#2C3E2D" />
+                                <stop offset="100%" stop-color="#4CA1AF" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M15 45V75H45V45L30 30Z" stroke="url(#pwa192)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="url(#pwa192)" fill-opacity="0.15" opacity="0.7"/>
+                        <path d="M75 45V75H105V45L90 30Z" stroke="url(#pwa192)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="url(#pwa192)" fill-opacity="0.15" opacity="0.7"/>
+                        <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#pwa192)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="url(#pwa192)" fill-opacity="0.15"/>
+                        <path d="M5 88H115" stroke="url(#pwa192)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                </div>
+                <label>PWA Icon 192x192 (shown at 96px)</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Social Sharing Preview -->
+    <div class="section">
+        <h2>WhatsApp / Social Share Preview</h2>
+        <p style="margin-bottom: 20px; color: #666;">This is how your link will appear when shared on WhatsApp, iMessage, Slack, etc.</p>
+        
+        <div class="preview-row">
+            <div class="preview-item">
+                <div class="whatsapp-preview">
+                    <div class="whatsapp-card">
+                        <div class="whatsapp-image">
+                            <!-- Logo fills the WhatsApp thumbnail -->
+                            <svg width="70" height="70" viewBox="5 20 110 70">
+                                <defs>
+                                    <linearGradient id="ogSmall" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#2C3E2D" />
+                                        <stop offset="100%" stop-color="#4CA1AF" />
+                                    </linearGradient>
+                                </defs>
+                                <path d="M15 45V75H45V45L30 30Z" stroke="url(#ogSmall)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="url(#ogSmall)" fill-opacity="0.15" opacity="0.7"/>
+                                <path d="M75 45V75H105V45L90 30Z" stroke="url(#ogSmall)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="url(#ogSmall)" fill-opacity="0.15" opacity="0.7"/>
+                                <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#ogSmall)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="url(#ogSmall)" fill-opacity="0.15"/>
+                                <path d="M5 88H115" stroke="url(#ogSmall)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="whatsapp-content">
+                            <div class="whatsapp-title">homes.kids</div>
+                            <div class="whatsapp-desc">Everything your child needs between homes.</div>
+                            <div class="whatsapp-link">🔗 homes.kids</div>
+                        </div>
+                    </div>
+                </div>
+                <label>WhatsApp link preview</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Open Graph Image Preview -->
+    <div class="section">
+        <h2>Open Graph Image (1200x630)</h2>
+        <p style="margin-bottom: 20px; color: #666;">This is the full-size image that social platforms will use. Logo is prominent and centered.</p>
+        
+        <div class="og-image-preview" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); display: flex; align-items: center; justify-content: center;">
+            <div style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <!-- Much bigger logo -->
+                <svg width="280" height="180" viewBox="5 20 110 70">
+                    <defs>
+                        <linearGradient id="ogLarge" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#2C3E2D" />
+                            <stop offset="100%" stop-color="#4CA1AF" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M15 45V75H45V45L30 30Z" stroke="url(#ogLarge)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#ogLarge)" fill-opacity="0.15" opacity="0.7"/>
+                    <path d="M75 45V75H105V45L90 30Z" stroke="url(#ogLarge)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#ogLarge)" fill-opacity="0.15" opacity="0.7"/>
+                    <path d="M35 85V50L60 25L85 50V85H35Z" stroke="url(#ogLarge)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="url(#ogLarge)" fill-opacity="0.15"/>
+                    <path d="M5 88H115" stroke="url(#ogLarge)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                <div style="margin-top: 16px;">
+                    <span class="logo-text" style="font-size: 42px;">homes.kids</span>
+                </div>
+                <p style="margin-top: 8px; color: #64748b; font-size: 16px;">Everything your child needs between homes.</p>
+            </div>
+        </div>
+        <label style="display: block; text-align: center; margin-top: 15px;">OG Image design for social sharing</label>
+    </div>
+
+    <!-- Alternative: Solid Color Background -->
+    <div class="section">
+        <h2>Alternative OG Image (with brand colors)</h2>
+        
+        <div class="og-image-preview" style="background: linear-gradient(135deg, #2C3E2D 0%, #4CA1AF 100%); display: flex; align-items: center; justify-content: center;">
+            <div style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <!-- Much bigger logo, white on gradient, NO ground line -->
+                <svg width="280" height="180" viewBox="5 20 110 70">
+                    <path d="M15 45V75H45V45L30 30Z" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="white" fill-opacity="0.3" opacity="0.7"/>
+                    <path d="M75 45V75H105V45L90 30Z" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="white" fill-opacity="0.3" opacity="0.7"/>
+                    <path d="M35 85V50L60 25L85 50V85H35Z" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="white" fill-opacity="0.3"/>
+                </svg>
+                <div style="margin-top: 16px;">
+                    <span class="logo-text-white" style="font-size: 42px;">homes.kids</span>
+                </div>
+                <p style="margin-top: 8px; color: rgba(255,255,255,0.85); font-size: 16px;">Everything your child needs between homes.</p>
+            </div>
+        </div>
+        <label style="display: block; text-align: center; margin-top: 15px;">Alternative: White logo on gradient background</label>
+    </div>
+
+    <!-- Instructions -->
+    <div class="section">
+        <h2>📋 Next Steps</h2>
+        <div class="note">
+            <strong>Files needed:</strong>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li><code>favicon.ico</code> - 16x16 and 32x32 (multi-size ICO)</li>
+                <li><code>apple-touch-icon.png</code> - 180x180 PNG</li>
+                <li><code>icon-192.png</code> - 192x192 PNG (for PWA)</li>
+                <li><code>icon-512.png</code> - 512x512 PNG (for PWA)</li>
+                <li><code>og-image.png</code> - 1200x630 PNG (for social sharing)</li>
+            </ul>
+            <p style="margin-top: 15px;">Once you approve the designs, I'll update the metadata in <code>layout.tsx</code> and create the necessary image files.</p>
+        </div>
+    </div>
+
+</body>
+</html>

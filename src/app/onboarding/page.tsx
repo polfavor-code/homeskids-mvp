@@ -281,6 +281,7 @@ export default function OnboardingPage() {
                 });
 
                 // Add current user as guardian with child_access (upsert to prevent duplicates)
+                // CRITICAL: This must succeed for the user to see the child after onboarding
                 const { error: accessError } = await supabase
                     .from("child_access")
                     .upsert({
@@ -293,7 +294,9 @@ export default function OnboardingPage() {
                     });
 
                 if (accessError) {
-                    console.error("Error creating child_access:", accessError);
+                    console.error("CRITICAL: Error creating child_access:", accessError);
+                    // This is a critical error - without child_access, user won't see the child
+                    throw new Error(`Failed to set up access to ${child.name.trim()}. Please try again.`);
                 }
 
                 // Add to map to prevent duplicates within same submission

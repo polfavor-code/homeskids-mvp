@@ -362,12 +362,8 @@ export default function DesktopNav() {
                                     <p className="text-[10px] text-textSub font-medium uppercase tracking-wide">Viewing</p>
                                     <p className="text-sm font-semibold text-forest truncate">{currentChild?.name}'s Space</p>
                                     {currentHome && (
-                                        <p className="text-xs text-textSub flex items-center gap-1 mt-0.5">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                                            </svg>
-                                            <span className="truncate">Now at {currentHome.name}</span>
+                                        <p className="text-xs text-textSub mt-0.5 truncate">
+                                            Now at {currentHome.name}
                                         </p>
                                     )}
                                 </div>

@@ -212,20 +212,6 @@ export default function MobileNav() {
                             {/* Child Switcher - Show if there are children */}
                             {childrenList.length > 0 && (
                                 <div className="p-3 bg-cream/30 border-b border-gray-100">
-                                    <div className="flex items-center justify-between mb-2 px-1">
-                                        <p className="text-[10px] font-semibold text-forest/60 uppercase tracking-wide">
-                                            Viewing
-                                        </p>
-                                        {currentHome && (
-                                            <p className="text-[10px] text-textSub flex items-center gap-1">
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                                                </svg>
-                                                <span>Now at {currentHome.name}</span>
-                                            </p>
-                                        )}
-                                    </div>
                                     <div className="flex gap-2 overflow-x-auto pb-1">
                                         {childrenList.map((child) => {
                                             const isActive = child.id === currentChild?.id;
@@ -233,7 +219,7 @@ export default function MobileNav() {
                                                 <button
                                                     key={child.id}
                                                     onClick={() => handleChildSwitch(child.id)}
-                                                    className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl transition-all flex-shrink-0 ${
+                                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all flex-shrink-0 ${
                                                         isActive
                                                             ? 'bg-softGreen border-2 border-forest/20'
                                                             : 'bg-white border border-gray-200 hover:border-forest/20'
@@ -245,14 +231,18 @@ export default function MobileNav() {
                                                         size={40}
                                                         bgColor={isActive ? "#4A7C59" : "#9CA3AF"}
                                                     />
-                                                    <span className={`text-xs font-medium ${
-                                                        isActive ? 'text-forest' : 'text-gray-700'
-                                                    }`}>
-                                                        {child.name}
-                                                    </span>
-                                                    {isActive && (
-                                                        <div className="w-1 h-1 rounded-full bg-forest" />
-                                                    )}
+                                                    <div className="text-left">
+                                                        <span className={`text-sm font-medium block ${
+                                                            isActive ? 'text-forest' : 'text-gray-700'
+                                                        }`}>
+                                                            {child.name}
+                                                        </span>
+                                                        {isActive && currentHome && (
+                                                            <span className="text-[11px] text-textSub">
+                                                                At {currentHome.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </button>
                                             );
                                         })}

@@ -290,7 +290,7 @@ export default function ItemDetailPage({
         (c) => c.id === item.locationCaregiverId
     );
     const locationLabel = item.isMissing
-        ? "Missing"
+        ? "Awaiting location"
         : itemHome
             ? itemHome.name
             : caregiver
@@ -301,8 +301,8 @@ export default function ItemDetailPage({
     let statusPill = null;
     if (item.isMissing) {
         statusPill = (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                Missing
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
+                Awaiting location
             </span>
         );
     } else if (isRequested) {
@@ -315,11 +315,11 @@ export default function ItemDetailPage({
 
     // Handler for location change - now uses homes instead of caregivers
     const handleLocationChange = (value: string) => {
-        if (value === "TO_BE_FOUND") {
+        if (value === "AWAITING_LOCATION") {
             updateItemLocation(item.id, { toBeFound: true });
-            setUpdateMessage("Marked as 'Missing'.");
+            setUpdateMessage("Set to 'Awaiting location'.");
             setExtraHistoryEntries((prev) => [
-                { text: "Marked as 'Missing'", time: "Just now" },
+                { text: "Set to 'Awaiting location'", time: "Just now" },
                 ...prev,
             ]);
         } else {
@@ -527,15 +527,15 @@ export default function ItemDetailPage({
 
             {/* Current Home Section */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 mb-4">
-                <h3 className="font-bold text-gray-900 mb-3">Current home</h3>
+                <h3 className="font-bold text-gray-900 mb-3">Current location</h3>
                 <MobileSelect
-                    value={item.isMissing ? "TO_BE_FOUND" : (item.locationHomeId ?? item.locationCaregiverId ?? "")}
+                    value={item.isMissing ? "AWAITING_LOCATION" : (item.locationHomeId ?? item.locationCaregiverId ?? "")}
                     onChange={handleLocationChange}
                     options={[
+                        { value: "AWAITING_LOCATION", label: "Awaiting location" },
                         ...homes.map((home) => ({ value: home.id, label: home.name })),
-                        { value: "TO_BE_FOUND", label: "Missing" }
                     ]}
-                    title="Select home"
+                    title="Where is this item?"
                 />
                 {updateMessage && (
                     <p className="text-xs text-gray-500 mt-2">{updateMessage}</p>
@@ -803,7 +803,7 @@ export default function ItemDetailPage({
                 ) : (
                     <div className="text-center p-4 bg-gray-50 rounded-xl">
                         <p className="text-gray-600 font-medium">
-                            This item is currently marked as &apos;Missing&apos;.
+                            This item&apos;s location hasn&apos;t been confirmed yet.
                         </p>
                     </div>
                 )}
@@ -822,12 +822,12 @@ export default function ItemDetailPage({
                 );
             })()}
 
-            {/* Missing Conversation Card */}
+            {/* Location Notes Card */}
             {item.isMissing && (
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 mb-4">
-                    <h3 className="font-bold text-gray-900 mb-1">Missing conversation</h3>
+                    <h3 className="font-bold text-gray-900 mb-1">Location notes</h3>
                     <p className="text-xs text-gray-500 mb-4">
-                        Use this space to leave calm notes about where this item might be.
+                        Leave notes about where this item might be or when you last saw it.
                     </p>
 
                     {/* Messages list */}
@@ -913,9 +913,9 @@ export default function ItemDetailPage({
                                 onClick={() => {
                                     markItemFound(item.id);
                                 }}
-                                className="flex-1 py-2.5 px-4 bg-green-500 text-white rounded-xl font-semibold text-sm hover:bg-green-600 transition-colors shadow-sm active:scale-[0.98]"
+                                className="flex-1 py-2.5 px-4 bg-forest text-white rounded-xl font-semibold text-sm hover:bg-forest/90 transition-colors shadow-sm active:scale-[0.98]"
                             >
-                                Mark as found
+                                Confirm location
                             </button>
                         </div>
                     </div>

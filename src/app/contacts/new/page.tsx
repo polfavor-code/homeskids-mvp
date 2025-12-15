@@ -4,12 +4,12 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import PhoneInput from "@/components/PhoneInput";
+import PhoneNumbersInput from "@/components/PhoneNumbersInput";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
 import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
 import ImageCropper from "@/components/ImageCropper";
 import ContactPreferencesSelector from "@/components/ContactPreferencesSelector";
-import { useContacts, ContactCategory, ContactMethod } from "@/lib/ContactsContext";
+import { useContacts, ContactCategory, ContactMethod, PhoneNumber } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
@@ -36,8 +36,7 @@ export default function NewContactPage() {
     const [role, setRole] = useState("");
     const [category, setCategory] = useState<ContactCategory>("other");
     const [connectedWith, setConnectedWith] = useState<string[]>([]);
-    const [phone, setPhone] = useState("");
-    const [phoneCountryCode, setPhoneCountryCode] = useState("+1");
+    const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
     const [email, setEmail] = useState("");
     const [telegram, setTelegram] = useState("");
     const [instagram, setInstagram] = useState("");
@@ -227,12 +226,6 @@ export default function NewContactPage() {
         setAddressLng(address.lng || undefined);
     }, []);
 
-    // Handle phone change
-    const handlePhoneChange = useCallback((newPhone: string, newCountryCode: string) => {
-        setPhone(newPhone);
-        setPhoneCountryCode(newCountryCode);
-    }, []);
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -249,12 +242,19 @@ export default function NewContactPage() {
             .filter(Boolean)
             .join(", ");
 
+        // Filter out empty phone numbers
+        const validPhoneNumbers = phoneNumbers.filter(p => p.number.trim());
+        
+        // Get first phone for legacy fields (backward compatibility)
+        const firstPhone = validPhoneNumbers[0];
+
         const result = await addContact({
             name: name.trim(),
             role: role.trim(),
             category,
-            phone: phone.trim() || undefined,
-            phoneCountryCode: phoneCountryCode || undefined,
+            phone: firstPhone?.number || undefined,
+            phoneCountryCode: firstPhone?.countryCode || undefined,
+            phoneNumbers: validPhoneNumbers.length > 0 ? validPhoneNumbers : undefined,
             email: email.trim() || undefined,
             telegram: telegram.trim() || undefined,
             instagram: instagram.trim() || undefined,
@@ -466,14 +466,12 @@ export default function NewContactPage() {
                             </h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-semibold text-forest mb-1">
-                                        Phone
+                                    <label className="block text-sm font-semibold text-forest mb-2">
+                                        Phone numbers
                                     </label>
-                                    <PhoneInput
-                                        value={phone}
-                                        countryCode={phoneCountryCode}
-                                        onChange={handlePhoneChange}
-                                        placeholder="Phone number"
+                                    <PhoneNumbersInput
+                                        phoneNumbers={phoneNumbers}
+                                        onChange={setPhoneNumbers}
                                     />
                                 </div>
                                 <div>
@@ -499,7 +497,7 @@ export default function NewContactPage() {
                             <ContactPreferencesSelector
                                 selectedMethods={contactPreferences}
                                 onMethodsChange={setContactPreferences}
-                                phone={phone}
+                                phone={phoneNumbers[0]?.number || ""}
                                 email={email}
                                 telegram={telegram}
                                 instagram={instagram}
