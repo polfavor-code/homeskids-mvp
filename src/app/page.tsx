@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import MissingItemAlert from "@/components/home/MissingItemAlert";
+import AwaitingLocationAlert from "@/components/home/MissingItemAlert";
 import HomesHorizontalSection from "@/components/home/HomesHorizontalSection";
 import WelcomeDashboard from "@/components/home/WelcomeDashboard";
 import SetupSteps from "@/components/home/SetupSteps";
@@ -310,10 +310,10 @@ export default function Home() {
                     </Link>
                 </div>
 
-                {/* Missing Item Alert - Inline */}
+                {/* Awaiting Location Alert - Inline */}
                 {missingItems.length > 0 && (
                     <div className="mb-6">
-                        <MissingItemAlert missingItems={missingItems} />
+                        <AwaitingLocationAlert awaitingLocationItems={missingItems} />
                     </div>
                 )}
 
