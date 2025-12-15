@@ -191,26 +191,19 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
 
             const childSpaceIds = childSpaces.map(cs => cs.id);
 
-            // 3. Fetch items for these child_spaces
+            // 3. Fetch items for these child_spaces with home information
             const { data: itemsData } = await supabase
                 .from("items")
-                .select("*")
+                .select(`
+                    *,
+                    child_spaces!inner(
+                        id,
+                        home_id
+                    )
+                `)
                 .in("child_space_id", childSpaceIds);
 
             if (itemsData) {
-                // Get child_spaces to map child_space_id -> home_id
-                const childSpaceToHomeMap = new Map<string, string>();
-                for (const csId of childSpaceIds) {
-                    const cs = await supabase
-                        .from("child_spaces")
-                        .select("id, home_id")
-                        .eq("id", csId)
-                        .single();
-                    if (cs.data) {
-                        childSpaceToHomeMap.set(cs.data.id, cs.data.home_id);
-                    }
-                }
-
                 const mappedItems: Item[] = itemsData.map((item: any) => ({
                     id: item.id,
                     childSpaceId: item.child_space_id,
@@ -230,8 +223,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     originHomeId: item.origin_home_id || null,
                     // Child ownership
                     childIds: item.child_ids || [],
-                    // V1 compatibility: derive locationHomeId from child_space
-                    locationHomeId: childSpaceToHomeMap.get(item.child_space_id) || null,
+                    // Get locationHomeId directly from the joined child_spaces data
+                    locationHomeId: item.child_spaces?.home_id || null,
                     locationCaregiverId: null,  // V2 doesn't use caregiver-based location
                     isMissing: item.status === "lost",
                 }));

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import Avatar from "@/components/Avatar";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
 import { useContacts, Contact, ContactCategory } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -214,9 +215,12 @@ export default function ContactDetailPage() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-border mb-4">
                 <div className="flex items-start gap-4">
                     {/* Large Avatar */}
-                    <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center text-forest font-bold text-2xl flex-shrink-0">
-                        {contact.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar
+                        storagePath={contact.avatarUrl}
+                        initial={contact.name.charAt(0).toUpperCase()}
+                        size={64}
+                        bgColor="#F5F5DC"
+                    />
 
                     <div className="flex-1 min-w-0">
                         {isEditing ? (

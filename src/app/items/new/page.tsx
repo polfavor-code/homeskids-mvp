@@ -176,11 +176,12 @@ export default function AddItemPage() {
             }
 
             const isMissing = location === "Missing";
+            const isUnassigned = location === "Unassigned";
             // Use home-based location - find the selected home from ALL homes (in case item is at hidden home)
             const selectedHome = homes.find((h) => h.id === location);
-            const locationHomeId = isMissing ? null : (selectedHome?.id || null);
+            const locationHomeId = (isMissing || isUnassigned) ? null : (selectedHome?.id || null);
             // Keep legacy caregiver ID for backwards compatibility
-            const locationCaregiverId = isMissing
+            const locationCaregiverId = (isMissing || isUnassigned)
                 ? (caregivers[0]?.id || "")
                 : (selectedHome?.ownerCaregiverId || caregivers[0]?.id || "");
 
@@ -349,11 +350,12 @@ export default function AddItemPage() {
                         value={location}
                         onChange={setLocation}
                         options={[
+                            { value: "Unassigned", label: activeHomes.length === 0 ? "No home yet" : "Unassigned" },
                             ...activeHomes.map((home) => ({ value: home.id, label: home.name })),
                             { value: "Missing", label: "Missing" }
                         ]}
-                        placeholder="Select home"
-                        title="Select home"
+                        placeholder={activeHomes.length === 0 ? "Select location" : "Select home"}
+                        title={activeHomes.length === 0 ? "Select location" : "Select home"}
                         required
                     />
                 </div>

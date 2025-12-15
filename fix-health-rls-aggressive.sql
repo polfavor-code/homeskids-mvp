@@ -6,11 +6,10 @@
 -- ============================================
 
 -- ============================================
--- STEP 1: Create helper functions if missing
+-- STEP 1: Ensure helper functions exist
 -- ============================================
 
--- Drop and recreate has_child_access function
-DROP FUNCTION IF EXISTS has_child_access(UUID, UUID);
+-- Create or replace has_child_access function (don't drop, just replace)
 CREATE OR REPLACE FUNCTION has_child_access(p_child_id UUID, p_user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -21,8 +20,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Drop and recreate is_guardian function
-DROP FUNCTION IF EXISTS is_guardian(UUID, UUID);
+-- Create or replace is_guardian function (don't drop, just replace)
 CREATE OR REPLACE FUNCTION is_guardian(p_child_id UUID, p_user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -191,7 +189,7 @@ SELECT
     c.name as child_name,
     has_child_access(ca.child_id, auth.uid()) as result
 FROM child_access ca
-JOIN children_v2 c ON c.id = ca.child_id
+JOIN children c ON c.id = ca.child_id
 WHERE ca.user_id = auth.uid()
 LIMIT 1;
 

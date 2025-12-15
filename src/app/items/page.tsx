@@ -2,18 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
+import FirstHomeAssignmentPrompt from "@/components/FirstHomeAssignmentPrompt";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
-import { ChevronDownIcon, ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
+import { ChevronDownIcon, ItemsIcon, TravelBagIcon, SearchIcon, HomeIcon } from "@/components/icons/DuotoneIcons";
 
 function ItemsPageContent() {
     useEnsureOnboarding();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const pathname = usePathname();
 
     const { items } = useItems();
     const { child, caregivers, homes } = useAppState();
@@ -24,6 +26,36 @@ function ItemsPageContent() {
 
     // Dropdown open state
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Soft nudge dismissal state (stored in localStorage)
+    const [isNoHomeBannerDismissed, setIsNoHomeBannerDismissed] = useState(false);
+    const [showFirstHomePrompt, setShowFirstHomePrompt] = useState(false);
+    const [firstHomeInfo, setFirstHomeInfo] = useState<{ id: string; name: string } | null>(null);
+
+    // Check localStorage for banner dismissal and first home prompt on mount
+    useEffect(() => {
+        const dismissed = localStorage.getItem('noHomeBannerDismissed');
+        setIsNoHomeBannerDismissed(dismissed === 'true');
+
+        const firstHomeDone = localStorage.getItem('firstHomeAssignmentDone');
+        
+        // Show first home prompt if:
+        // 1. Not shown before (firstHomeDone is null)
+        // 2. We have exactly 1 home (first home just created)
+        // 3. We have unassigned items
+        if (!firstHomeDone && homes.length === 1) {
+            const unassignedItems = items.filter(item => !item.isMissing && !item.locationHomeId);
+            if (unassignedItems.length > 0) {
+                setFirstHomeInfo({ id: homes[0].id, name: homes[0].name });
+                setShowFirstHomePrompt(true);
+            }
+        }
+    }, [homes, items]);
+
+    const handleDismissNoHomeBanner = () => {
+        localStorage.setItem('noHomeBannerDismissed', 'true');
+        setIsNoHomeBannerDismissed(true);
+    };
 
     // Update URL when filter changes
     const handleFilterChange = (filter: string) => {
@@ -36,15 +68,19 @@ function ItemsPageContent() {
         }
     };
 
-    // Helper to get location label - prefers home, falls back to caregiver
+    // Helper to get location label - prefers home, shows "No home yet" when no homes exist
     const getLocationLabel = (item: { locationHomeId?: string | null; locationCaregiverId?: string | null; isMissing?: boolean; status?: string }) => {
         if (item.isMissing || item.status === "lost") return "Missing";
         if (item.locationHomeId) {
             const home = homes.find((h) => h.id === item.locationHomeId);
             if (home) return home.name;
         }
+        // If no homes exist at all, show "No home yet" instead of "Unknown Location"
+        if (homes.length === 0) {
+            return "No home yet";
+        }
         const caregiver = caregivers.find((c) => c.id === item.locationCaregiverId);
-        return caregiver ? `${caregiver.label}'s Home` : "Unknown Location";
+        return caregiver ? `${caregiver.label}'s Home` : "No home yet";
     };
 
     // Filter items by home
@@ -73,6 +109,12 @@ function ItemsPageContent() {
     // Calculate counts
     const missingCount = items.filter((item) => item.isMissing).length;
     const totalCount = items.length;
+    const unassignedCount = items.filter((item) => !item.isMissing && !item.locationHomeId).length;
+    
+    // Determine if we should show the no-home banner
+    const hasNoHomes = homes.length === 0;
+    const hasUnassignedItems = unassignedCount > 0;
+    const shouldShowNoHomeBanner = hasNoHomes && !isNoHomeBannerDismissed;
 
     // Get home item count
     const getHomeItemCount = (homeId: string) => {
@@ -156,8 +198,22 @@ function ItemsPageContent() {
         return "Packed";
     };
 
+    // Get unassigned item IDs for first home prompt
+    const unassignedItemIds = items
+        .filter(item => !item.isMissing && !item.locationHomeId)
+        .map(item => item.id);
+
     return (
         <AppShell>
+            {/* First Home Assignment Prompt */}
+            {showFirstHomePrompt && firstHomeInfo && unassignedItemIds.length > 0 && (
+                <FirstHomeAssignmentPrompt
+                    homeId={firstHomeInfo.id}
+                    homeName={firstHomeInfo.name}
+                    unassignedItemIds={unassignedItemIds}
+                    onClose={() => setShowFirstHomePrompt(false)}
+                />
+            )}
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
                 <div>
@@ -199,18 +255,44 @@ function ItemsPageContent() {
                 )}
             </div>
 
-            {/* Home Filter Dropdown - Chip Style */}
-            <div className="mb-4 home-filter-dropdown relative">
-                <button
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="inline-flex items-center gap-2 pl-4 pr-3 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium text-forest hover:border-forest transition-colors"
-                >
-                    <span>{getCurrentFilterLabel()}</span>
-                    <span className="flex items-center justify-center min-w-[24px] h-6 px-1.5 bg-softGreen text-forest text-xs font-bold rounded-full">
-                        {homeFilter === "all" ? totalCount : getHomeItemCount(homeFilter)}
-                    </span>
-                    <ChevronDownIcon size={14} className={`text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
-                </button>
+            {/* Soft Nudge: No Home Banner (Non-blocking) */}
+            {shouldShowNoHomeBanner && (
+                <div className="bg-[#FDF6F4] border border-[#F0DDD8] rounded-2xl px-4 py-3 mb-4 flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#FAEAE6] flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-terracotta">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                            <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                    </div>
+                    <p className="flex-1 text-sm text-forest">
+                        Items will stay unassigned until you <Link href="/settings/homes" className="font-semibold text-terracotta underline underline-offset-2 hover:text-terracotta/80 transition-colors">add a home</Link>
+                    </p>
+                    <button
+                        onClick={handleDismissNoHomeBanner}
+                        className="flex-shrink-0 p-1 rounded-full hover:bg-[#F0DDD8] transition-colors"
+                        aria-label="Dismiss"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-terracotta/50 hover:text-terracotta">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+            )}
+
+            {/* Home Filter Dropdown - Chip Style (only show if homes exist) */}
+            {homes.length > 0 && (
+                <div className="mb-4 home-filter-dropdown relative">
+                    <button
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="inline-flex items-center gap-2 pl-4 pr-3 py-2 bg-white border border-gray-300 rounded-full text-sm font-medium text-forest hover:border-forest transition-colors"
+                    >
+                        <span>{getCurrentFilterLabel()}</span>
+                        <span className="flex items-center justify-center min-w-[24px] h-6 px-1.5 bg-softGreen text-forest text-xs font-bold rounded-full">
+                            {homeFilter === "all" ? totalCount : getHomeItemCount(homeFilter)}
+                        </span>
+                        <ChevronDownIcon size={14} className={`text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                    </button>
 
                 {/* Desktop Dropdown */}
                 {isDropdownOpen && (
@@ -237,6 +319,7 @@ function ItemsPageContent() {
                     </div>
                 )}
             </div>
+            )}
 
             {/* Mobile Bottom Sheet */}
             {isDropdownOpen && (

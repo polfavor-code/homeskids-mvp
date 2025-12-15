@@ -4,6 +4,7 @@ import React, { useState, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import Avatar from "@/components/Avatar";
 import { useContacts, ContactCategory, Contact } from "@/lib/ContactsContext";
 import { useAppState, CaregiverProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -136,8 +137,13 @@ function ContactsPageContent() {
                     >
                         <div className="flex items-center gap-2 min-w-0">
                             {/* Avatar / Initial - Clickable */}
-                            <Link href={`/contacts/${contact.id}`} className="w-10 h-10 rounded-full bg-cream flex items-center justify-center text-forest font-bold text-sm flex-shrink-0 hover:bg-forest hover:text-white transition-colors">
-                                {contact.name.charAt(0).toUpperCase()}
+                            <Link href={`/contacts/${contact.id}`} className="flex-shrink-0">
+                                <Avatar
+                                    storagePath={contact.avatarUrl}
+                                    initial={contact.name.charAt(0).toUpperCase()}
+                                    size={40}
+                                    bgColor="#F5F5DC"
+                                />
                             </Link>
 
                             {/* Info - Clickable */}
