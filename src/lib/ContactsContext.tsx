@@ -58,6 +58,9 @@ export interface Contact {
     connectedWith?: string;
     avatarUrl?: string;
     createdAt: string;
+    // Who added this contact
+    createdByUserId?: string;
+    createdByName?: string;
 }
 
 // V2: Home contact - "People you can contact here" (linked to a profile)
@@ -230,6 +233,21 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                     .eq("child_id", childIds[0])
                     .order("is_favorite", { ascending: false })
                     .order("name", { ascending: true });
+                
+                // Fetch creator names for contacts that have created_by_user_id
+                let creatorNames: Record<string, string> = {};
+                if (contactsData) {
+                    const creatorIds = [...new Set(contactsData.filter(c => c.created_by_user_id).map(c => c.created_by_user_id))];
+                    if (creatorIds.length > 0) {
+                        const { data: profiles } = await supabase
+                            .from("profiles")
+                            .select("id, name")
+                            .in("id", creatorIds);
+                        if (profiles) {
+                            creatorNames = Object.fromEntries(profiles.map(p => [p.id, p.name]));
+                        }
+                    }
+                }
 
                 if (error) {
                     if (isMounted) {
@@ -276,6 +294,8 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                             connectedWith: c.connected_with,
                             avatarUrl: c.avatar_url,
                             createdAt: c.created_at,
+                            createdByUserId: c.created_by_user_id,
+                            createdByName: c.created_by_user_id ? creatorNames[c.created_by_user_id] : undefined,
                         };
                     });
                     setContacts(mappedContacts);
@@ -322,6 +342,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
             
             const insertData: any = {
                 child_id: childId,
+                created_by_user_id: user.id,
                 name: contact.name,
                 role: contact.role,
                 category: contact.category,
@@ -383,6 +404,17 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 }];
             }
 
+            // Fetch creator's name
+            let creatorName: string | undefined;
+            if (data.created_by_user_id) {
+                const { data: profileData } = await supabase
+                    .from("profiles")
+                    .select("name")
+                    .eq("id", data.created_by_user_id)
+                    .single();
+                creatorName = profileData?.name;
+            }
+
             const newContact: Contact = {
                 id: data.id,
                 name: data.name,
@@ -408,6 +440,8 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 connectedWith: data.connected_with,
                 avatarUrl: data.avatar_url,
                 createdAt: data.created_at,
+                createdByUserId: data.created_by_user_id,
+                createdByName: creatorName,
             };
             setContacts((prev) => [...prev, newContact]);
 

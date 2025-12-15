@@ -552,6 +552,13 @@ export default function ContactDetailPage() {
                 </div>
             </div>
 
+            {/* Added by - subtle footer */}
+            {!isEditing && contact.createdByName && (
+                <p className="text-xs text-textSub/50 text-center mt-4">
+                    Added by {contact.createdByName}
+                </p>
+            )}
+
             {/* Error */}
             {error && (
                 <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm mt-4">
