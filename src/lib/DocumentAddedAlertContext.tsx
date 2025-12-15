@@ -98,7 +98,7 @@ export function DocumentAddedAlertProvider({ children }: { children: ReactNode }
     useEffect(() => {
         if (!familyId || !user) return;
 
-        console.log("Setting up document added alert subscription for family:", familyId);
+        // Setting up document added alert subscription
 
         const channelName = `doc-added-${familyId}-${Date.now()}`;
 
@@ -113,7 +113,7 @@ export function DocumentAddedAlertProvider({ children }: { children: ReactNode }
                     filter: `family_id=eq.${familyId}`,
                 },
                 async (payload) => {
-                    console.log("Document added alert: New document inserted:", payload);
+                    // Document added alert: New document inserted
 
                     const newData = payload.new as any;
                     const documentId = newData?.id;
@@ -123,14 +123,14 @@ export function DocumentAddedAlertProvider({ children }: { children: ReactNode }
 
                     // Skip if we just added this document ourselves
                     if (recentlyAddedDocIds.current.has(documentId)) {
-                        console.log("Document added alert: Skipping - added by current user");
+                        // Document added alert: Skipping - added by current user
                         recentlyAddedDocIds.current.delete(documentId);
                         return;
                     }
 
                     // Skip if the document was created by current user
                     if (createdBy === user.id) {
-                        console.log("Document added alert: Skipping - created_by matches current user");
+                        // Document added alert: Skipping - created_by matches current user
                         return;
                     }
 
@@ -157,17 +157,17 @@ export function DocumentAddedAlertProvider({ children }: { children: ReactNode }
                         isOwnAction: false,
                     };
 
-                    console.log("Document added alert: Showing remote alert", newAlert);
+                    // Document added alert: Showing remote alert
                     setAlerts(prev => [...prev, newAlert]);
                     scheduleAutoDismiss(newAlert.id);
                 }
             )
             .subscribe((status) => {
-                console.log("Document added alert subscription status:", status);
+                // Subscription status: ${status}
             });
 
         return () => {
-            console.log("Removing document added alert channel:", channelName);
+            // Removing document added alert channel
             supabase.removeChannel(channel);
         };
     }, [familyId, user, scheduleAutoDismiss]);
