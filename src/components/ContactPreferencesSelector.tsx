@@ -151,13 +151,20 @@ export default function ContactPreferencesSelector({
                                 <label className="block text-xs font-medium text-textSub mb-1">
                                     Telegram
                                 </label>
-                                <input
-                                    type="text"
-                                    value={telegram || ""}
-                                    onChange={(e) => onTelegramChange(e.target.value)}
-                                    placeholder="@username or phone number"
-                                    className="w-full h-9 px-3 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0088cc]/20 focus:border-[#0088cc]"
-                                />
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-textSub font-medium">@</span>
+                                    <input
+                                        type="text"
+                                        value={telegram?.replace(/^@/, "") || ""}
+                                        onChange={(e) => {
+                                            // Strip @ if user types it, store without @
+                                            const value = e.target.value.replace(/^@/, "");
+                                            onTelegramChange(value);
+                                        }}
+                                        placeholder="username"
+                                        className="w-full h-9 pl-7 pr-3 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0088cc]/20 focus:border-[#0088cc]"
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
@@ -175,13 +182,20 @@ export default function ContactPreferencesSelector({
                                 <label className="block text-xs font-medium text-textSub mb-1">
                                     Instagram
                                 </label>
-                                <input
-                                    type="text"
-                                    value={instagram || ""}
-                                    onChange={(e) => onInstagramChange(e.target.value)}
-                                    placeholder="@username or profile URL"
-                                    className="w-full h-9 px-3 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E4405F]/20 focus:border-[#E4405F]"
-                                />
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-textSub font-medium">@</span>
+                                    <input
+                                        type="text"
+                                        value={instagram?.replace(/^@/, "") || ""}
+                                        onChange={(e) => {
+                                            // Strip @ if user types it, store without @
+                                            const value = e.target.value.replace(/^@/, "");
+                                            onInstagramChange(value);
+                                        }}
+                                        placeholder="username"
+                                        className="w-full h-9 pl-7 pr-3 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E4405F]/20 focus:border-[#E4405F]"
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}

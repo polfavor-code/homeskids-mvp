@@ -5,7 +5,7 @@
  */
 
 // Event type discriminator
-export type EventType = 'home_day' | 'event';
+export type EventType = 'home_day' | 'travel' | 'event';
 
 // Status for home day confirmation workflow
 export type EventStatus = 'confirmed' | 'proposed' | 'rejected';
@@ -30,8 +30,15 @@ export interface CalendarEvent {
     
     // Type and status
     eventType: EventType;
-    homeId: string | null;
+    homeId: string | null; // For home_day events
     status: EventStatus;
+    
+    // Travel-specific fields
+    fromHomeId: string | null;
+    fromLocation: string | null;
+    toHomeId: string | null;
+    toLocation: string | null;
+    travelWith: string | null;
     
     // Proposal/confirmation tracking
     proposedBy: string | null;
@@ -68,6 +75,12 @@ export interface CalendarEventRow {
     event_type: EventType;
     home_id: string | null;
     status: EventStatus;
+    // Travel-specific fields
+    from_home_id: string | null;
+    from_location: string | null;
+    to_home_id: string | null;
+    to_location: string | null;
+    travel_with: string | null;
     proposed_by: string | null;
     confirmed_by: string | null;
     confirmed_at: string | null;
@@ -91,6 +104,12 @@ export interface CalendarEventDisplay extends CalendarEvent {
     // Home info (for home_day)
     homeName?: string;
     homeColor?: string;
+    
+    // Travel info (for travel events)
+    fromHomeName?: string;
+    fromHomeColor?: string;
+    toHomeName?: string;
+    toHomeColor?: string;
     
     // User info
     createdByName?: string;
@@ -128,6 +147,22 @@ export interface CreateHomeDayPayload {
     allDay?: boolean;
     title?: string; // Optional custom title, defaults to home name
     proposalReason?: string;
+    timezone?: string;
+}
+
+// Payload for creating a travel event
+export interface CreateTravelPayload {
+    childId: string;
+    fromHomeId: string | null; // null means "other location"
+    fromLocation?: string; // Custom location name if fromHomeId is null
+    toHomeId: string | null; // null means "other location"
+    toLocation?: string; // Custom location name if toHomeId is null
+    startAt: Date;
+    endAt: Date;
+    allDay?: boolean;
+    title?: string; // Auto-generated but can be customized
+    travelWith?: string; // Optional: who is traveling with the child
+    notes?: string;
     timezone?: string;
 }
 
@@ -228,6 +263,12 @@ export function rowToEvent(row: CalendarEventRow): CalendarEvent {
         eventType: row.event_type,
         homeId: row.home_id,
         status: row.status,
+        // Travel fields
+        fromHomeId: row.from_home_id,
+        fromLocation: row.from_location,
+        toHomeId: row.to_home_id,
+        toLocation: row.to_location,
+        travelWith: row.travel_with,
         proposedBy: row.proposed_by,
         confirmedBy: row.confirmed_by,
         confirmedAt: row.confirmed_at ? new Date(row.confirmed_at) : null,

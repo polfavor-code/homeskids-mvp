@@ -7,6 +7,7 @@ import {
     ListEventsFilter,
     CreateEventPayload,
     CreateHomeDayPayload,
+    CreateTravelPayload,
     UpdateEventPayload,
     EventType,
     EventStatus,
@@ -17,6 +18,7 @@ import {
     listChildEvents,
     createEvent,
     createHomeDayProposal,
+    createTravelEvent,
     confirmHomeDay,
     rejectHomeDay,
     updateEvent,
@@ -32,6 +34,7 @@ export type CalendarView = 'month' | 'agenda';
 interface CalendarFilters {
     showEvents: boolean;
     showHomeDays: boolean;
+    showTravel: boolean;
     showPending: boolean;
     showRejected: boolean;
 }
@@ -61,6 +64,7 @@ interface CalendarContextType {
     refreshEvents: () => Promise<void>;
     addEvent: (payload: CreateEventPayload) => Promise<{ success: boolean; error?: string }>;
     addHomeDay: (payload: CreateHomeDayPayload) => Promise<{ success: boolean; error?: string; autoConfirmed?: boolean }>;
+    addTravel: (payload: CreateTravelPayload) => Promise<{ success: boolean; error?: string }>;
     confirmEvent: (eventId: string) => Promise<{ success: boolean; error?: string }>;
     rejectEvent: (eventId: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
     editEvent: (eventId: string, payload: UpdateEventPayload) => Promise<{ success: boolean; error?: string }>;
@@ -106,6 +110,7 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
     const [filters, setFiltersState] = useState<CalendarFilters>({
         showEvents: true,
         showHomeDays: true,
+        showTravel: true,
         showPending: true,
         showRejected: false,
     });
@@ -165,6 +170,7 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
             const eventTypes: EventType[] = [];
             if (filters.showEvents) eventTypes.push('event');
             if (filters.showHomeDays) eventTypes.push('home_day');
+            if (filters.showTravel) eventTypes.push('travel');
             
             // Build status filter
             const statuses: EventStatus[] = ['confirmed'];
@@ -219,6 +225,18 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
                 (a, b) => a.startAt.getTime() - b.startAt.getTime()
             ));
             return { success: true, autoConfirmed: result.autoConfirmed };
+        }
+        return { success: false, error: result.error };
+    }, []);
+    
+    // Add travel
+    const addTravel = useCallback(async (payload: CreateTravelPayload) => {
+        const result = await createTravelEvent(payload);
+        if (result.event) {
+            setEvents(prev => [...prev, result.event!].sort(
+                (a, b) => a.startAt.getTime() - b.startAt.getTime()
+            ));
+            return { success: true };
         }
         return { success: false, error: result.error };
     }, []);
@@ -318,6 +336,7 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
                 refreshEvents,
                 addEvent,
                 addHomeDay,
+                addTravel,
                 confirmEvent,
                 rejectEvent,
                 editEvent,

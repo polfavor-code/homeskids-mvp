@@ -33,6 +33,7 @@ export default function EventDetailPanel() {
     if (!selectedEvent) return null;
     
     const isHomeDay = selectedEvent.eventType === 'home_day';
+    const isTravel = selectedEvent.eventType === 'travel';
     const isPending = selectedEvent.status === 'proposed';
     const isConfirmed = selectedEvent.status === 'confirmed';
     const isRejected = selectedEvent.status === 'rejected';
@@ -151,9 +152,9 @@ export default function EventDetailPanel() {
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
                     <div className="flex items-center gap-2">
-                        <span className="text-xl">{isHomeDay ? '🏠' : '📅'}</span>
+                        <span className="text-xl">{isHomeDay ? '🏠' : isTravel ? '🚗' : '📅'}</span>
                         <h2 className="font-dmSerif text-lg text-forest">
-                            {isEditing ? 'Edit' : ''} {isHomeDay ? 'Stay' : 'Event'} {isEditing ? '' : 'Details'}
+                            {isEditing ? 'Edit' : ''} {isHomeDay ? 'Stay' : isTravel ? 'Travel' : 'Event'} {isEditing ? '' : 'Details'}
                         </h2>
                     </div>
                     <div className="flex items-center gap-2">
@@ -323,6 +324,56 @@ export default function EventDetailPanel() {
                                 >
                                     <p className="text-sm text-textSub">Home</p>
                                     <p className="font-medium text-forest">{selectedEvent.homeName}</p>
+                                </div>
+                            )}
+                            
+                            {/* Travel route for travel events */}
+                            {isTravel && (
+                                <div className="space-y-2">
+                                    {/* From */}
+                                    <div 
+                                        className="p-3 rounded-lg"
+                                        style={{ 
+                                            backgroundColor: selectedEvent.fromHomeColor 
+                                                ? `${selectedEvent.fromHomeColor}15` 
+                                                : '#f3f4f6',
+                                            borderLeft: `4px solid ${selectedEvent.fromHomeColor || '#6b7280'}`,
+                                        }}
+                                    >
+                                        <p className="text-sm text-textSub">From</p>
+                                        <p className="font-medium text-forest">
+                                            {selectedEvent.fromHomeName || selectedEvent.fromLocation || 'Unknown'}
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Arrow */}
+                                    <div className="flex justify-center">
+                                        <span className="text-textSub">↓</span>
+                                    </div>
+                                    
+                                    {/* To */}
+                                    <div 
+                                        className="p-3 rounded-lg"
+                                        style={{ 
+                                            backgroundColor: selectedEvent.toHomeColor 
+                                                ? `${selectedEvent.toHomeColor}15` 
+                                                : '#f3f4f6',
+                                            borderLeft: `4px solid ${selectedEvent.toHomeColor || '#6b7280'}`,
+                                        }}
+                                    >
+                                        <p className="text-sm text-textSub">To</p>
+                                        <p className="font-medium text-forest">
+                                            {selectedEvent.toHomeName || selectedEvent.toLocation || 'Unknown'}
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Traveling with */}
+                                    {selectedEvent.travelWith && (
+                                        <div className="p-3 bg-blue-50 rounded-lg">
+                                            <p className="text-sm text-textSub">Traveling with</p>
+                                            <p className="font-medium text-forest">{selectedEvent.travelWith}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             

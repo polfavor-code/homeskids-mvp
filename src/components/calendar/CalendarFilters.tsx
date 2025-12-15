@@ -20,7 +20,17 @@ export default function CalendarFilters() {
                     onChange={e => setFilters({ showHomeDays: e.target.checked })}
                     className="w-4 h-4 rounded border-border text-terracotta focus:ring-terracotta"
                 />
-                <span className="text-forest">Stays</span>
+                <span className="text-forest">🏠 Stays</span>
+            </label>
+            
+            <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={filters.showTravel}
+                    onChange={e => setFilters({ showTravel: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-terracotta focus:ring-terracotta"
+                />
+                <span className="text-forest">🚗 Travel</span>
             </label>
             
             <label className="flex items-center gap-1.5 cursor-pointer">
@@ -30,7 +40,7 @@ export default function CalendarFilters() {
                     onChange={e => setFilters({ showEvents: e.target.checked })}
                     className="w-4 h-4 rounded border-border text-terracotta focus:ring-terracotta"
                 />
-                <span className="text-forest">Events</span>
+                <span className="text-forest">📅 Events</span>
             </label>
             
             <span className="text-border mx-2">|</span>
