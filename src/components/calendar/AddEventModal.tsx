@@ -470,28 +470,48 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                 </div>
                 
                 {/* Footer */}
-                <div className="p-4 border-t border-border flex gap-3">
-                    <button
-                        onClick={handleClose}
-                        className="flex-1 btn-secondary py-2"
-                        disabled={isSubmitting}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={tab === 'home_day' ? handleSubmitHomeDay : handleSubmitEvent}
-                        className="flex-1 btn-accent py-2"
-                        disabled={isSubmitting || (tab === 'home_day' && !selectedHomeId) || (tab === 'event' && !eventTitle.trim())}
-                    >
-                        {isSubmitting ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                Adding...
-                            </span>
-                        ) : (
-                            tab === 'home_day' ? `Add ${currentChild?.name}'s stay` : 'Add Event'
-                        )}
-                    </button>
+                <div className="p-4 border-t border-border space-y-3">
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleClose}
+                            className="flex-1 btn-secondary py-2"
+                            disabled={isSubmitting}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={tab === 'home_day' ? handleSubmitHomeDay : handleSubmitEvent}
+                            className="flex-1 btn-accent py-2"
+                            disabled={isSubmitting || (tab === 'home_day' && !selectedHomeId) || (tab === 'event' && !eventTitle.trim())}
+                        >
+                            {isSubmitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                    Adding...
+                                </span>
+                            ) : (
+                                tab === 'home_day' ? `Add ${currentChild?.name}'s stay` : 'Add Event'
+                            )}
+                        </button>
+                    </div>
+                    
+                    {/* Google Calendar helper link */}
+                    <div className="text-center">
+                        <a
+                            href="/settings/integrations"
+                            onClick={handleClose}
+                            className="inline-flex items-center gap-1.5 text-xs text-textSub hover:text-blue-600 transition-colors"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="4" width="18" height="18" rx="2" fill="#4285F4"/>
+                                <rect x="3" y="4" width="18" height="5" fill="#1967D2"/>
+                                <rect x="6" y="12" width="3" height="3" fill="white"/>
+                                <rect x="10.5" y="12" width="3" height="3" fill="white"/>
+                                <rect x="15" y="12" width="3" height="3" fill="white"/>
+                            </svg>
+                            Import events from Google Calendar
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

@@ -117,8 +117,8 @@ export async function listChildEvents(
                     rejectedByName: row.rejected_by_profile?.name,
                     canConfirm,
                     canReject: canConfirm, // Same logic for reject
-                    canEdit: event.createdBy === user.id,
-                    canDelete: isGuardian,
+                    canEdit: !event.isReadOnly && (event.createdBy === user.id || isGuardian),
+                    canDelete: !event.isReadOnly && isGuardian,
                     eligibleConfirmers,
                 } as CalendarEventDisplay;
             })
