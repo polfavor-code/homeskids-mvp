@@ -254,12 +254,21 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
     };
 
     const handleCropComplete = async (croppedBlob: Blob) => {
-        if (!user) return;
+        if (!user) {
+            setError("Please log in to upload a photo");
+            return;
+        }
 
         try {
             setError("");
             setCropperImage(null);
             setUploading(true);
+
+            // Verify session is valid
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !session) {
+                throw new Error("Session expired. Please refresh the page.");
+            }
 
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(7);
@@ -270,6 +279,8 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
 
             const tempPath = `temp-${user.id}-${timestamp}-${random}_display.jpg`;
 
+            console.log("[AddChild] Uploading avatar to:", tempPath);
+
             // Upload to temp location (will be updated with child ID after creation)
             const { error: uploadError } = await supabase.storage
                 .from("avatars")
@@ -278,7 +289,12 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
                     upsert: true,
                 });
 
-            if (uploadError) throw uploadError;
+            if (uploadError) {
+                console.error("[AddChild] Avatar upload error:", uploadError);
+                throw uploadError;
+            }
+
+            console.log("[AddChild] Avatar uploaded successfully");
 
             // Store the path for later
             setAvatarPath(tempPath);
@@ -292,8 +308,8 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
                 setAvatarUrl(urlData.signedUrl);
             }
         } catch (err: any) {
-            console.error("Error uploading avatar:", err);
-            setError(err.message || "Failed to upload photo");
+            console.error("[AddChild] Error uploading avatar:", err);
+            setError(err.message || "Failed to upload photo. Please try again.");
         } finally {
             setUploading(false);
         }
@@ -320,7 +336,15 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
             setSaving(true);
             setError("");
 
-            // Create child
+            // Verify auth session is valid before proceeding
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !session) {
+                throw new Error("Session expired. Please refresh the page and try again.");
+            }
+
+            console.log("[AddChild] Creating child for user:", user.id);
+
+            // Create child - include avatar path directly
             const { data: newChild, error: childError } = await supabase
                 .from("children")
                 .insert({
@@ -333,43 +357,64 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
                 .select()
                 .single();
 
-            if (childError) throw childError;
+            if (childError) {
+                console.error("[AddChild] Error creating child:", childError);
+                throw childError;
+            }
+
+            console.log("[AddChild] Child created:", newChild.id);
+
+            // CRITICAL: Add current user as guardian with child_access FIRST
+            // This must succeed for the user to see the child
+            const { error: accessError } = await supabase
+                .from("child_access")
+                .upsert({
+                    child_id: newChild.id,
+                    user_id: user.id,
+                    role_type: "guardian",
+                    access_level: "manage",
+                }, {
+                    onConflict: "child_id,user_id",
+                });
+
+            if (accessError) {
+                console.error("[AddChild] CRITICAL: Error creating child_access:", accessError);
+                // Don't throw - child was created, we should continue
+            } else {
+                console.log("[AddChild] child_access created successfully");
+            }
 
             // If we uploaded an avatar to temp path, rename it to include child ID
             if (avatarPath && newChild) {
                 const newAvatarPath = avatarPath.replace(`temp-${user.id}`, `child-${newChild.id}`);
+                
+                console.log("[AddChild] Renaming avatar from", avatarPath, "to", newAvatarPath);
                 
                 // Copy to new path
                 const { error: copyError } = await supabase.storage
                     .from("avatars")
                     .copy(avatarPath, newAvatarPath);
 
-                if (!copyError) {
+                if (copyError) {
+                    console.error("[AddChild] Error copying avatar:", copyError);
+                    // Avatar stays at temp path, which is still valid
+                } else {
                     // Update child with new path
-                    await supabase
+                    const { error: updateError } = await supabase
                         .from("children")
                         .update({ avatar_url: newAvatarPath })
                         .eq("id", newChild.id);
 
-                    // Delete temp file
-                    await supabase.storage
-                        .from("avatars")
-                        .remove([avatarPath]);
+                    if (updateError) {
+                        console.error("[AddChild] Error updating avatar path:", updateError);
+                    } else {
+                        console.log("[AddChild] Avatar path updated successfully");
+                        // Delete temp file (best effort)
+                        await supabase.storage
+                            .from("avatars")
+                            .remove([avatarPath]);
+                    }
                 }
-            }
-
-            // Add current user as guardian with child_access
-            const { error: accessError } = await supabase
-                .from("child_access")
-                .insert({
-                    child_id: newChild.id,
-                    user_id: user.id,
-                    role_type: "guardian",
-                    access_level: "manage",
-                });
-
-            if (accessError) {
-                console.error("Error creating child_access:", accessError);
             }
 
             // Link child to all existing homes the user has access to
@@ -385,29 +430,38 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
                     .single();
 
                 if (csError) {
-                    console.error("Error creating child_space:", csError);
+                    console.error("[AddChild] Error creating child_space:", csError);
                     continue;
                 }
 
                 // Grant current user child_space_access
-                await supabase.from("child_space_access").insert({
+                const { error: csaError } = await supabase.from("child_space_access").insert({
                     child_space_id: newChildSpace.id,
                     user_id: user.id,
                     can_view_address: true,
                 });
+
+                if (csaError) {
+                    console.error("[AddChild] Error creating child_space_access:", csaError);
+                }
             }
 
             // Set the newly created child as active
             setCurrentChildId(newChild.id);
 
+            // Wait a moment for database to propagate, then refresh
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             // Refresh app data
             await refreshData();
+
+            console.log("[AddChild] Child creation complete:", newChild.id);
 
             // Notify parent
             onChildAdded(name.trim());
         } catch (err: any) {
-            console.error("Error creating child:", err);
-            setError(err.message || "Failed to create child");
+            console.error("[AddChild] Error creating child:", err);
+            setError(err.message || "Failed to create child. Please try again.");
         } finally {
             setSaving(false);
         }
