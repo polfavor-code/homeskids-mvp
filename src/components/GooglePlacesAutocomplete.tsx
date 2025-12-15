@@ -79,6 +79,8 @@ export default function GooglePlacesAutocomplete({
     const sessionTokenRef = useRef<any>(null);
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    // Track if we're using the new Places API
+    const useNewPlacesAPI = useRef<boolean>(false);
 
     const onAddressSelectRef = useRef(onAddressSelect);
     onAddressSelectRef.current = onAddressSelect;
@@ -113,13 +115,25 @@ export default function GooglePlacesAutocomplete({
         const initServices = () => {
             if (window.google?.maps?.places && window.google?.maps?.Geocoder) {
                 try {
-                    autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-                    const dummyDiv = document.createElement("div");
-                    placesServiceRef.current = new window.google.maps.places.PlacesService(dummyDiv);
                     geocoderRef.current = new window.google.maps.Geocoder();
-                    sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+                    
+                    // Check if new Places API is available
+                    const hasNewAPI = !!window.google.maps.places.Place && 
+                                      !!window.google.maps.places.AutocompleteSuggestion;
+                    useNewPlacesAPI.current = hasNewAPI;
+                    
+                    // Initialize legacy services as fallback
+                    if (!hasNewAPI) {
+                        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+                        const dummyDiv = document.createElement("div");
+                        placesServiceRef.current = new window.google.maps.places.PlacesService(dummyDiv);
+                        sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+                    }
+                    
                     setIsLoaded(true);
-                    console.log("Google Maps services initialized successfully");
+                    console.log("Google Maps services initialized successfully", { 
+                        newAPI: useNewPlacesAPI.current 
+                    });
                 } catch (err) {
                     console.error("Error initializing Google Maps services:", err);
                 }
@@ -434,9 +448,9 @@ export default function GooglePlacesAutocomplete({
         };
     }, []);
 
-    // Search for predictions
-    const searchPlaces = useCallback((input: string) => {
-        if (!isLoaded || !autocompleteServiceRef.current || input.length < 3) {
+    // Search for predictions - uses new API if available, falls back to legacy
+    const searchPlaces = useCallback(async (input: string) => {
+        if (!isLoaded || input.length < 3) {
             setPredictions([]);
             setShowDropdown(false);
             return;
@@ -444,24 +458,60 @@ export default function GooglePlacesAutocomplete({
 
         setIsSearching(true);
 
-        autocompleteServiceRef.current.getPlacePredictions(
-            {
-                input,
-                types: ["address"],
-                sessionToken: sessionTokenRef.current,
-            },
-            (results: Prediction[] | null, status: string) => {
-                setIsSearching(false);
-                if (status === "OK" && results) {
-                    setPredictions(results);
+        // Try new API first if available
+        if (useNewPlacesAPI.current) {
+            try {
+                const { suggestions } = await window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+                    input,
+                    includedPrimaryTypes: ["street_address", "premise", "subpremise", "route"],
+                });
+
+                if (suggestions && suggestions.length > 0) {
+                    const mappedPredictions: Prediction[] = suggestions.map((suggestion: any) => ({
+                        place_id: suggestion.placePrediction.placeId,
+                        description: suggestion.placePrediction.text.text,
+                        structured_formatting: {
+                            main_text: suggestion.placePrediction.mainText?.text || suggestion.placePrediction.text.text.split(",")[0],
+                            secondary_text: suggestion.placePrediction.secondaryText?.text || suggestion.placePrediction.text.text.split(",").slice(1).join(",").trim(),
+                        },
+                    }));
+                    setPredictions(mappedPredictions);
                     setShowDropdown(true);
                 } else {
-                    console.log("Places autocomplete status:", status);
                     setPredictions([]);
                     setShowDropdown(false);
                 }
+                setIsSearching(false);
+                return;
+            } catch (err) {
+                console.warn("New Places API failed, trying legacy:", err);
             }
-        );
+        }
+
+        // Fallback to legacy API
+        if (autocompleteServiceRef.current) {
+            autocompleteServiceRef.current.getPlacePredictions(
+                {
+                    input,
+                    types: ["address"],
+                    sessionToken: sessionTokenRef.current,
+                },
+                (results: Prediction[] | null, status: string) => {
+                    setIsSearching(false);
+                    if (status === "OK" && results) {
+                        setPredictions(results);
+                        setShowDropdown(true);
+                    } else {
+                        setPredictions([]);
+                        setShowDropdown(false);
+                    }
+                }
+            );
+        } else {
+            setIsSearching(false);
+            setPredictions([]);
+            setShowDropdown(false);
+        }
     }, [isLoaded]);
 
     // Handle input change with debounce
@@ -539,59 +589,101 @@ export default function GooglePlacesAutocomplete({
         }
     };
 
-    // Handle prediction selection
-    const handleSelectPrediction = (prediction: Prediction) => {
-        if (!placesServiceRef.current) {
-            console.warn("Places service not ready");
-            return;
-        }
-
+    // Handle prediction selection - uses new API if available, falls back to legacy
+    const handleSelectPrediction = async (prediction: Prediction) => {
         setShowDropdown(false);
         setSearchValue(prediction.description);
         setIsSearching(true);
 
-        placesServiceRef.current.getDetails(
-            {
-                placeId: prediction.place_id,
-                fields: ["address_components", "geometry", "formatted_address"],
-                sessionToken: sessionTokenRef.current,
-            },
-            (place: any, status: string) => {
+        // Try new API first if available
+        if (useNewPlacesAPI.current) {
+            try {
+                const place = new window.google.maps.places.Place({
+                    id: prediction.place_id,
+                });
+
+                await place.fetchFields({
+                    fields: ["addressComponents", "location", "formattedAddress"],
+                });
+
+                const addressComponents = parseAddressComponentsNew(place.addressComponents || []);
+                const lat = place.location?.lat() || 0;
+                const lng = place.location?.lng() || 0;
+                const formattedAddress = place.formattedAddress || prediction.description;
+
+                setSearchValue(formattedAddress);
+                setAddressFields({
+                    street: addressComponents.street,
+                    city: addressComponents.city,
+                    state: addressComponents.state,
+                    zip: addressComponents.zip,
+                    country: addressComponents.country,
+                });
+
+                updateMarkerPosition(lat, lng);
+
+                onAddressSelectRef.current({
+                    ...addressComponents,
+                    lat,
+                    lng,
+                    formattedAddress,
+                });
                 setIsSearching(false);
-                
-                // Always create a new session token after getting place details
-                if (sessionTokenRef.current && window.google?.maps?.places?.AutocompleteSessionToken) {
-                    sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
-                }
-
-                if (status === "OK" && place) {
-                    const addressComponents = parseAddressComponents(place);
-                    const lat = place.geometry.location.lat();
-                    const lng = place.geometry.location.lng();
-                    const formattedAddress = place.formatted_address || prediction.description;
-
-                    setSearchValue(formattedAddress);
-                    setAddressFields({
-                        street: addressComponents.street,
-                        city: addressComponents.city,
-                        state: addressComponents.state,
-                        zip: addressComponents.zip,
-                        country: addressComponents.country,
-                    });
-
-                    updateMarkerPosition(lat, lng);
-
-                    onAddressSelectRef.current({
-                        ...addressComponents,
-                        lat,
-                        lng,
-                        formattedAddress,
-                    });
-                } else {
-                    console.warn("Place details failed:", status);
-                }
+                return;
+            } catch (err) {
+                console.warn("New Place API failed, trying legacy:", err);
             }
-        );
+        }
+
+        // Fallback to legacy API
+        if (placesServiceRef.current) {
+            placesServiceRef.current.getDetails(
+                {
+                    placeId: prediction.place_id,
+                    fields: ["address_components", "geometry", "formatted_address"],
+                    sessionToken: sessionTokenRef.current,
+                },
+                (place: any, status: string) => {
+                    setIsSearching(false);
+                    
+                    // Create new session token
+                    if (window.google?.maps?.places?.AutocompleteSessionToken) {
+                        sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+                    }
+
+                    if (status === "OK" && place) {
+                        const addressComponents = parseAddressComponents(place);
+                        const lat = place.geometry.location.lat();
+                        const lng = place.geometry.location.lng();
+                        const formattedAddress = place.formatted_address || prediction.description;
+
+                        setSearchValue(formattedAddress);
+                        setAddressFields({
+                            street: addressComponents.street,
+                            city: addressComponents.city,
+                            state: addressComponents.state,
+                            zip: addressComponents.zip,
+                            country: addressComponents.country,
+                        });
+
+                        updateMarkerPosition(lat, lng);
+
+                        onAddressSelectRef.current({
+                            ...addressComponents,
+                            lat,
+                            lng,
+                            formattedAddress,
+                        });
+                    } else {
+                        console.warn("Place details failed:", status);
+                        geocodeAddress(prediction.description);
+                    }
+                }
+            );
+        } else {
+            setIsSearching(false);
+            geocodeAddress(prediction.description);
+        }
     };
 
     const parseAddressComponents = (place: any): Omit<AddressComponents, "lat" | "lng" | "formattedAddress"> => {
@@ -617,6 +709,41 @@ export default function GooglePlacesAutocomplete({
                 zip = component.long_name;
             } else if (types.includes("country")) {
                 country = component.long_name;
+            }
+        }
+
+        return {
+            street: streetNumber ? `${streetNumber} ${route}` : route,
+            city,
+            state,
+            zip,
+            country,
+        };
+    };
+
+    // Parse address components from new Places API format
+    const parseAddressComponentsNew = (components: any[]): Omit<AddressComponents, "lat" | "lng" | "formattedAddress"> => {
+        let streetNumber = "";
+        let route = "";
+        let city = "";
+        let state = "";
+        let zip = "";
+        let country = "";
+
+        for (const component of components) {
+            const types = component.types || [];
+            if (types.includes("street_number")) {
+                streetNumber = component.longText || component.shortText || "";
+            } else if (types.includes("route")) {
+                route = component.longText || component.shortText || "";
+            } else if (types.includes("locality") || types.includes("postal_town")) {
+                city = component.longText || component.shortText || "";
+            } else if (types.includes("administrative_area_level_1")) {
+                state = component.shortText || component.longText || "";
+            } else if (types.includes("postal_code")) {
+                zip = component.longText || component.shortText || "";
+            } else if (types.includes("country")) {
+                country = component.longText || component.shortText || "";
             }
         }
 
