@@ -149,6 +149,7 @@ interface AppStateContextType {
     // V2: User can have access to multiple children
     children: ChildProfile[];
     currentChild: ChildProfile | null;
+    currentChildId: string;
     setCurrentChildId: (childId: string) => void;
 
     // V1 compatibility: single child alias
@@ -1279,6 +1280,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 // V2 interface
                 children: childrenList,
                 currentChild,
+                currentChildId,
                 setCurrentChildId,
                 caregivers,
                 setCaregivers,
