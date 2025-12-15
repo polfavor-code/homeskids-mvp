@@ -299,7 +299,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     // Derived: is child at user's home?
     // Check if the current home is owned by the current user
-    const currentHome = homes.find(h => h.id === currentHomeId);
+    const currentHome = homes.find(h => h.id === currentHomeId) || null;
     const isChildAtUserHome = !!(
         currentHomeId &&
         currentUserCaregiver &&
