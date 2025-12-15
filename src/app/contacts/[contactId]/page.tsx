@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
@@ -8,10 +8,14 @@ import Avatar from "@/components/Avatar";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
 import PhoneNumbersInput from "@/components/PhoneNumbersInput";
 import ContactPreferencesSelector from "@/components/ContactPreferencesSelector";
+import GooglePlacesAutocomplete, { AddressComponents } from "@/components/GooglePlacesAutocomplete";
+import ImageCropper from "@/components/ImageCropper";
 import { ContactActions } from "@/components/ContactPreferenceIcons";
-import { useContacts, Contact, ContactCategory, ContactMethod, PhoneNumber } from "@/lib/ContactsContext";
+import { useContacts, ContactCategory, ContactMethod, PhoneNumber } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import { supabase } from "@/lib/supabase";
+import { processImageForUpload } from "@/lib/imageUtils";
 
 const CATEGORIES: { value: ContactCategory; label: string }[] = [
     { value: "medical", label: "Medical" },
@@ -29,6 +33,7 @@ export default function ContactDetailPage() {
     const contactId = params.contactId as string;
     const { contacts, isLoaded, updateContact, deleteContact, toggleFavorite } = useContacts();
     const { caregivers } = useAppState();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -45,9 +50,48 @@ export default function ContactDetailPage() {
     const [telegram, setTelegram] = useState("");
     const [instagram, setInstagram] = useState("");
     const [contactPreferences, setContactPreferences] = useState<ContactMethod[]>([]);
-    const [address, setAddress] = useState("");
     const [notes, setNotes] = useState("");
     const [connectedWith, setConnectedWith] = useState<string[]>([]);
+
+    // Address state
+    const [addressStreet, setAddressStreet] = useState("");
+    const [addressCity, setAddressCity] = useState("");
+    const [addressState, setAddressState] = useState("");
+    const [addressZip, setAddressZip] = useState("");
+    const [addressCountry, setAddressCountry] = useState("");
+    const [addressLat, setAddressLat] = useState<number | undefined>();
+    const [addressLng, setAddressLng] = useState<number | undefined>();
+
+    // Photo state
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [cropperImage, setCropperImage] = useState<string | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [familyId, setFamilyId] = useState<string | null>(null);
+
+    // Fetch user's family ID on mount
+    useEffect(() => {
+        const fetchFamilyId = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.user) return;
+
+                const { data: familyMember } = await supabase
+                    .from("family_members")
+                    .select("family_id")
+                    .eq("user_id", session.user.id)
+                    .single();
+
+                if (familyMember) {
+                    setFamilyId(familyMember.family_id);
+                }
+            } catch (err) {
+                console.error("Failed to fetch family ID:", err);
+            }
+        };
+
+        fetchFamilyId();
+    }, []);
 
     // Caregiver options for MobileMultiSelect
     const caregiverOptions = caregivers.map((caregiver) => ({
@@ -60,6 +104,119 @@ export default function ContactDetailPage() {
         value: "all",
         label: caregivers.length > 2 ? "All caregivers" : "Both sides",
     };
+
+    // Handle photo upload
+    const handlePhotoClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (!file.type.startsWith("image/")) {
+                setError("Please select an image file");
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                setError("Image must be less than 5MB");
+                return;
+            }
+            const imageUrl = URL.createObjectURL(file);
+            setCropperImage(imageUrl);
+            setError(null);
+        }
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        try {
+            setError(null);
+            setCropperImage(null);
+            setIsUploading(true);
+
+            if (!familyId) {
+                setError("No family found. Please complete onboarding.");
+                setIsUploading(false);
+                return;
+            }
+
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
+
+            const croppedFile = new File([croppedBlob], "cropped.jpg", { type: "image/jpeg" });
+            const processed = await processImageForUpload(croppedFile);
+
+            const originalPath = `${familyId}/contacts/${timestamp}-${random}_original.jpg`;
+            const displayPath = `${familyId}/contacts/${timestamp}-${random}_display.jpg`;
+
+            const { error: originalError } = await supabase.storage
+                .from("avatars")
+                .upload(originalPath, processed.original, {
+                    cacheControl: "31536000",
+                    upsert: true,
+                });
+
+            if (originalError) throw originalError;
+
+            let finalPath = originalPath;
+
+            if (processed.needsResize) {
+                const { error: displayError } = await supabase.storage
+                    .from("avatars")
+                    .upload(displayPath, processed.display, {
+                        cacheControl: "3600",
+                        upsert: true,
+                    });
+
+                if (!displayError) {
+                    finalPath = displayPath;
+                }
+            }
+
+            setAvatarUrl(finalPath);
+
+            const { data } = await supabase.storage
+                .from("avatars")
+                .createSignedUrl(finalPath, 3600);
+
+            if (data?.signedUrl) {
+                setPhotoPreview(data.signedUrl);
+            }
+        } catch (err: unknown) {
+            console.error("Error uploading photo:", err);
+            setError(err instanceof Error ? err.message : "Failed to upload photo");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleCropCancel = () => {
+        if (cropperImage) {
+            URL.revokeObjectURL(cropperImage);
+        }
+        setCropperImage(null);
+    };
+
+    const handleRemovePhoto = () => {
+        setPhotoPreview(null);
+        setAvatarUrl(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    // Handle address selection from Google Places
+    const handleAddressSelect = useCallback((address: AddressComponents) => {
+        setAddressStreet(address.street);
+        setAddressCity(address.city);
+        setAddressState(address.state);
+        setAddressZip(address.zip);
+        setAddressCountry(address.country);
+        setAddressLat(address.lat || undefined);
+        setAddressLng(address.lng || undefined);
+    }, []);
 
     // Helper to parse stored connectedWith string to array
     const parseConnectedWith = (value?: string): string[] => {
@@ -124,9 +281,33 @@ export default function ContactDetailPage() {
             setTelegram(contact.telegram || "");
             setInstagram(contact.instagram || "");
             setContactPreferences(contact.contactPreferences || []);
-            setAddress(contact.address || "");
             setNotes(contact.notes || "");
             setConnectedWith(parseConnectedWith(contact.connectedWith));
+            
+            // Address fields
+            setAddressStreet(contact.addressStreet || "");
+            setAddressCity(contact.addressCity || "");
+            setAddressState(contact.addressState || "");
+            setAddressZip(contact.addressZip || "");
+            setAddressCountry(contact.addressCountry || "");
+            setAddressLat(contact.addressLat);
+            setAddressLng(contact.addressLng);
+            
+            // Avatar
+            setAvatarUrl(contact.avatarUrl || null);
+            if (contact.avatarUrl) {
+                // Get signed URL for preview
+                supabase.storage
+                    .from("avatars")
+                    .createSignedUrl(contact.avatarUrl, 3600)
+                    .then(({ data }) => {
+                        if (data?.signedUrl) {
+                            setPhotoPreview(data.signedUrl);
+                        }
+                    });
+            } else {
+                setPhotoPreview(null);
+            }
         }
     }, [contact, caregivers]);
 
@@ -142,6 +323,11 @@ export default function ContactDetailPage() {
         // Filter out empty phone numbers
         const validPhoneNumbers = phoneNumbers.filter(p => p.number.trim());
 
+        // Build full address string for legacy field
+        const fullAddress = [addressStreet, addressCity, addressState, addressZip, addressCountry]
+            .filter(Boolean)
+            .join(", ");
+
         const result = await updateContact(contactId, {
             name: name.trim(),
             role: role.trim(),
@@ -151,9 +337,17 @@ export default function ContactDetailPage() {
             telegram: telegram.trim() || undefined,
             instagram: instagram.trim() || undefined,
             contactPreferences: contactPreferences.length > 0 ? contactPreferences : undefined,
-            address: address.trim() || undefined,
+            address: fullAddress || undefined,
+            addressStreet: addressStreet.trim() || undefined,
+            addressCity: addressCity.trim() || undefined,
+            addressState: addressState.trim() || undefined,
+            addressZip: addressZip.trim() || undefined,
+            addressCountry: addressCountry.trim() || undefined,
+            addressLat: addressLat,
+            addressLng: addressLng,
             notes: notes.trim() || undefined,
             connectedWith: connectedWith.length > 0 ? connectedWith.join(",") : undefined,
+            avatarUrl: avatarUrl || undefined,
         });
 
         if (result.success) {
@@ -228,7 +422,19 @@ export default function ContactDetailPage() {
     }
 
     return (
-        <AppShell>
+        <>
+            {/* Image Cropper Modal */}
+            {cropperImage && (
+                <ImageCropper
+                    imageSrc={cropperImage}
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                    aspectRatio={1}
+                    cropShape="round"
+                />
+            )}
+
+            <AppShell>
             {/* Back Link */}
             <div className="mb-4">
                 <Link
@@ -242,13 +448,73 @@ export default function ContactDetailPage() {
             {/* Header with Avatar */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-border mb-4">
                 <div className="flex items-start gap-4">
-                    {/* Large Avatar */}
-                    <Avatar
-                        storagePath={contact.avatarUrl}
-                        initial={contact.name.charAt(0).toUpperCase()}
-                        size={64}
-                        bgColor="#F5F5DC"
-                    />
+                    {/* Large Avatar - with upload in edit mode */}
+                    {isEditing ? (
+                        <div className="flex flex-col items-center gap-1">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoChange}
+                                className="hidden"
+                                disabled={isUploading}
+                            />
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={handlePhotoClick}
+                                    disabled={isUploading}
+                                    className={`w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed flex-shrink-0 cursor-pointer transition-colors overflow-hidden ${
+                                        photoPreview
+                                            ? "border-transparent"
+                                            : "border-border bg-softGreen hover:border-teal"
+                                    } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
+                                >
+                                    {isUploading ? (
+                                        <div className="animate-spin w-5 h-5 border-2 border-forest border-t-transparent rounded-full" />
+                                    ) : photoPreview ? (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img
+                                            src={photoPreview}
+                                            alt="Contact photo"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-2xl font-medium text-forest">
+                                            {name.charAt(0).toUpperCase() || "?"}
+                                        </span>
+                                    )}
+                                </button>
+                                {photoPreview && !isUploading && (
+                                    <button
+                                        type="button"
+                                        onClick={handleRemovePhoto}
+                                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                                    >
+                                        ×
+                                    </button>
+                                )}
+                                {!isUploading && (
+                                    <div className="absolute bottom-0 right-0 bg-white rounded-full p-0.5 border-2 border-forest shadow-md">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-forest">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                            <circle cx="12" cy="13" r="4" />
+                                        </svg>
+                                    </div>
+                                )}
+                            </div>
+                            {isUploading && (
+                                <span className="text-xs text-textSub">Uploading...</span>
+                            )}
+                        </div>
+                    ) : (
+                        <Avatar
+                            storagePath={contact.avatarUrl}
+                            initial={contact.name.charAt(0).toUpperCase()}
+                            size={64}
+                            bgColor="#F5F5DC"
+                        />
+                    )}
 
                     <div className="flex-1 min-w-0">
                         {isEditing ? (
@@ -349,9 +615,30 @@ export default function ContactDetailPage() {
                                     setTelegram(contact.telegram || "");
                                     setInstagram(contact.instagram || "");
                                     setContactPreferences(contact.contactPreferences || []);
-                                    setAddress(contact.address || "");
                                     setNotes(contact.notes || "");
                                     setConnectedWith(parseConnectedWith(contact.connectedWith));
+                                    // Reset address
+                                    setAddressStreet(contact.addressStreet || "");
+                                    setAddressCity(contact.addressCity || "");
+                                    setAddressState(contact.addressState || "");
+                                    setAddressZip(contact.addressZip || "");
+                                    setAddressCountry(contact.addressCountry || "");
+                                    setAddressLat(contact.addressLat);
+                                    setAddressLng(contact.addressLng);
+                                    // Reset avatar
+                                    setAvatarUrl(contact.avatarUrl || null);
+                                    if (contact.avatarUrl) {
+                                        supabase.storage
+                                            .from("avatars")
+                                            .createSignedUrl(contact.avatarUrl, 3600)
+                                            .then(({ data }) => {
+                                                if (data?.signedUrl) {
+                                                    setPhotoPreview(data.signedUrl);
+                                                }
+                                            });
+                                    } else {
+                                        setPhotoPreview(null);
+                                    }
                                 }}
                                 className="px-3 py-1.5 text-sm font-medium text-textSub hover:bg-cream rounded-lg transition-colors"
                             >
@@ -498,14 +785,20 @@ export default function ContactDetailPage() {
 
                 {/* Address */}
                 <div className="p-4 border-b border-border/50">
-                    <label className="block text-xs text-textSub mb-1">Address</label>
+                    <label className="block text-xs text-textSub mb-2">Address</label>
                     {isEditing ? (
-                        <textarea
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            placeholder="Add address"
-                            rows={2}
-                            className="w-full text-sm text-forest focus:outline-none resize-none"
+                        <GooglePlacesAutocomplete
+                            onAddressSelect={handleAddressSelect}
+                            initialAddress={{
+                                street: addressStreet,
+                                city: addressCity,
+                                state: addressState,
+                                zip: addressZip,
+                                country: addressCountry,
+                                lat: addressLat,
+                                lng: addressLng,
+                            }}
+                            placeholder="Search address..."
                         />
                     ) : (
                         <p className="text-sm text-forest whitespace-pre-line">
@@ -601,5 +894,6 @@ export default function ContactDetailPage() {
                 </div>
             )}
         </AppShell>
+        </>
     );
 }

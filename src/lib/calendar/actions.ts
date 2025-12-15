@@ -12,6 +12,7 @@ import {
     CalendarEventRow,
     CreateEventPayload,
     CreateHomeDayPayload,
+    CreateTravelPayload,
     UpdateEventPayload,
     ListEventsFilter,
     rowToEvent,
@@ -81,6 +82,29 @@ export async function listChildEvents(
         
         const isGuardian = !!guardianCheck;
 
+        // Get all unique home IDs for travel events to fetch their names
+        const travelHomeIds = new Set<string>();
+        (data || []).forEach((row: any) => {
+            if (row.event_type === 'travel') {
+                if (row.from_home_id) travelHomeIds.add(row.from_home_id);
+                if (row.to_home_id) travelHomeIds.add(row.to_home_id);
+            }
+        });
+
+        // Fetch travel home names if needed
+        let travelHomeNames: Record<string, string> = {};
+        if (travelHomeIds.size > 0) {
+            const { data: travelHomes } = await supabase
+                .from('homes')
+                .select('id, name')
+                .in('id', Array.from(travelHomeIds));
+            if (travelHomes) {
+                travelHomes.forEach((h: any) => {
+                    travelHomeNames[h.id] = h.name;
+                });
+            }
+        }
+
         // Transform to display format
         const events: CalendarEventDisplay[] = await Promise.all(
             (data || []).map(async (row: any) => {
@@ -107,10 +131,27 @@ export async function listChildEvents(
                     }));
                 }
 
+                // Get travel home names
+                const fromHomeName = event.fromHomeId 
+                    ? travelHomeNames[event.fromHomeId] || event.fromLocation || undefined
+                    : event.fromLocation || undefined;
+                const toHomeName = event.toHomeId 
+                    ? travelHomeNames[event.toHomeId] || event.toLocation || undefined
+                    : event.toLocation || undefined;
+
                 return {
                     ...event,
                     homeName: row.homes?.name,
                     homeColor: row.homes?.name ? getHomeColor(row.homes.name) : undefined,
+                    // Travel-specific display fields
+                    fromHomeName,
+                    fromHomeColor: event.fromHomeId && travelHomeNames[event.fromHomeId] 
+                        ? getHomeColor(travelHomeNames[event.fromHomeId]) 
+                        : undefined,
+                    toHomeName,
+                    toHomeColor: event.toHomeId && travelHomeNames[event.toHomeId] 
+                        ? getHomeColor(travelHomeNames[event.toHomeId]) 
+                        : undefined,
                     createdByName: row.created_by_profile?.name,
                     proposedByName: row.proposed_by_profile?.name,
                     confirmedByName: row.confirmed_by_profile?.name,
@@ -259,6 +300,99 @@ export async function createHomeDayProposal(
     } catch (err) {
         console.error('Error in createHomeDayProposal:', err);
         return { error: 'Failed to create home day' };
+    }
+}
+
+// ============================================
+// CREATE TRAVEL EVENT
+// ============================================
+
+export async function createTravelEvent(
+    payload: CreateTravelPayload
+): Promise<{ event?: CalendarEventDisplay; error?: string }> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { error: 'Not authenticated' };
+        }
+
+        // Get home names for title generation
+        let fromName = payload.fromLocation || 'Unknown';
+        let toName = payload.toLocation || 'Unknown';
+        let fromColor: string | undefined;
+        let toColor: string | undefined;
+
+        if (payload.fromHomeId) {
+            const { data: fromHome } = await supabase
+                .from('homes')
+                .select('name')
+                .eq('id', payload.fromHomeId)
+                .single();
+            if (fromHome) {
+                fromName = fromHome.name;
+                fromColor = getHomeColor(fromHome.name);
+            }
+        }
+
+        if (payload.toHomeId) {
+            const { data: toHome } = await supabase
+                .from('homes')
+                .select('name')
+                .eq('id', payload.toHomeId)
+                .single();
+            if (toHome) {
+                toName = toHome.name;
+                toColor = getHomeColor(toHome.name);
+            }
+        }
+
+        // Generate default title if not provided
+        const title = payload.title || `Travel: ${fromName} → ${toName}`;
+
+        // Create the travel event
+        const { data, error } = await supabase
+            .from('calendar_events')
+            .insert({
+                child_id: payload.childId,
+                title,
+                description: payload.notes || null,
+                start_at: payload.startAt.toISOString(),
+                end_at: payload.endAt.toISOString(),
+                all_day: payload.allDay ?? false, // Travel usually has specific times
+                timezone: payload.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+                event_type: 'travel',
+                status: 'confirmed', // Travel events are always confirmed
+                from_home_id: payload.fromHomeId || null,
+                from_location: payload.fromLocation || null,
+                to_home_id: payload.toHomeId || null,
+                to_location: payload.toLocation || null,
+                travel_with: payload.travelWith || null,
+                created_by: user.id,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating travel event:', error);
+            return { error: error.message };
+        }
+
+        const event = rowToEvent(data as CalendarEventRow);
+        return {
+            event: {
+                ...event,
+                fromHomeName: fromName,
+                fromHomeColor: fromColor,
+                toHomeName: toName,
+                toHomeColor: toColor,
+                createdByName: user.email?.split('@')[0] || 'You',
+                canEdit: true,
+                canDelete: true,
+            },
+        };
+    } catch (err) {
+        console.error('Error in createTravelEvent:', err);
+        return { error: 'Failed to create travel event' };
     }
 }
 

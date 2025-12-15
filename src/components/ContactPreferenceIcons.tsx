@@ -172,6 +172,17 @@ export function ContactMethodIcon({ method, size = 20, className = "" }: { metho
     return <>{icons[method]}</>;
 }
 
+// Helper to format username for display (adds @ prefix if not present)
+export function formatUsernameForDisplay(value: string | undefined): string {
+    if (!value) return "";
+    // Don't add @ if it's a URL or phone number
+    if (value.includes(".") || value.includes("/") || /^\+?\d+$/.test(value.replace(/\s/g, ""))) {
+        return value;
+    }
+    // Add @ if not already present
+    return value.startsWith("@") ? value : `@${value}`;
+}
+
 // Helper to generate contact URLs
 export function getContactUrl(method: ContactMethod, value: string, phoneCountryCode?: string): string {
     const cleanPhone = (phoneCountryCode || "") + value.replace(/\D/g, "");

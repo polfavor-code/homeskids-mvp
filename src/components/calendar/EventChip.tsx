@@ -23,33 +23,53 @@ interface EventChipProps {
 
 export default function EventChip({ event, compact = false, onClick }: EventChipProps) {
     const isHomeDay = event.eventType === 'home_day';
+    const isTravel = event.eventType === 'travel';
     const isPending = event.status === 'proposed';
     const isRejected = event.status === 'rejected';
     const isImported = event.source === 'google';
     
+    // Get the relevant color for the event
+    const getEventColor = () => {
+        if (isHomeDay && event.homeColor) return event.homeColor;
+        if (isTravel && event.toHomeColor) return event.toHomeColor;
+        return null;
+    };
+    
+    const eventColor = getEventColor();
+    
     // Get background color
     const getBgColor = () => {
         if (isRejected) return 'bg-gray-100';
-        if (isHomeDay && event.homeColor) {
-            // Convert hex to rgba for lighter background
+        if (eventColor) {
+            // Will be overridden by inline style
             return 'bg-opacity-20';
         }
+        if (isTravel) return 'bg-blue-50';
         return 'bg-softGreen';
     };
     
     // Get text color
     const getTextColor = () => {
         if (isRejected) return 'text-gray-400';
-        if (isHomeDay && event.homeColor) return 'text-forest';
         return 'text-forest';
     };
     
-    // Get border style for home days
+    // Get border style for home days and travel
     const getBorderStyle = () => {
-        if (isHomeDay && event.homeColor && !isRejected) {
-            return { borderLeft: `3px solid ${event.homeColor}` };
+        if (eventColor && !isRejected) {
+            return { borderLeft: `3px solid ${eventColor}` };
+        }
+        if (isTravel && !isRejected) {
+            return { borderLeft: '3px solid #3B82F6' }; // blue-500
         }
         return {};
+    };
+    
+    // Get event icon
+    const getEventIcon = () => {
+        if (isHomeDay) return '🏠';
+        if (isTravel) return '🚗';
+        return '📅';
     };
     
     if (compact) {
@@ -65,12 +85,14 @@ export default function EventChip({ event, compact = false, onClick }: EventChip
                 `}
                 style={{
                     ...getBorderStyle(),
-                    backgroundColor: isHomeDay && event.homeColor && !isRejected 
-                        ? `${event.homeColor}20` 
-                        : undefined,
+                    backgroundColor: eventColor && !isRejected 
+                        ? `${eventColor}20` 
+                        : isTravel && !isRejected 
+                            ? '#EFF6FF' // blue-50
+                            : undefined,
                 }}
             >
-                {isHomeDay ? '🏠' : '📅'} {event.title}
+                {getEventIcon()} {event.title}
                 {isPending && <span className="ml-1 text-amber-600">●</span>}
                 {isImported && <span className="ml-1 opacity-60"><GoogleIcon size={10} /></span>}
             </button>
@@ -89,9 +111,11 @@ export default function EventChip({ event, compact = false, onClick }: EventChip
             `}
             style={{
                 ...getBorderStyle(),
-                backgroundColor: isHomeDay && event.homeColor && !isRejected 
-                    ? `${event.homeColor}15` 
-                    : undefined,
+                backgroundColor: eventColor && !isRejected 
+                    ? `${eventColor}15` 
+                    : isTravel && !isRejected 
+                        ? '#EFF6FF' // blue-50
+                        : undefined,
             }}
         >
             <div className="flex items-start justify-between gap-2">
@@ -111,7 +135,14 @@ export default function EventChip({ event, compact = false, onClick }: EventChip
                             </span>
                         )}
                     </div>
-                    {event.description && (
+                    {/* Travel route display */}
+                    {isTravel && (event.fromHomeName || event.fromLocation) && (event.toHomeName || event.toLocation) && (
+                        <p className="text-xs text-textSub mt-0.5 truncate">
+                            {event.fromHomeName || event.fromLocation} → {event.toHomeName || event.toLocation}
+                        </p>
+                    )}
+                    {/* Regular description */}
+                    {!isTravel && event.description && (
                         <p className="text-xs text-textSub mt-0.5 truncate">{event.description}</p>
                     )}
                 </div>
@@ -121,9 +152,7 @@ export default function EventChip({ event, compact = false, onClick }: EventChip
                             <GoogleIcon size={14} />
                         </span>
                     )}
-                    {isHomeDay && (
-                        <span className="text-lg">🏠</span>
-                    )}
+                    <span className="text-lg">{getEventIcon()}</span>
                 </div>
             </div>
         </button>
