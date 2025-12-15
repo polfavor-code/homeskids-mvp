@@ -6,9 +6,10 @@ import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import MobileMultiSelect from "@/components/MobileMultiSelect";
+import PhoneNumbersInput from "@/components/PhoneNumbersInput";
 import ContactPreferencesSelector from "@/components/ContactPreferencesSelector";
 import { ContactActions } from "@/components/ContactPreferenceIcons";
-import { useContacts, Contact, ContactCategory, ContactMethod } from "@/lib/ContactsContext";
+import { useContacts, Contact, ContactCategory, ContactMethod, PhoneNumber } from "@/lib/ContactsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 
@@ -39,7 +40,7 @@ export default function ContactDetailPage() {
     const [name, setName] = useState("");
     const [role, setRole] = useState("");
     const [category, setCategory] = useState<ContactCategory>("other");
-    const [phone, setPhone] = useState("");
+    const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
     const [email, setEmail] = useState("");
     const [telegram, setTelegram] = useState("");
     const [instagram, setInstagram] = useState("");
@@ -105,7 +106,20 @@ export default function ContactDetailPage() {
             setName(contact.name);
             setRole(contact.role || "");
             setCategory(contact.category);
-            setPhone(contact.phone || "");
+            // Initialize phoneNumbers from contact
+            if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+                setPhoneNumbers(contact.phoneNumbers);
+            } else if (contact.phone) {
+                // Migrate legacy single phone
+                setPhoneNumbers([{
+                    id: "legacy-1",
+                    number: contact.phone,
+                    countryCode: contact.phoneCountryCode || "+1",
+                    type: "mobile",
+                }]);
+            } else {
+                setPhoneNumbers([]);
+            }
             setEmail(contact.email || "");
             setTelegram(contact.telegram || "");
             setInstagram(contact.instagram || "");
@@ -125,11 +139,14 @@ export default function ContactDetailPage() {
         setIsSaving(true);
         setError(null);
 
+        // Filter out empty phone numbers
+        const validPhoneNumbers = phoneNumbers.filter(p => p.number.trim());
+
         const result = await updateContact(contactId, {
             name: name.trim(),
             role: role.trim(),
             category,
-            phone: phone.trim() || undefined,
+            phoneNumbers: validPhoneNumbers,
             email: email.trim() || undefined,
             telegram: telegram.trim() || undefined,
             instagram: instagram.trim() || undefined,
@@ -315,7 +332,19 @@ export default function ContactDetailPage() {
                                     setName(contact.name);
                                     setRole(contact.role || "");
                                     setCategory(contact.category);
-                                    setPhone(contact.phone || "");
+                                    // Reset phoneNumbers
+                                    if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+                                        setPhoneNumbers(contact.phoneNumbers);
+                                    } else if (contact.phone) {
+                                        setPhoneNumbers([{
+                                            id: "legacy-1",
+                                            number: contact.phone,
+                                            countryCode: contact.phoneCountryCode || "+1",
+                                            type: "mobile",
+                                        }]);
+                                    } else {
+                                        setPhoneNumbers([]);
+                                    }
                                     setEmail(contact.email || "");
                                     setTelegram(contact.telegram || "");
                                     setInstagram(contact.instagram || "");
@@ -380,25 +409,39 @@ export default function ContactDetailPage() {
 
             {/* Contact Details */}
             <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
-                {/* Phone */}
+                {/* Phone Numbers */}
                 <div className="p-4 border-b border-border/50">
-                    <label className="block text-xs text-textSub mb-1">Phone</label>
+                    <label className="block text-xs text-textSub mb-2">Phone</label>
                     {isEditing ? (
-                        <input
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="Add phone number"
-                            className="w-full text-sm text-forest focus:outline-none"
+                        <PhoneNumbersInput
+                            phoneNumbers={phoneNumbers}
+                            onChange={setPhoneNumbers}
                         />
                     ) : (
-                        <p className="text-sm text-forest">
-                            {contact.phone ? (
-                                `${contact.phoneCountryCode || ''} ${contact.phone}`
+                        <div className="space-y-1">
+                            {contact.phoneNumbers && contact.phoneNumbers.length > 0 ? (
+                                contact.phoneNumbers.map((phone, idx) => (
+                                    <div key={phone.id || idx} className="flex items-center gap-2">
+                                        <span className="text-xs text-textSub capitalize">{phone.type}:</span>
+                                        <a 
+                                            href={`tel:${phone.countryCode}${phone.number}`}
+                                            className="text-sm text-forest hover:text-teal"
+                                        >
+                                            {phone.countryCode} {phone.number}
+                                        </a>
+                                    </div>
+                                ))
+                            ) : contact.phone ? (
+                                <a 
+                                    href={`tel:${contact.phoneCountryCode || ''}${contact.phone}`}
+                                    className="text-sm text-forest hover:text-teal"
+                                >
+                                    {contact.phoneCountryCode || ''} {contact.phone}
+                                </a>
                             ) : (
-                                <span className="text-textSub/50">Not provided</span>
+                                <span className="text-sm text-textSub/50">Not provided</span>
                             )}
-                        </p>
+                        </div>
                     )}
                 </div>
 
@@ -427,7 +470,7 @@ export default function ContactDetailPage() {
                         <ContactPreferencesSelector
                             selectedMethods={contactPreferences}
                             onMethodsChange={setContactPreferences}
-                            phone={phone}
+                            phone={phoneNumbers[0]?.number || ""}
                             email={email}
                             telegram={telegram}
                             instagram={instagram}

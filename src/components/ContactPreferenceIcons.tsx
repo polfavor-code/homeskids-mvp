@@ -9,7 +9,8 @@ export type ContactMethod =
     | "sms" 
     | "email" 
     | "telegram" 
-    | "instagram";
+    | "instagram"
+    | "signal";
 
 export interface ContactPreference {
     method: ContactMethod;
@@ -80,6 +81,15 @@ export const CONTACT_METHODS: Record<ContactMethod, {
         bgColor: "bg-[#E4405F]/10",
         hoverColor: "hover:bg-[#E4405F]/20",
     },
+    signal: {
+        label: "Signal",
+        placeholder: "Phone number",
+        inputType: "phone",
+        fieldKey: "phone",
+        color: "#3A76F0",
+        bgColor: "bg-[#3A76F0]/10",
+        hoverColor: "hover:bg-[#3A76F0]/20",
+    },
 };
 
 // Icon components for each method
@@ -140,6 +150,14 @@ export function InstagramIcon({ size = 20, className = "" }: IconProps) {
     );
 }
 
+export function SignalIcon({ size = 20, className = "" }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4c5.302 0 9.6 4.298 9.6 9.6s-4.298 9.6-9.6 9.6S2.4 17.302 2.4 12 6.698 2.4 12 2.4zm0 3.6c-3.314 0-6 2.686-6 6s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6zm0 2.4c1.988 0 3.6 1.612 3.6 3.6s-1.612 3.6-3.6 3.6-3.6-1.612-3.6-3.6 1.612-3.6 3.6-3.6z"/>
+        </svg>
+    );
+}
+
 // Map method to icon component
 export function ContactMethodIcon({ method, size = 20, className = "" }: { method: ContactMethod; size?: number; className?: string }) {
     const icons: Record<ContactMethod, React.ReactNode> = {
@@ -149,6 +167,7 @@ export function ContactMethodIcon({ method, size = 20, className = "" }: { metho
         email: <EmailIcon size={size} className={className} />,
         telegram: <TelegramIcon size={size} className={className} />,
         instagram: <InstagramIcon size={size} className={className} />,
+        signal: <SignalIcon size={size} className={className} />,
     };
     return <>{icons[method]}</>;
 }
@@ -183,6 +202,9 @@ export function getContactUrl(method: ContactMethod, value: string, phoneCountry
             }
             const username = value.startsWith("@") ? value.substring(1) : value;
             return `https://instagram.com/${username}`;
+        case "signal":
+            // Signal uses phone numbers - opens signal.me link
+            return `https://signal.me/#p/${cleanPhone}`;
         default:
             return "#";
     }
@@ -268,6 +290,7 @@ export function ContactActions({
             case "whatsapp":
             case "phone":
             case "sms":
+            case "signal":
                 return phone;
             case "email":
                 return email;
@@ -294,7 +317,7 @@ export function ContactActions({
                     key={method}
                     method={method}
                     value={getValue(method)!}
-                    phoneCountryCode={method === "whatsapp" || method === "phone" || method === "sms" ? phoneCountryCode : undefined}
+                    phoneCountryCode={method === "whatsapp" || method === "phone" || method === "sms" || method === "signal" ? phoneCountryCode : undefined}
                     size={size}
                 />
             ))}

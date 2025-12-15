@@ -22,7 +22,7 @@ interface ContactPreferencesSelectorProps {
     showInputs?: boolean;
 }
 
-const ALL_METHODS: ContactMethod[] = ["whatsapp", "phone", "sms", "email", "telegram", "instagram"];
+const ALL_METHODS: ContactMethod[] = ["whatsapp", "phone", "sms", "signal", "email", "telegram", "instagram"];
 
 export default function ContactPreferencesSelector({
     selectedMethods,
@@ -49,6 +49,7 @@ export default function ContactPreferencesSelector({
             case "whatsapp":
             case "phone":
             case "sms":
+            case "signal":
                 return !!phone;
             case "email":
                 return !!email;
@@ -68,8 +69,7 @@ export default function ContactPreferencesSelector({
 
     // Get the hint text for methods that need phone/email
     const getHintText = (method: ContactMethod): string | null => {
-        const meta = CONTACT_METHODS[method];
-        if (method === "whatsapp" || method === "phone" || method === "sms") {
+        if (method === "whatsapp" || method === "phone" || method === "sms" || method === "signal") {
             if (!phone) return "Add phone number above";
         }
         if (method === "email" && !email) {

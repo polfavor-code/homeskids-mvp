@@ -18,7 +18,17 @@ import { supabase, FEATURES } from "@/lib/supabase";
 export type ContactCategory = "medical" | "school" | "family" | "friends" | "activities" | "other";
 
 // Contact preference methods - how this contact prefers to be reached
-export type ContactMethod = "whatsapp" | "phone" | "sms" | "email" | "telegram" | "instagram";
+export type ContactMethod = "whatsapp" | "phone" | "sms" | "email" | "telegram" | "instagram" | "signal";
+
+// Phone number type for multiple phone support
+export type PhoneType = "mobile" | "home" | "work" | "other";
+
+export interface PhoneNumber {
+    id: string;
+    number: string;
+    countryCode: string;
+    type: PhoneType;
+}
 
 // Legacy contact type (general contacts like doctors, schools)
 export interface Contact {
@@ -26,8 +36,11 @@ export interface Contact {
     name: string;
     role: string;
     category: ContactCategory;
+    // Legacy single phone - kept for backward compatibility
     phone?: string;
     phoneCountryCode?: string;
+    // New: Multiple phone numbers
+    phoneNumbers?: PhoneNumber[];
     email?: string;
     telegram?: string;
     instagram?: string;
@@ -223,31 +236,48 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                         setContacts([]);
                     }
                 } else if (contactsData && isMounted) {
-                    const mappedContacts: Contact[] = contactsData.map((c: any) => ({
-                        id: c.id,
-                        name: c.name,
-                        role: c.role || "",
-                        category: c.category || "other",
-                        phone: c.phone,
-                        phoneCountryCode: c.phone_country_code,
-                        email: c.email,
-                        telegram: c.telegram,
-                        instagram: c.instagram,
-                        contactPreferences: c.contact_preferences || [],
-                        address: c.address,
-                        addressStreet: c.address_street,
-                        addressCity: c.address_city,
-                        addressState: c.address_state,
-                        addressZip: c.address_zip,
-                        addressCountry: c.address_country,
-                        addressLat: c.address_lat,
-                        addressLng: c.address_lng,
-                        notes: c.notes,
-                        isFavorite: c.is_favorite || false,
-                        connectedWith: c.connected_with,
-                        avatarUrl: c.avatar_url,
-                        createdAt: c.created_at,
-                    }));
+                    const mappedContacts: Contact[] = contactsData.map((c: any) => {
+                        // Handle phoneNumbers - either from new column or migrate from legacy
+                        let phoneNumbers: PhoneNumber[] = [];
+                        if (c.phone_numbers && Array.isArray(c.phone_numbers)) {
+                            phoneNumbers = c.phone_numbers;
+                        } else if (c.phone) {
+                            // Migrate legacy single phone to phoneNumbers array
+                            phoneNumbers = [{
+                                id: "legacy-1",
+                                number: c.phone,
+                                countryCode: c.phone_country_code || "+1",
+                                type: "mobile" as PhoneType,
+                            }];
+                        }
+
+                        return {
+                            id: c.id,
+                            name: c.name,
+                            role: c.role || "",
+                            category: c.category || "other",
+                            phone: c.phone,
+                            phoneCountryCode: c.phone_country_code,
+                            phoneNumbers,
+                            email: c.email,
+                            telegram: c.telegram,
+                            instagram: c.instagram,
+                            contactPreferences: c.contact_preferences || [],
+                            address: c.address,
+                            addressStreet: c.address_street,
+                            addressCity: c.address_city,
+                            addressState: c.address_state,
+                            addressZip: c.address_zip,
+                            addressCountry: c.address_country,
+                            addressLat: c.address_lat,
+                            addressLng: c.address_lng,
+                            notes: c.notes,
+                            isFavorite: c.is_favorite || false,
+                            connectedWith: c.connected_with,
+                            avatarUrl: c.avatar_url,
+                            createdAt: c.created_at,
+                        };
+                    });
                     setContacts(mappedContacts);
                 }
             } catch (error) {
@@ -284,13 +314,19 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
             // Build insert object - only include new fields if they have values
             // This ensures backwards compatibility before migration is run
+            
+            // Get first phone for legacy field (backward compatibility)
+            const firstPhone = contact.phoneNumbers?.find(p => p.number);
+            const legacyPhone = firstPhone?.number || contact.phone || null;
+            const legacyCountryCode = firstPhone?.countryCode || contact.phoneCountryCode || null;
+            
             const insertData: any = {
                 child_id: childId,
                 name: contact.name,
                 role: contact.role,
                 category: contact.category,
-                phone: contact.phone || null,
-                phone_country_code: contact.phoneCountryCode || null,
+                phone: legacyPhone,
+                phone_country_code: legacyCountryCode,
                 email: contact.email || null,
                 address: contact.address || null,
                 address_street: contact.addressStreet || null,
@@ -305,6 +341,15 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 connected_with: contact.connectedWith || null,
                 avatar_url: contact.avatarUrl || null,
             };
+
+            // Add phoneNumbers as JSON array
+            if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+                // Filter out empty phone numbers
+                const validPhones = contact.phoneNumbers.filter(p => p.number.trim());
+                if (validPhones.length > 0) {
+                    insertData.phone_numbers = validPhones;
+                }
+            }
 
             // Add new preference fields only if they have values
             // These columns may not exist if migration hasn't been run
@@ -325,6 +370,19 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 return { success: false, error: error.message };
             }
 
+            // Map phoneNumbers from response
+            let phoneNumbers: PhoneNumber[] = [];
+            if (data.phone_numbers && Array.isArray(data.phone_numbers)) {
+                phoneNumbers = data.phone_numbers;
+            } else if (data.phone) {
+                phoneNumbers = [{
+                    id: "legacy-1",
+                    number: data.phone,
+                    countryCode: data.phone_country_code || "+1",
+                    type: "mobile" as PhoneType,
+                }];
+            }
+
             const newContact: Contact = {
                 id: data.id,
                 name: data.name,
@@ -332,6 +390,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 category: data.category || "other",
                 phone: data.phone,
                 phoneCountryCode: data.phone_country_code,
+                phoneNumbers,
                 email: data.email,
                 telegram: data.telegram,
                 instagram: data.instagram,
@@ -369,8 +428,20 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
             if (updates.name !== undefined) dbUpdates.name = updates.name;
             if (updates.role !== undefined) dbUpdates.role = updates.role;
             if (updates.category !== undefined) dbUpdates.category = updates.category;
-            if (updates.phone !== undefined) dbUpdates.phone = updates.phone || null;
-            if (updates.phoneCountryCode !== undefined) dbUpdates.phone_country_code = updates.phoneCountryCode || null;
+            
+            // Handle phoneNumbers - also update legacy fields for backward compatibility
+            if (updates.phoneNumbers !== undefined) {
+                const validPhones = updates.phoneNumbers.filter(p => p.number.trim());
+                dbUpdates.phone_numbers = validPhones.length > 0 ? validPhones : null;
+                // Update legacy fields with first phone
+                const firstPhone = validPhones[0];
+                dbUpdates.phone = firstPhone?.number || null;
+                dbUpdates.phone_country_code = firstPhone?.countryCode || null;
+            } else {
+                if (updates.phone !== undefined) dbUpdates.phone = updates.phone || null;
+                if (updates.phoneCountryCode !== undefined) dbUpdates.phone_country_code = updates.phoneCountryCode || null;
+            }
+            
             if (updates.email !== undefined) dbUpdates.email = updates.email || null;
             if (updates.address !== undefined) dbUpdates.address = updates.address || null;
             if (updates.addressStreet !== undefined) dbUpdates.address_street = updates.addressStreet || null;
