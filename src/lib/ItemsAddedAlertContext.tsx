@@ -308,7 +308,7 @@ export function ItemsAddedAlertProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!familyId || !user) return;
 
-        console.log("Setting up items alert subscription for family:", familyId);
+        // Setting up items alert subscription
 
         const channelName = `items-alerts-${familyId}-${Date.now()}`;
 
@@ -323,43 +323,43 @@ export function ItemsAddedAlertProvider({ children }: { children: ReactNode }) {
                     filter: `family_id=eq.${familyId}`,
                 },
                 (payload) => {
-                    console.log("Items alert: New item inserted:", payload);
+                    // Items alert: New item inserted
 
                     const newItem = payload.new as any;
                     const homeId = newItem.location_home_id;
                     const createdBy = newItem.created_by;
 
-                    console.log("Items alert: homeId=", homeId, "createdBy=", createdBy, "user.id=", user.id);
+                    // Check homeId and createdBy
 
                     // Skip if no home ID or no creator
                     if (!homeId || !createdBy) {
-                        console.log("Items alert: Skipping - no homeId or createdBy");
+                        // Items alert: Skipping - no homeId or createdBy
                         return;
                     }
 
                     // Check if user has access to this home
                     const hasAccess = hasAccessToHome(homeId);
-                    console.log("Items alert: hasAccessToHome=", hasAccess, "homes=", homes.map(h => ({ id: h.id, name: h.name, accessibleCaregiverIds: h.accessibleCaregiverIds, ownerCaregiverId: h.ownerCaregiverId })));
+                    // Check home access
 
                     if (!hasAccess) {
-                        console.log("Items alert: Skipping - user has no access to home");
+                        // Items alert: Skipping - user has no access to home
                         return;
                     }
 
                     // Determine if this is the current user's own item
                     const isOwnItem = createdBy === user.id;
-                    console.log("Items alert: isOwnItem=", isOwnItem, "showing alert!");
+                    // Items alert: showing alert
 
                     // Add alert
                     addOrUpdateAlert(homeId, createdBy, newItem.id, isOwnItem);
                 }
             )
             .subscribe((status) => {
-                console.log("Items alert subscription status:", status);
+                // Subscription status: ${status}
             });
 
         return () => {
-            console.log("Removing items alert channel:", channelName);
+            // Removing items alert channel
             supabase.removeChannel(channel);
         };
     }, [familyId, user, hasAccessToHome, addOrUpdateAlert]);

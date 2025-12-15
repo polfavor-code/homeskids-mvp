@@ -24,7 +24,6 @@ export const metadata: Metadata = {
         apple: "/icons/icon-192.png",
     },
     appleWebApp: {
-        capable: true,
         statusBarStyle: "default",
         title: "homes.kids",
     },

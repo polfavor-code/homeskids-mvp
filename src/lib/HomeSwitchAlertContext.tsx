@@ -124,7 +124,7 @@ export function HomeSwitchAlertProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!familyId || !user || !child?.id) return;
 
-        console.log("Setting up home switch alert subscription for child:", child.id);
+        // Setting up home switch alert subscription for child: ${child.id}
 
         const channelName = `home-switch-${child.id}-${Date.now()}`;
 
@@ -139,7 +139,7 @@ export function HomeSwitchAlertProvider({ children }: { children: ReactNode }) {
                     filter: `id=eq.${child.id}`,
                 },
                 (payload) => {
-                    console.log("Home switch alert: Child updated:", payload);
+                    // Home switch alert: Child updated
 
                     const newData = payload.new as any;
                     const oldData = payload.old as any;
@@ -152,13 +152,13 @@ export function HomeSwitchAlertProvider({ children }: { children: ReactNode }) {
                     const previousHomeId = oldHomeId || lastKnownHomeId.current;
 
                     if (!newHomeId || newHomeId === previousHomeId) {
-                        console.log("Home switch alert: No home change detected, skipping", { newHomeId, previousHomeId, oldHomeId });
+                        // Home switch alert: No home change detected, skipping
                         return;
                     }
 
                     // Skip if we just triggered this switch ourselves
                     if (justSwitchedLocally.current) {
-                        console.log("Home switch alert: Skipping - triggered locally");
+                        // Home switch alert: Skipping - triggered locally
                         // Still update lastKnownHomeId
                         lastKnownHomeId.current = newHomeId;
                         return;
@@ -180,7 +180,7 @@ export function HomeSwitchAlertProvider({ children }: { children: ReactNode }) {
                         isOwnAction: false,
                     };
 
-                    console.log("Home switch alert: Showing remote alert", newAlert);
+                    // Home switch alert: Showing remote alert
                     setAlerts(prev => [...prev, newAlert]);
                     scheduleAutoDismiss(newAlert.id);
 
@@ -189,11 +189,11 @@ export function HomeSwitchAlertProvider({ children }: { children: ReactNode }) {
                 }
             )
             .subscribe((status) => {
-                console.log("Home switch alert subscription status:", status);
+                // Subscription status: ${status}
             });
 
         return () => {
-            console.log("Removing home switch alert channel:", channelName);
+            // Removing home switch alert channel
             supabase.removeChannel(channel);
         };
     }, [familyId, user, child?.id, child?.name, getHomeName, scheduleAutoDismiss]);

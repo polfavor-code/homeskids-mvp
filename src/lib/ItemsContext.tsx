@@ -410,6 +410,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 is_packed: item.isPacked || false,
                 is_request_canceled: item.isRequestCanceled || false,
             };
+            
+            console.log("[Items] Creating item with photo_url:", item.photoUrl);
 
             // First try with child_ids
             const result1 = await supabase

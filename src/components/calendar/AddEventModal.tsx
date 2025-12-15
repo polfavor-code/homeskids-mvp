@@ -495,8 +495,8 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                         </button>
                     </div>
                     
-                    {/* Google Calendar helper link */}
-                    <div className="text-center">
+                    {/* Calendar import links */}
+                    <div className="flex items-center justify-center gap-4">
                         <a
                             href="/settings/integrations"
                             onClick={handleClose}
@@ -509,7 +509,20 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
                                 <rect x="10.5" y="12" width="3" height="3" fill="white"/>
                                 <rect x="15" y="12" width="3" height="3" fill="white"/>
                             </svg>
-                            Import events from Google Calendar
+                            Google Calendar
+                        </a>
+                        <span className="text-textSub/30">|</span>
+                        <a
+                            href="/settings/integrations/apple-calendar/connect"
+                            onClick={handleClose}
+                            className="inline-flex items-center gap-1.5 text-xs text-textSub hover:text-red-600 transition-colors"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="4" width="18" height="18" rx="2" fill="#FF3B30"/>
+                                <rect x="3" y="4" width="18" height="5" fill="#D12F26"/>
+                                <text x="12" y="17" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">31</text>
+                            </svg>
+                            Apple Calendar
                         </a>
                     </div>
                 </div>

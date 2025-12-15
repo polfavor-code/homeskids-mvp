@@ -189,23 +189,23 @@ export default function Home() {
 
     // Global empty state for items - Show generic welcome dashboard
     if (items.length === 0) {
-        // Get current user's name (e.g. "paul")
+        // Get current user's first name only (e.g. "Paul")
         const currentUser = caregivers.find(c => c.isCurrentUser);
-        const userName = currentUser?.name || user?.user_metadata?.name?.split(' ')[0] || 'there';
+        const welcomeUserName = (currentUser?.name?.split(' ')[0]) || (user?.user_metadata?.name?.split(' ')[0]) || 'there';
 
         return (
             <AppShell>
                 <WelcomeDashboard
-                    userName={userName}
+                    userName={welcomeUserName}
                     childName={child?.name || "your child"}
                 />
             </AppShell>
         );
     }
 
-    // Get current user's name (e.g. "paul")
+    // Get current user's first name only (e.g. "Paul")
     const currentUser = caregivers.find(c => c.isCurrentUser);
-    const userName = currentUser?.name || user?.user_metadata?.name?.split(' ')[0] || 'there';
+    const userName = (currentUser?.name?.split(' ')[0]) || (user?.user_metadata?.name?.split(' ')[0]) || 'there';
 
     // Get requested items count and who requested them
     const requestedItems = items.filter(item => item.isRequestedForNextVisit && !item.isMissing);
@@ -226,7 +226,6 @@ export default function Home() {
     // Build dynamic subtitle
     const getDynamicSubtitle = () => {
         const childName = child?.name || "Your child";
-        const pronoun = child?.name ? (child.name.endsWith('s') ? "their" : "her") : "their"; // Simple heuristic
 
         if (isChildAtUserHome) {
             // Child is at user's home
@@ -235,7 +234,7 @@ export default function Home() {
                 return (
                     <>
                         {childName} is staying at your home.<br />
-                        {requesterName} requested {requestedByOthers.length} {requestedByOthers.length === 1 ? 'item' : 'items'} to be packed for {pronoun} next stay.
+                        {requesterName} requested {requestedByOthers.length} {requestedByOthers.length === 1 ? 'item' : 'items'} to pack.
                     </>
                 );
             }
@@ -247,11 +246,11 @@ export default function Home() {
             );
         } else {
             // Child is at another home
-            const homeName = childHomeOwner?.label || childCurrentHome?.name || "another home";
+            const homeName = childCurrentHome?.name || "another home";
             return (
                 <>
-                    {childName} is staying at {pronoun} {homeName}.<br />
-                    Request items for {pronoun} next stay at yours.
+                    {childName} is at {homeName}.<br />
+                    Request items for the next stay at yours.
                 </>
             );
         }

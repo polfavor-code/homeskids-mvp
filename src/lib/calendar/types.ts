@@ -11,7 +11,7 @@ export type EventType = 'home_day' | 'event';
 export type EventStatus = 'confirmed' | 'proposed' | 'rejected';
 
 // Event source (manual or external)
-export type EventSource = 'manual' | 'google' | 'apple' | 'outlook';
+export type EventSource = 'manual' | 'google' | 'apple' | 'outlook' | 'ics';
 
 // Calendar event as stored in database
 export interface CalendarEvent {

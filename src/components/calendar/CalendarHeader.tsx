@@ -1,26 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React from "react";
 import { useCalendar } from "@/lib/calendar/CalendarContext";
 import { CalendarIcon } from "@/components/icons/DuotoneIcons";
-import { getGoogleCalendarConnectionStatus } from "@/lib/google-calendar";
-
-// Google Calendar Icon
-function GoogleCalendarIcon({ size = 16 }: { size?: number }) {
-    return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="18" rx="2" fill="#4285F4"/>
-            <rect x="3" y="4" width="18" height="5" fill="#1967D2"/>
-            <path d="M7 2v4M17 2v4" stroke="#1967D2" strokeWidth="2" strokeLinecap="round"/>
-            <rect x="6" y="12" width="3" height="3" fill="white"/>
-            <rect x="10.5" y="12" width="3" height="3" fill="white"/>
-            <rect x="15" y="12" width="3" height="3" fill="white"/>
-            <rect x="6" y="16.5" width="3" height="3" fill="white"/>
-            <rect x="10.5" y="16.5" width="3" height="3" fill="white"/>
-        </svg>
-    );
-}
 
 interface CalendarHeaderProps {
     onAddClick: () => void;
@@ -36,19 +18,6 @@ export default function CalendarHeader({ onAddClick }: CalendarHeaderProps) {
         goToNext,
         pendingCount,
     } = useCalendar();
-    
-    const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
-    const [googleEmail, setGoogleEmail] = useState<string | null>(null);
-    
-    // Check Google Calendar connection status
-    useEffect(() => {
-        async function checkConnection() {
-            const result = await getGoogleCalendarConnectionStatus();
-            setGoogleConnected(result.connected);
-            setGoogleEmail(result.connection?.googleAccountEmail || null);
-        }
-        checkConnection();
-    }, []);
     
     const monthYear = currentDate.toLocaleDateString('en-US', {
         month: 'long',
@@ -136,34 +105,6 @@ export default function CalendarHeader({ onAddClick }: CalendarHeaderProps) {
                         Agenda
                     </button>
                 </div>
-                
-                {/* Google Calendar status/connect button */}
-                {googleConnected === null ? (
-                    // Loading state
-                    <div className="px-3 py-1.5 text-sm text-textSub">
-                        <span className="w-4 h-4 border-2 border-textSub/30 border-t-textSub rounded-full animate-spin inline-block"></span>
-                    </div>
-                ) : googleConnected ? (
-                    // Connected state - show badge with manage link
-                    <Link
-                        href="/settings/integrations"
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors group"
-                        title={`Synced with ${googleEmail}`}
-                    >
-                        <GoogleCalendarIcon size={16} />
-                        <span>Google synced</span>
-                        <span className="text-blue-500 group-hover:text-blue-700 text-xs">Manage</span>
-                    </Link>
-                ) : (
-                    // Not connected state - show connect button
-                    <Link
-                        href="/settings/integrations"
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 rounded-lg transition-colors"
-                    >
-                        <GoogleCalendarIcon size={16} />
-                        <span>Connect Google</span>
-                    </Link>
-                )}
                 
                 {/* Add button */}
                 <button
