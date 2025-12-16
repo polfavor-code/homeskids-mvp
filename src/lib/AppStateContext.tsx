@@ -1379,7 +1379,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     )
                 `)
                 .eq("child_id", childId)
-                .order("status", { ascending: false }); // Active first
+                .order("status", { ascending: true }); // Active first (a < i alphabetically)
             
             if (error) {
                 console.error("Error fetching child homes with status:", error);
@@ -1552,7 +1552,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     )
                 `)
                 .eq("home_id", homeId)
-                .order("status", { ascending: false }); // Active first
+                .order("status", { ascending: true }); // Active first (a < i alphabetically)
             
             if (error) {
                 console.error("Error fetching home children with status:", error);
