@@ -36,7 +36,8 @@ const getRoleLabel = (role: string): string => {
 
 // Helper to format child roles for display
 // Returns something like "Parent of June & Elodie" or "Parent of Elodie, Step-parent of June"
-const formatChildRoles = (childRoles: ChildRoleMapping[] | undefined): string => {
+// Accepts any array with childName and role properties
+const formatChildRoles = (childRoles: { childName: string; role: string }[] | undefined): string => {
     if (!childRoles || childRoles.length === 0) return "";
     
     // Group by role
