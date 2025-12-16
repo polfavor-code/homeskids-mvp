@@ -270,11 +270,8 @@ export default function CaregiversPage() {
                     } else if (ca.helper_type) {
                         const helperLabels: Record<string, string> = {
                             "nanny": "Nanny",
-                            "babysitter": "Babysitter",
                             "family_member": "Family member",
-                            "family_friend": "Family friend",
                             "friend": "Family friend", // DB stores "friend" for family_friend
-                            "other": "Helper"
                         };
                         return helperLabels[ca.helper_type] || "Helper";
                     }
