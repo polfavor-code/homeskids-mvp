@@ -108,6 +108,16 @@ export type HomeProfile = {
     status: HomeStatus; // V1 compatibility
     // V2: child_space_id for this home+child combination
     childSpaceId?: string;
+    // Soft-delete: when archived, home is hidden but data preserved
+    archivedAt?: string;
+};
+
+// Archived home with item count for UI
+export type ArchivedHome = {
+    id: string;
+    name: string;
+    archivedAt: string;
+    itemCount: number;
 };
 
 // V2: Child Space - the key concept linking child to home
@@ -248,6 +258,13 @@ interface AppStateContextType {
     toggleChildHomeStatus: (childId: string, homeId: string, newStatus: 'active' | 'inactive') => Promise<{ success: boolean; error?: string }>;
     linkChildToHome: (childId: string, homeId: string, inviteId?: string) => Promise<{ success: boolean; error?: string }>;
     getHomeChildrenWithStatus: (homeId: string) => Promise<{ childId: string; childName: string; childAvatarUrl?: string; status: 'active' | 'inactive' }[]>;
+    
+    // Home archive (soft-delete) helpers
+    archiveHome: (homeId: string) => Promise<{ success: boolean; error?: string }>;
+    restoreHome: (homeId: string) => Promise<{ success: boolean; error?: string }>;
+    getArchivedHomes: () => Promise<ArchivedHome[]>;
+    permanentlyDeleteHome: (homeId: string) => Promise<{ success: boolean; error?: string }>;
+    getItemsInArchivedHomes: () => Promise<{ totalCount: number; homes: { homeId: string; homeName: string; itemCount: number }[] }>;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -575,22 +592,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     child_id,
                     home_id,
                     status,
-                    homes (
+                    homes!inner (
                         id,
                         name,
                         address,
                         photo_url,
                         notes,
-                        owner_caregiver_id
+                        owner_caregiver_id,
+                        archived_at
                     )
                 `)
                 .in("child_id", allChildIds)
                 .eq("status", "active");
                 
-            // Build all child spaces list
+            // Build all child spaces list - filter out archived homes
             const loadedAllChildSpaces: ChildSpace[] = [];
             if (allChildSpacesData) {
                 for (const cs of allChildSpacesData as any[]) {
+                    // Skip archived homes
+                    if (cs.homes?.archived_at) continue;
+                    
                     loadedAllChildSpaces.push({
                         id: cs.id,
                         childId: cs.child_id,
@@ -611,6 +632,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 if (allChildSpacesData) {
                     const seenHomeIds = new Set<string>();
                     for (const cs of allChildSpacesData as any[]) {
+                        // Skip archived homes
+                        if (cs.homes?.archived_at) continue;
+                        
                         if (cs.homes && !seenHomeIds.has(cs.homes.id)) {
                             seenHomeIds.add(cs.homes.id);
                             const photoUrl = await getAvatarUrl(cs.homes.photo_url);
@@ -653,13 +677,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     child_id,
                     home_id,
                     status,
-                    homes (
+                    homes!inner (
                         id,
                         name,
                         address,
                         photo_url,
                         notes,
-                        owner_caregiver_id
+                        owner_caregiver_id,
+                        archived_at
                     )
                 `)
                 .eq("child_id", childIdToUse)
@@ -671,6 +696,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
             if (childSpacesData) {
                 for (const cs of childSpacesData as any[]) {
+                    // Skip archived homes
+                    if (cs.homes?.archived_at) continue;
+                    
                     loadedChildSpaces.push({
                         id: cs.id,
                         childId: cs.child_id,
@@ -1580,6 +1608,219 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             return [];
         }
     }, []);
+    
+    // ==========================================
+    // Home Archive (Soft-Delete) Helpers
+    // ==========================================
+    
+    // Archive a home (soft-delete) - sets archived_at timestamp
+    const archiveHome = useCallback(async (homeId: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const { error } = await supabase
+                .from("homes")
+                .update({ archived_at: new Date().toISOString() })
+                .eq("id", homeId);
+            
+            if (error) {
+                console.error("Error archiving home:", error);
+                return { success: false, error: error.message };
+            }
+            
+            // Refresh data to update UI
+            await refreshData();
+            return { success: true };
+        } catch (err) {
+            console.error("Error in archiveHome:", err);
+            return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+    }, [refreshData]);
+    
+    // Restore an archived home - clears archived_at timestamp
+    const restoreHome = useCallback(async (homeId: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const { error } = await supabase
+                .from("homes")
+                .update({ archived_at: null })
+                .eq("id", homeId);
+            
+            if (error) {
+                console.error("Error restoring home:", error);
+                return { success: false, error: error.message };
+            }
+            
+            // Refresh data to update UI
+            await refreshData();
+            return { success: true };
+        } catch (err) {
+            console.error("Error in restoreHome:", err);
+            return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+    }, [refreshData]);
+    
+    // Get all archived homes with item counts
+    const getArchivedHomes = useCallback(async (): Promise<ArchivedHome[]> => {
+        try {
+            // Get archived homes the user has access to via home_memberships
+            const { data: memberships, error: membershipError } = await supabase
+                .from("home_memberships")
+                .select("home_id")
+                .eq("user_id", user?.id || "");
+            
+            if (membershipError) {
+                console.error("Error fetching home memberships:", membershipError);
+                return [];
+            }
+            
+            const memberHomeIds = (memberships || []).map(m => m.home_id);
+            if (memberHomeIds.length === 0) return [];
+            
+            // Get archived homes
+            const { data: archivedHomesData, error: homesError } = await supabase
+                .from("homes")
+                .select("id, name, archived_at")
+                .in("id", memberHomeIds)
+                .not("archived_at", "is", null)
+                .order("archived_at", { ascending: false });
+            
+            if (homesError) {
+                console.error("Error fetching archived homes:", homesError);
+                return [];
+            }
+            
+            // Get item counts for each archived home
+            const result: ArchivedHome[] = [];
+            for (const home of (archivedHomesData || [])) {
+                // Get child_spaces for this home
+                const { data: childSpacesData } = await supabase
+                    .from("child_spaces")
+                    .select("id")
+                    .eq("home_id", home.id);
+                
+                const childSpaceIds = (childSpacesData || []).map(cs => cs.id);
+                
+                // Get item count
+                let itemCount = 0;
+                if (childSpaceIds.length > 0) {
+                    const { count } = await supabase
+                        .from("items")
+                        .select("id", { count: "exact", head: true })
+                        .in("child_space_id", childSpaceIds);
+                    itemCount = count || 0;
+                }
+                
+                result.push({
+                    id: home.id,
+                    name: home.name,
+                    archivedAt: home.archived_at,
+                    itemCount,
+                });
+            }
+            
+            return result;
+        } catch (err) {
+            console.error("Error in getArchivedHomes:", err);
+            return [];
+        }
+    }, [user?.id]);
+    
+    // Permanently delete a home (hard delete - cascades to child_spaces and items)
+    const permanentlyDeleteHome = useCallback(async (homeId: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            // First delete home_access entries
+            await supabase
+                .from("home_access")
+                .delete()
+                .eq("home_id", homeId);
+            
+            // Then delete the home (cascades to child_spaces and items)
+            const { error } = await supabase
+                .from("homes")
+                .delete()
+                .eq("id", homeId);
+            
+            if (error) {
+                console.error("Error permanently deleting home:", error);
+                return { success: false, error: error.message };
+            }
+            
+            // Refresh data to update UI
+            await refreshData();
+            return { success: true };
+        } catch (err) {
+            console.error("Error in permanentlyDeleteHome:", err);
+            return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+    }, [refreshData]);
+    
+    // Get count of items in archived homes for the current child
+    const getItemsInArchivedHomes = useCallback(async (): Promise<{ totalCount: number; homes: { homeId: string; homeName: string; itemCount: number }[] }> => {
+        try {
+            if (!currentChildId || !user?.id) {
+                return { totalCount: 0, homes: [] };
+            }
+            
+            // Get archived homes the user has access to via home_memberships
+            const { data: memberships, error: membershipError } = await supabase
+                .from("home_memberships")
+                .select("home_id")
+                .eq("user_id", user.id);
+            
+            if (membershipError || !memberships || memberships.length === 0) {
+                return { totalCount: 0, homes: [] };
+            }
+            
+            const memberHomeIds = memberships.map(m => m.home_id);
+            
+            // Get archived homes
+            const { data: archivedHomesData, error: homesError } = await supabase
+                .from("homes")
+                .select("id, name, archived_at")
+                .in("id", memberHomeIds)
+                .not("archived_at", "is", null);
+            
+            if (homesError || !archivedHomesData || archivedHomesData.length === 0) {
+                return { totalCount: 0, homes: [] };
+            }
+            
+            // Get item counts for each archived home (only for current child)
+            const homes: { homeId: string; homeName: string; itemCount: number }[] = [];
+            let totalCount = 0;
+            
+            for (const home of archivedHomesData) {
+                // Get child_spaces for this home and current child
+                const { data: childSpacesData } = await supabase
+                    .from("child_spaces")
+                    .select("id")
+                    .eq("home_id", home.id)
+                    .eq("child_id", currentChildId);
+                
+                const childSpaceIds = (childSpacesData || []).map(cs => cs.id);
+                
+                if (childSpaceIds.length > 0) {
+                    // Get item count
+                    const { count } = await supabase
+                        .from("items")
+                        .select("id", { count: "exact", head: true })
+                        .in("child_space_id", childSpaceIds);
+                    
+                    const itemCount = count || 0;
+                    if (itemCount > 0) {
+                        homes.push({
+                            homeId: home.id,
+                            homeName: home.name,
+                            itemCount,
+                        });
+                        totalCount += itemCount;
+                    }
+                }
+            }
+            
+            return { totalCount, homes };
+        } catch (err) {
+            console.error("Error in getItemsInArchivedHomes:", err);
+            return { totalCount: 0, homes: [] };
+        }
+    }, [currentChildId, user?.id]);
 
     return (
         <AppStateContext.Provider
@@ -1632,6 +1873,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 toggleChildHomeStatus,
                 linkChildToHome,
                 getHomeChildrenWithStatus,
+                // Home archive (soft-delete) helpers
+                archiveHome,
+                restoreHome,
+                getArchivedHomes,
+                permanentlyDeleteHome,
+                getItemsInArchivedHomes,
             }}
         >
             {children}

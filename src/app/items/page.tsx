@@ -9,6 +9,7 @@ import FirstHomeAssignmentPrompt from "@/components/FirstHomeAssignmentPrompt";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
+import { supabase } from "@/lib/supabase";
 import { ChevronDownIcon, ItemsIcon, TravelBagIcon, SearchIcon, HomeIcon } from "@/components/icons/DuotoneIcons";
 
 function ItemsPageContent() {
@@ -17,8 +18,28 @@ function ItemsPageContent() {
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
-    const { items } = useItems();
-    const { child, caregivers, accessibleHomes } = useAppState();
+    const { items, refetchItems } = useItems();
+    const { child, caregivers, accessibleHomes, getItemsInArchivedHomes, currentChildId } = useAppState();
+    
+    // Archived home items state
+    const [archivedItemsCount, setArchivedItemsCount] = useState(0);
+    const [loadingArchivedCount, setLoadingArchivedCount] = useState(false);
+    
+    // Archived items modal state
+    type ArchivedHomeItem = {
+        id: string;
+        name: string;
+        category?: string;
+        photoUrl?: string;
+        childSpaceId: string;
+        homeName: string;
+    };
+    const [showArchivedItemsModal, setShowArchivedItemsModal] = useState(false);
+    const [archivedHomeItems, setArchivedHomeItems] = useState<ArchivedHomeItem[]>([]);
+    const [loadingArchivedItems, setLoadingArchivedItems] = useState(false);
+    const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+    const [destinationHomeId, setDestinationHomeId] = useState("");
+    const [movingItems, setMovingItems] = useState(false);
     
     // Use only accessible homes for display
     const homes = accessibleHomes;
@@ -43,6 +64,7 @@ function ItemsPageContent() {
 
     // Soft nudge dismissal state (stored in localStorage)
     const [isNoHomeBannerDismissed, setIsNoHomeBannerDismissed] = useState(false);
+    const [isArchivedBannerDismissed, setIsArchivedBannerDismissed] = useState(false);
     const [showFirstHomePrompt, setShowFirstHomePrompt] = useState(false);
     const [firstHomeInfo, setFirstHomeInfo] = useState<{ id: string; name: string } | null>(null);
 
@@ -50,6 +72,9 @@ function ItemsPageContent() {
     useEffect(() => {
         const dismissed = localStorage.getItem('noHomeBannerDismissed');
         setIsNoHomeBannerDismissed(dismissed === 'true');
+        
+        const archivedDismissed = localStorage.getItem('archivedBannerDismissed');
+        setIsArchivedBannerDismissed(archivedDismissed === 'true');
 
         const firstHomeDone = localStorage.getItem('firstHomeAssignmentDone');
         
@@ -65,10 +90,232 @@ function ItemsPageContent() {
             }
         }
     }, [homes, items]);
+    
+    // Load count of items in archived homes
+    useEffect(() => {
+        const loadArchivedItemsCount = async () => {
+            setLoadingArchivedCount(true);
+            try {
+                const result = await getItemsInArchivedHomes();
+                setArchivedItemsCount(result.totalCount);
+            } catch (err) {
+                console.error("Error loading archived items count:", err);
+            } finally {
+                setLoadingArchivedCount(false);
+            }
+        };
+        
+        loadArchivedItemsCount();
+    }, [getItemsInArchivedHomes]);
+    
+    // Load items from archived homes for the modal
+    const loadArchivedHomeItems = async () => {
+        if (!currentChildId) return;
+        
+        setLoadingArchivedItems(true);
+        try {
+            // Get archived homes the user has access to
+            const { data: memberships } = await supabase
+                .from("home_memberships")
+                .select("home_id");
+            
+            if (!memberships || memberships.length === 0) {
+                setArchivedHomeItems([]);
+                return;
+            }
+            
+            const memberHomeIds = memberships.map(m => m.home_id);
+            
+            // Get archived homes
+            const { data: archivedHomesData } = await supabase
+                .from("homes")
+                .select("id, name, archived_at")
+                .in("id", memberHomeIds)
+                .not("archived_at", "is", null);
+            
+            if (!archivedHomesData || archivedHomesData.length === 0) {
+                setArchivedHomeItems([]);
+                return;
+            }
+            
+            // Get items from archived homes for the current child
+            const items: ArchivedHomeItem[] = [];
+            
+            for (const home of archivedHomesData) {
+                // Get child_spaces for this home and current child
+                const { data: childSpacesData } = await supabase
+                    .from("child_spaces")
+                    .select("id")
+                    .eq("home_id", home.id)
+                    .eq("child_id", currentChildId);
+                
+                const childSpaceIds = (childSpacesData || []).map(cs => cs.id);
+                
+                if (childSpaceIds.length > 0) {
+                    // Get items in these child_spaces
+                    const { data: itemsData } = await supabase
+                        .from("items")
+                        .select("id, name, category, photo_url, child_space_id")
+                        .in("child_space_id", childSpaceIds)
+                        .order("name");
+                    
+                    for (const item of (itemsData || [])) {
+                        let photoUrl: string | undefined;
+                        if (item.photo_url) {
+                            try {
+                                const { data } = await supabase.storage
+                                    .from("item-photos")
+                                    .createSignedUrl(item.photo_url, 3600);
+                                photoUrl = data?.signedUrl;
+                            } catch {
+                                // Ignore photo URL errors
+                            }
+                        }
+                        items.push({
+                            id: item.id,
+                            name: item.name,
+                            category: item.category,
+                            photoUrl,
+                            childSpaceId: item.child_space_id,
+                            homeName: home.name,
+                        });
+                    }
+                }
+            }
+            
+            setArchivedHomeItems(items);
+        } catch (err) {
+            console.error("Error loading archived home items:", err);
+            setArchivedHomeItems([]);
+        } finally {
+            setLoadingArchivedItems(false);
+        }
+    };
+    
+    // Move selected items to destination home
+    const handleMoveArchivedItems = async () => {
+        if (!destinationHomeId || selectedItemIds.size === 0 || !currentChildId) return;
+        
+        setMovingItems(true);
+        try {
+            // Get the destination child_space
+            const { data: destChildSpace, error: csError } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .eq("home_id", destinationHomeId)
+                .eq("child_id", currentChildId)
+                .single();
+            
+            if (csError || !destChildSpace) {
+                throw new Error("Could not find destination space for this child");
+            }
+            
+            // Update items to new child_space
+            const itemIds = Array.from(selectedItemIds);
+            const { error: updateError } = await supabase
+                .from("items")
+                .update({ child_space_id: destChildSpace.id })
+                .in("id", itemIds);
+            
+            if (updateError) {
+                throw new Error(updateError.message);
+            }
+            
+            const movedCount = itemIds.length;
+            const destHome = homes.find(h => h.id === destinationHomeId);
+            
+            // Refresh items list
+            if (refetchItems) {
+                await refetchItems();
+            }
+            
+            // Clear selection
+            setSelectedItemIds(new Set());
+            setDestinationHomeId("");
+            
+            // Reload archived items to update the list
+            await loadArchivedHomeItems();
+            
+            // Update archived count
+            const result = await getItemsInArchivedHomes();
+            setArchivedItemsCount(result.totalCount);
+            
+            // If no more items, close the modal
+            if (result.totalCount === 0) {
+                setShowArchivedItemsModal(false);
+            }
+            
+            // Show a brief success indication (could add toast later)
+            console.log(`Moved ${movedCount} item(s) to ${destHome?.name || 'new home'}`);
+        } catch (err: any) {
+            console.error("Error moving items:", err);
+            alert(err.message || "Failed to move items");
+        } finally {
+            setMovingItems(false);
+        }
+    };
+    
+    // Delete selected items permanently
+    const [deletingItems, setDeletingItems] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    
+    const handleDeleteArchivedItems = async () => {
+        if (selectedItemIds.size === 0) return;
+        
+        setDeletingItems(true);
+        try {
+            const itemIds = Array.from(selectedItemIds);
+            
+            // Delete items from database
+            const { error: deleteError } = await supabase
+                .from("items")
+                .delete()
+                .in("id", itemIds);
+            
+            if (deleteError) {
+                throw new Error(deleteError.message);
+            }
+            
+            const deletedCount = itemIds.length;
+            
+            // Refresh items list
+            if (refetchItems) {
+                await refetchItems();
+            }
+            
+            // Clear selection
+            setSelectedItemIds(new Set());
+            setShowDeleteConfirm(false);
+            
+            // Reload archived items to update the list
+            await loadArchivedHomeItems();
+            
+            // Update archived count
+            const result = await getItemsInArchivedHomes();
+            setArchivedItemsCount(result.totalCount);
+            
+            // If no more items, close the modal
+            if (result.totalCount === 0) {
+                setShowArchivedItemsModal(false);
+            }
+            
+            console.log(`Deleted ${deletedCount} item(s) permanently`);
+        } catch (err: any) {
+            console.error("Error deleting items:", err);
+            alert(err.message || "Failed to delete items");
+        } finally {
+            setDeletingItems(false);
+        }
+    };
 
     const handleDismissNoHomeBanner = () => {
         localStorage.setItem('noHomeBannerDismissed', 'true');
         setIsNoHomeBannerDismissed(true);
+    };
+    
+    const handleDismissArchivedBanner = () => {
+        localStorage.setItem('archivedBannerDismissed', 'true');
+        setIsArchivedBannerDismissed(true);
     };
 
     // Update URL when filter changes
@@ -302,6 +549,41 @@ function ItemsPageContent() {
                 </div>
             )}
 
+            {/* Items in Archived Homes Banner - shows once, then dismissed */}
+            {archivedItemsCount > 0 && !loadingArchivedCount && !isArchivedBannerDismissed && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4 flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-amber-600">
+                            <path d="M21 8v13H3V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M1 3h22v5H1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M10 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </div>
+                    <p className="flex-1 text-sm text-amber-800">
+                        You have <span className="font-semibold">{archivedItemsCount} item{archivedItemsCount !== 1 ? 's' : ''}</span> in archived homes
+                    </p>
+                    <button
+                        onClick={() => {
+                            loadArchivedHomeItems();
+                            setShowArchivedItemsModal(true);
+                        }}
+                        className="flex-shrink-0 text-sm font-semibold text-amber-700 hover:text-amber-800 transition-colors"
+                    >
+                        Manage →
+                    </button>
+                    <button
+                        onClick={handleDismissArchivedBanner}
+                        className="flex-shrink-0 p-1 rounded-full hover:bg-amber-100 transition-colors"
+                        aria-label="Dismiss"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400 hover:text-amber-600">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+            )}
+
             {/* Home Filter Dropdown - Chip Style (only show if homes exist) */}
             {homes.length > 0 && (
                 <div className="mb-4 home-filter-dropdown relative">
@@ -346,6 +628,24 @@ function ItemsPageContent() {
                                 }`}
                             >
                                 Awaiting location ({awaitingLocationCount})
+                            </button>
+                        )}
+                        {archivedItemsCount > 0 && (
+                            <button
+                                onClick={() => {
+                                    setIsDropdownOpen(false);
+                                    loadArchivedHomeItems();
+                                    setShowArchivedItemsModal(true);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors text-amber-700"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-amber-500">
+                                        <path d="M21 8v13H3V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M1 3h22v5H1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                    Archived homes ({archivedItemsCount})
+                                </span>
                             </button>
                         )}
                     </div>
@@ -416,6 +716,25 @@ function ItemsPageContent() {
                                 >
                                     <span>Awaiting location</span>
                                     <span className="text-sm text-gray-500">{awaitingLocationCount} items</span>
+                                </button>
+                            )}
+                            {archivedItemsCount > 0 && (
+                                <button
+                                    onClick={() => {
+                                        setIsDropdownOpen(false);
+                                        loadArchivedHomeItems();
+                                        setShowArchivedItemsModal(true);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors text-amber-700 hover:bg-amber-50"
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-amber-500">
+                                            <path d="M21 8v13H3V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            <path d="M1 3h22v5H1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                        Archived homes
+                                    </span>
+                                    <span className="text-sm text-amber-500">{archivedItemsCount} items</span>
                                 </button>
                             )}
                         </div>
@@ -490,6 +809,196 @@ function ItemsPageContent() {
                     </div>
                 )}
             </div>
+
+            {/* Archived Items Relocation Modal */}
+            {showArchivedItemsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        onClick={() => { setShowArchivedItemsModal(false); setShowDeleteConfirm(false); }}
+                    />
+                    <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] flex flex-col">
+                        {/* Header */}
+                        <div className="p-4 border-b border-border/30 flex-shrink-0">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-bold text-forest text-lg">Items in archived homes</h3>
+                                    <p className="text-sm text-textSub mt-1">
+                                        Select items to move to an active home
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => { setShowArchivedItemsModal(false); setShowDeleteConfirm(false); }}
+                                    className="p-2 text-textSub hover:text-forest rounded-lg"
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {/* Items List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                            {loadingArchivedItems ? (
+                                <div className="text-center py-8">
+                                    <div className="w-6 h-6 border-2 border-forest/30 border-t-forest rounded-full animate-spin mx-auto"></div>
+                                    <p className="text-xs text-textSub mt-2">Loading items...</p>
+                                </div>
+                            ) : archivedHomeItems.length === 0 ? (
+                                <p className="text-sm text-textSub text-center py-8">
+                                    No items in archived homes
+                                </p>
+                            ) : (
+                                <>
+                                    {/* Select all checkbox */}
+                                    <div className="flex items-center gap-2 pb-2 border-b border-border/30">
+                                        <input
+                                            type="checkbox"
+                                            id="select-all-archived"
+                                            checked={selectedItemIds.size === archivedHomeItems.length && archivedHomeItems.length > 0}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedItemIds(new Set(archivedHomeItems.map(i => i.id)));
+                                                } else {
+                                                    setSelectedItemIds(new Set());
+                                                }
+                                            }}
+                                            className="w-4 h-4 rounded border-gray-300 text-forest focus:ring-forest"
+                                        />
+                                        <label htmlFor="select-all-archived" className="text-sm font-medium text-forest">
+                                            Select all ({archivedHomeItems.length} items)
+                                        </label>
+                                    </div>
+                                    
+                                    {archivedHomeItems.map((item) => (
+                                        <label
+                                            key={item.id}
+                                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                                                selectedItemIds.has(item.id) 
+                                                    ? 'border-forest bg-softGreen/30' 
+                                                    : 'border-border hover:border-forest/30'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedItemIds.has(item.id)}
+                                                onChange={(e) => {
+                                                    const newSet = new Set(selectedItemIds);
+                                                    if (e.target.checked) {
+                                                        newSet.add(item.id);
+                                                    } else {
+                                                        newSet.delete(item.id);
+                                                    }
+                                                    setSelectedItemIds(newSet);
+                                                }}
+                                                className="w-4 h-4 rounded border-gray-300 text-forest focus:ring-forest"
+                                            />
+                                            {item.photoUrl ? (
+                                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                                    <img 
+                                                        src={item.photoUrl} 
+                                                        alt={item.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
+                                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                                        <path d="M21 15l-5-5L5 21" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-forest truncate">{item.name}</p>
+                                                <p className="text-xs text-textSub">
+                                                    {item.category && `${item.category} · `}
+                                                    <span className="text-amber-600">From: {item.homeName}</span>
+                                                </p>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </>
+                            )}
+                        </div>
+                        
+                        {/* Footer with destination and action buttons */}
+                        {archivedHomeItems.length > 0 && (
+                            <div className="p-4 border-t border-border/30 space-y-3 flex-shrink-0">
+                                {!showDeleteConfirm ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-forest mb-1">
+                                                Move {selectedItemIds.size > 0 ? selectedItemIds.size : 'selected'} item{selectedItemIds.size !== 1 ? 's' : ''} to:
+                                            </label>
+                                            <select
+                                                value={destinationHomeId}
+                                                onChange={(e) => setDestinationHomeId(e.target.value)}
+                                                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                            >
+                                                <option value="">Select destination home</option>
+                                                {homes.map((home) => (
+                                                    <option key={home.id} value={home.id}>
+                                                        {home.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleMoveArchivedItems}
+                                                disabled={movingItems || selectedItemIds.size === 0 || !destinationHomeId}
+                                                className="flex-1 bg-forest text-white font-medium py-2.5 px-4 rounded-xl hover:bg-forest/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {movingItems ? "Moving..." : `Move ${selectedItemIds.size} item${selectedItemIds.size !== 1 ? 's' : ''}`}
+                                            </button>
+                                            <button
+                                                onClick={() => setShowDeleteConfirm(true)}
+                                                disabled={selectedItemIds.size === 0}
+                                                className="px-4 py-2.5 border border-red-200 text-red-600 font-medium rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Delete selected items"
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                                    <line x1="10" y1="11" x2="10" y2="17"/>
+                                                    <line x1="14" y1="11" x2="14" y2="17"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                        <p className="text-sm text-red-800 font-medium mb-3">
+                                            Permanently delete {selectedItemIds.size} item{selectedItemIds.size !== 1 ? 's' : ''}?
+                                        </p>
+                                        <p className="text-xs text-red-600 mb-3">
+                                            This cannot be undone. The items will be removed forever.
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setShowDeleteConfirm(false)}
+                                                className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleDeleteArchivedItems}
+                                                disabled={deletingItems}
+                                                className="flex-1 bg-red-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                                            >
+                                                {deletingItems ? "Deleting..." : "Delete forever"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <style jsx>{`
                 @keyframes slide-up {
