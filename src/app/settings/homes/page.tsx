@@ -1422,7 +1422,7 @@ export default function HomeSetupPage() {
                                                     // Format role label for this caregiver
                                                     let roleLabel = '';
                                                     if (c.roleType === 'guardian') {
-                                                        roleLabel = c.guardianRole === 'step_parent' ? 'Step-parent' : 'Parent';
+                                                        roleLabel = c.guardianRole === 'stepparent' ? 'Step-parent' : 'Parent';
                                                     } else {
                                                         // Helper types
                                                         const helperLabels: Record<string, string> = {
