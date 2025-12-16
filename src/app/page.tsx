@@ -182,6 +182,8 @@ export default function Home() {
                             });
                         }}
                     />
+                    {/* Toast notifications - needed for addToast to render */}
+                    <ToastContainer toasts={toasts} onDismiss={removeToast} />
                 </AppShell>
             );
         }
