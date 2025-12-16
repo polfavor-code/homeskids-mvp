@@ -1363,7 +1363,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // ==========================================
     
     // Get all homes for a child with their status (active and inactive)
-    const getChildHomesWithStatus = async (childId: string): Promise<ChildHomeWithStatus[]> => {
+    const getChildHomesWithStatus = useCallback(async (childId: string): Promise<ChildHomeWithStatus[]> => {
         try {
             const { data, error } = await supabase
                 .from("child_spaces")
@@ -1398,10 +1398,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             console.error("Error in getChildHomesWithStatus:", err);
             return [];
         }
-    };
+    }, []);
     
     // Toggle a child-home link status (activate or deactivate)
-    const toggleChildHomeStatus = async (
+    const toggleChildHomeStatus = useCallback(async (
         childId: string, 
         homeId: string, 
         newStatus: 'active' | 'inactive'
@@ -1456,10 +1456,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             console.error("Error in toggleChildHomeStatus:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    };
+    }, [refreshData]);
     
     // Link a child to a home (create or reactivate)
-    const linkChildToHome = async (
+    const linkChildToHome = useCallback(async (
         childId: string, 
         homeId: string, 
         inviteId?: string
@@ -1534,10 +1534,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             console.error("Error in linkChildToHome:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    };
+    }, [user, refreshData]);
     
     // Get all children for a home with their status
-    const getHomeChildrenWithStatus = async (homeId: string): Promise<{ childId: string; childName: string; childAvatarUrl?: string; status: 'active' | 'inactive' }[]> => {
+    const getHomeChildrenWithStatus = useCallback(async (homeId: string): Promise<{ childId: string; childName: string; childAvatarUrl?: string; status: 'active' | 'inactive' }[]> => {
         try {
             const { data, error } = await supabase
                 .from("child_spaces")
@@ -1579,7 +1579,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             console.error("Error in getHomeChildrenWithStatus:", err);
             return [];
         }
-    };
+    }, []);
 
     return (
         <AppStateContext.Provider
