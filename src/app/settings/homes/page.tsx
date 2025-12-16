@@ -1772,7 +1772,7 @@ export default function HomeSetupPage() {
                                             disabled={saving}
                                             className="text-sm px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
                                         >
-                                            Move to pending
+                                            Remove from Active
                                         </button>
                                     )}
                                 </div>
