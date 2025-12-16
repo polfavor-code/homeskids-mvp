@@ -151,6 +151,10 @@ export default function ChildEditPage() {
     const activeConnectedHomes = connectedHomes.filter(h => h.status === 'active');
     const inactiveConnectedHomes = connectedHomes.filter(h => h.status === 'inactive');
     
+    // Create a stable key from active home IDs for useEffect dependencies
+    // This ensures the effect re-runs when homes change, not just when count changes
+    const activeHomeIdsKey = activeConnectedHomes.map(h => h.homeId).sort().join(',');
+    
     // Load connected caregivers - derived from child_access (caregivers with access to this child)
     // and cross-referenced with active homes via child_space_access
     useEffect(() => {
@@ -302,7 +306,7 @@ export default function ChildEditPage() {
         };
         
         loadConnectedCaregivers();
-    }, [childId, activeConnectedHomes.length]);
+    }, [childId, activeHomeIdsKey]);
 
     const loadChildData = async () => {
         if (!contextChild || !user) return;
