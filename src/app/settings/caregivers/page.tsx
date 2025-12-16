@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
@@ -119,6 +119,8 @@ export default function CaregiversPage() {
     const [visibleChildrenByCaregiver, setVisibleChildrenByCaregiver] = useState<
         Record<string, { id: string; name: string; avatarUrl?: string }[]>
     >({});
+    // Ref to track which caregiver IDs have had their children loaded (avoids stale closure issues in useEffect)
+    const loadedCaregiverChildrenRef = useRef<Set<string>>(new Set());
     const [loadingChildrenFor, setLoadingChildrenFor] = useState<string | null>(null);
     
     // Other caregivers state - caregivers in account not connected to this child
@@ -166,6 +168,9 @@ export default function CaregiversPage() {
 
     // Helper function to derive visible children from caregiver's accessible homes
     const loadVisibleChildrenForCaregiver = async (caregiverId: string, homeIds: string[]) => {
+        // Mark as loaded immediately to prevent duplicate calls
+        loadedCaregiverChildrenRef.current.add(caregiverId);
+        
         if (homeIds.length === 0) {
             setVisibleChildrenByCaregiver(prev => ({ ...prev, [caregiverId]: [] }));
             return;
@@ -196,6 +201,8 @@ export default function CaregiversPage() {
         } catch (err) {
             console.error("Error loading visible children:", err);
             setVisibleChildrenByCaregiver(prev => ({ ...prev, [caregiverId]: [] }));
+            // Remove from loaded set on error so it can be retried
+            loadedCaregiverChildrenRef.current.delete(caregiverId);
         } finally {
             setLoadingChildrenFor(null);
         }
@@ -205,7 +212,8 @@ export default function CaregiversPage() {
     useEffect(() => {
         if (expandedCaregiverId) {
             const caregiver = caregivers.find(c => c.id === expandedCaregiverId);
-            if (caregiver && !visibleChildrenByCaregiver[expandedCaregiverId]) {
+            // Use ref to check if already loaded (avoids stale closure issues)
+            if (caregiver && !loadedCaregiverChildrenRef.current.has(expandedCaregiverId)) {
                 loadVisibleChildrenForCaregiver(expandedCaregiverId, caregiver.accessibleHomeIds || []);
             }
         }
