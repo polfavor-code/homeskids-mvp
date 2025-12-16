@@ -61,14 +61,6 @@ export default function NoHomeAccessEmptyState({
                 </p>
             </div>
 
-            {/* Learn more link */}
-            <a
-                href="#"
-                className="mt-4 text-sm text-forest/60 hover:text-forest underline"
-            >
-                Learn how home access works
-            </a>
-
             {/* Footer */}
             <p className="mt-8 text-xs text-textSub/60">
                 If you think this is a mistake, contact {inviterName}.
