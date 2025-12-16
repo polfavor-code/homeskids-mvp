@@ -25,13 +25,17 @@ function ContactsPageContent() {
     useEnsureOnboarding();
 
     const { contacts, isLoaded, toggleFavorite } = useContacts();
-    const { child, caregivers, currentChild } = useAppState();
+    const { child, caregivers, currentChild, accessibleHomes } = useAppState();
     const searchParams = useSearchParams();
     const [filter, setFilter] = useState<ContactCategory | "all">("all");
 
     const activeChild = currentChild || child;
+    
+    // Check if user has home access - no access means empty list
+    const hasHomeAccess = accessibleHomes.length > 0;
+    const accessibleContacts = hasHomeAccess ? contacts : [];
 
-    console.log("[ContactsPage] contacts:", contacts.length, "isLoaded:", isLoaded);
+    console.log("[ContactsPage] contacts:", contacts.length, "isLoaded:", isLoaded, "hasHomeAccess:", hasHomeAccess);
 
     // Helper to get the connected with display text
     const getConnectedWithLabel = (contact: Contact): string | null => {
@@ -49,8 +53,8 @@ function ContactsPageContent() {
         return caregiver ? (caregiver.label || caregiver.name) : null;
     };
 
-    // Filter contacts
-    const filteredContacts = contacts.filter((contact) => {
+    // Filter contacts (using accessibleContacts as base)
+    const filteredContacts = accessibleContacts.filter((contact) => {
         if (filter === "all") return true;
         return contact.category === filter;
     });
@@ -96,7 +100,7 @@ function ContactsPageContent() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="font-dmSerif text-2xl text-forest">
-                            {activeChild?.name || "Child"}&apos;s Contacts
+                            {hasHomeAccess ? `${activeChild?.name || "Child"}'s Contacts` : "Contacts"}
                         </h1>
                         <p className="text-sm text-textSub mt-1">
                             Share important contacts.
@@ -226,14 +230,19 @@ function ContactsPageContent() {
                                 : `No ${filter} contacts`}
                         </h3>
                         <p className="text-sm text-textSub max-w-xs mx-auto mb-4">
-                            Add teachers, doctors, family members and other important contacts for {activeChild?.name || "your child"}.
+                            {!hasHomeAccess 
+                                ? "Once you're added to a home, contacts will appear here automatically."
+                                : `Add teachers, doctors, family members and other important contacts for ${activeChild?.name || "your child"}.`
+                            }
                         </p>
-                        <Link
-                            href="/contacts/new"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-forest text-white rounded-xl font-medium hover:bg-teal transition-colors"
-                        >
-                            + Add a contact
-                        </Link>
+                        {hasHomeAccess && (
+                            <Link
+                                href="/contacts/new"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-forest text-white rounded-xl font-medium hover:bg-teal transition-colors"
+                            >
+                                + Add a contact
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>

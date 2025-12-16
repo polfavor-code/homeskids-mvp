@@ -24,7 +24,7 @@ const ROLE_OPTIONS = [
 ];
 
 // Track invite link data outside component to survive re-renders
-let pendingInviteData: { token: string; name: string; role: string; homeIds: string[] } | null = null;
+let pendingInviteData: { token: string; name: string; label: string; role: string; homeIds: string[] } | null = null;
 
 export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCaregiverPanelProps) {
     const { user } = useAuth();
@@ -33,6 +33,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
     // Initialize from pending data if exists (survives re-renders from context updates)
     const [showInviteLink, setShowInviteLink] = useState(() => pendingInviteData !== null);
     const [inviteName, setInviteName] = useState(() => pendingInviteData?.name || "");
+    const [inviteLabel, setInviteLabel] = useState(() => pendingInviteData?.label || "");
     const [inviteRole, setInviteRole] = useState(() => pendingInviteData?.role || "");
     const [inviteToken, setInviteToken] = useState(() => pendingInviteData?.token || "");
 
@@ -79,7 +80,12 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
 
     const handleGenerateInvite = async () => {
         if (!inviteName.trim()) {
-            setError("Please enter their name");
+            setError("Please enter their full name");
+            return;
+        }
+
+        if (!inviteLabel.trim()) {
+            setError(`Please enter what ${child?.name || "your child"} calls them`);
             return;
         }
 
@@ -118,7 +124,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 token: newToken,
                 status: "pending",
                 invitee_name: inviteName.trim(),
-                invitee_label: null, // Will be set by invitee during their onboarding
+                invitee_label: inviteLabel.trim(), // Child-specific display name (e.g., "Daddy", "Grandma")
                 invitee_role: inviteRole,
                 has_own_home: askToCreateHome, // True if they need to create their own home
                 home_id: primaryHomeId,
@@ -143,6 +149,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             pendingInviteData = {
                 token: newToken,
                 name: inviteName.trim(),
+                label: inviteLabel.trim(),
                 role: inviteRole,
                 homeIds: finalHomeIds
             };
@@ -173,6 +180,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
         setShowInviteLink(false);
         setInviteToken("");
         setInviteName("");
+        setInviteLabel("");
         setInviteRole("");
         setSelectedHomeIds(homes.length === 1 ? [homes[0].id] : []);
         setSkipHomeSelection(false);
@@ -223,7 +231,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 )}
 
                 <p className="text-sm text-textSub">
-                    Send this link to <strong>{inviteName}</strong> so they can access {child?.name}'s information.
+                    Send this link to <strong>{inviteName}</strong> ({inviteLabel}) so they can access {child?.name}'s information.
                 </p>
 
                 {/* Show which homes they'll have access to */}
@@ -297,7 +305,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             <div className="space-y-4">
                 <div>
                     <label htmlFor="invitee-name" className="block text-sm font-semibold text-forest mb-1.5">
-                        Their Name
+                        Full name
                     </label>
                     <input
                         id="invitee-name"
@@ -305,8 +313,25 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                         value={inviteName}
                         onChange={(e) => setInviteName(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                        placeholder="e.g., Ellis"
+                        placeholder="e.g., Ellis Martinez"
                     />
+                </div>
+
+                <div>
+                    <label htmlFor="invitee-label" className="block text-sm font-semibold text-forest mb-1.5">
+                        How does {child?.name || "your child"} call them?
+                    </label>
+                    <input
+                        id="invitee-label"
+                        type="text"
+                        value={inviteLabel}
+                        onChange={(e) => setInviteLabel(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                        placeholder='e.g., "Daddy", "Grandma", "Aunt Lisa"'
+                    />
+                    <p className="text-xs text-textSub mt-1">
+                        This name will be shown throughout {child?.name || "your child"}'s space.
+                    </p>
                 </div>
 
                 <div>
@@ -496,7 +521,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 </button>
                 <button
                     onClick={handleGenerateInvite}
-                    disabled={generatingInvite || !inviteName.trim() || !inviteRole}
+                    disabled={generatingInvite || !inviteName.trim() || !inviteLabel.trim() || !inviteRole}
                     className="btn-primary flex-1 disabled:opacity-50"
                 >
                     {generatingInvite ? "Creating..." : "Create Invite"}

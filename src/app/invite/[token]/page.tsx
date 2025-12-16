@@ -169,6 +169,19 @@ export default function InvitePage() {
             // Fall back to direct inserts (may fail due to RLS but worth trying)
             const isGuardian = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
 
+            // Map invitee_role to valid helper_type values
+            // DB constraint only allows: 'family_member', 'friend', 'nanny'
+            const mapRoleToHelperType = (role: string): string => {
+                switch (role) {
+                    case "nanny": return "nanny";
+                    case "babysitter": return "nanny";
+                    case "family_member": return "family_member";
+                    case "family_friend": return "friend";
+                    case "friend": return "friend";
+                    default: return "friend";
+                }
+            };
+
             if (isGuardian) {
                 const { error: guardianError } = await supabase.from("child_guardians").insert({
                     child_id: invite.child_id,
@@ -184,7 +197,7 @@ export default function InvitePage() {
                 child_id: invite.child_id,
                 user_id: userId,
                 role_type: isGuardian ? "guardian" : "helper",
-                helper_type: !isGuardian ? invite.invitee_role : null,
+                helper_type: !isGuardian ? mapRoleToHelperType(invite.invitee_role) : null,
                 access_level: isGuardian ? "manage" : "view",
             }, { onConflict: "child_id,user_id" });
             if (accessError) {

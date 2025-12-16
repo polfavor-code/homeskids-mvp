@@ -236,12 +236,20 @@ export default function SetupHomePage() {
                 });
 
                 // Create child_space linking child to this home
+                // IMPORTANT: Only link the specific child from the invite, not all children
+                const childSpaceData: any = {
+                    home_id: newHome.id,
+                    child_id: childId,
+                    status: "active", // Explicitly set active status
+                };
+                // Add audit field if this came from an invite
+                if (inviteId) {
+                    childSpaceData.created_by_invite_id = inviteId;
+                }
+                
                 const { data: newChildSpace, error: csError } = await supabase
                     .from("child_spaces")
-                    .insert({
-                        home_id: newHome.id,
-                        child_id: childId,
-                    })
+                    .insert(childSpaceData)
                     .select()
                     .single();
 

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
+import { useAppState } from "@/lib/AppStateContext";
 
 // ==============================================
 // V2 DOCUMENTS CONTEXT - Documents per child_v2
@@ -42,37 +43,22 @@ const DocumentsContext = createContext<DocumentsContextType | undefined>(undefin
 
 export function DocumentsProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
+    const { currentChildId } = useAppState();
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [childId, setChildId] = useState<string | null>(null);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const user = session?.user;
+            const sessionUser = session?.user;
 
-            if (!user) {
+            if (!sessionUser || !currentChildId) {
                 setDocuments([]);
                 setIsLoaded(true);
                 return;
             }
 
-            // V2: Get children this user has access to via child_access
-            const { data: childAccess } = await supabase
-                .from("child_access")
-                .select("child_id")
-                .eq("user_id", user.id);
-
-            if (!childAccess || childAccess.length === 0) {
-                setIsLoaded(true);
-                return;
-            }
-
-            // Use first child for now
-            const currentChildId = childAccess[0].child_id;
-            setChildId(currentChildId);
-
-            // Fetch documents for this child
+            // Fetch documents for the currently selected child
             const { data: documentsData } = await supabase
                 .from("documents")
                 .select("*")
@@ -96,17 +82,24 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
                     updatedAt: d.updated_at,
                 }));
                 setDocuments(mappedDocuments);
+            } else {
+                setDocuments([]);
             }
         } catch (error) {
             console.error("Failed to load documents:", error);
         } finally {
             setIsLoaded(true);
         }
-    };
+    }, [currentChildId]);
 
+    // Fetch documents when child changes or on mount
     useEffect(() => {
+        setIsLoaded(false);
         fetchData();
+    }, [fetchData]);
 
+    // Also listen to auth state changes
+    useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             setIsLoaded(false);
             fetchData();
@@ -115,16 +108,16 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
         return () => {
             subscription.unsubscribe();
         };
-    }, []);
+    }, [fetchData]);
 
     const uploadFile = async (file: File): Promise<{ success: boolean; path?: string; error?: string }> => {
-        if (!childId) {
-            return { success: false, error: "No child found" };
+        if (!currentChildId) {
+            return { success: false, error: "No child selected" };
         }
 
         try {
             const fileExt = file.name.split(".").pop();
-            const fileName = `${childId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const fileName = `${currentChildId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
             const { error } = await supabase.storage
                 .from("documents")
@@ -156,15 +149,15 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     };
 
     const addDocument = async (document: Omit<Document, "id" | "createdAt" | "updatedAt">): Promise<{ success: boolean; error?: string; document?: Document }> => {
-        if (!childId) {
-            return { success: false, error: "No child found" };
+        if (!currentChildId) {
+            return { success: false, error: "No child selected" };
         }
 
         try {
             const { data, error } = await supabase
                 .from("documents")
                 .insert({
-                    child_id: childId,
+                    child_id: currentChildId,
                     name: document.name,
                     category: document.category,
                     file_path: document.filePath,

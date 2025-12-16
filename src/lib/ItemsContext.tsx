@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAppState } from "@/lib/AppStateContext";
 
 // ==============================================
 // V2 ITEMS CONTEXT - Items per ChildSpace
@@ -136,10 +137,10 @@ interface ItemsContextType {
 const ItemsContext = createContext<ItemsContextType | undefined>(undefined);
 
 export function ItemsProvider({ children }: { children: ReactNode }) {
+    const { currentChildId } = useAppState();
     const [items, setItems] = useState<Item[]>([]);
     const [transferRequests, setTransferRequests] = useState<ItemTransferRequest[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [currentChildId, setCurrentChildId] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [accessibleChildSpaceIds, setAccessibleChildSpaceIds] = useState<string[]>([]);
     const hasCompletedFetchRef = useRef(false);
@@ -187,9 +188,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             }
 
             const childIds = childAccess.map(ca => ca.child_id);
-            setCurrentChildId(childIds[0]); // Use first child for now
 
-            // 2. Get child_spaces for these children
+            // 2. Get child_spaces for these children (fetch items for ALL children)
             const { data: childSpaces } = await supabase
                 .from("child_spaces")
                 .select("id")

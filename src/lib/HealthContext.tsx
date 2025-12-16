@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAppState } from "@/lib/AppStateContext";
 
 // ==============================================
 // V2 HEALTH CONTEXT - Health data per child_v2
@@ -135,43 +136,30 @@ const defaultHealthFlags: HealthFlags = {
 };
 
 export function HealthProvider({ children }: { children: ReactNode }) {
+    const { currentChildId } = useAppState();
     const [healthStatus, setHealthStatus] = useState<HealthStatus>(defaultHealthStatus);
     const [allergies, setAllergies] = useState<Allergy[]>([]);
     const [medications, setMedications] = useState<Medication[]>([]);
     const [dietaryNeeds, setDietaryNeeds] = useState<DietaryNeeds>(defaultDietaryNeeds);
     const [healthFlags, setHealthFlags] = useState<HealthFlags>(defaultHealthFlags);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [childId, setChildId] = useState<string | null>(null);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const user = session?.user;
+            const sessionUser = session?.user;
 
-            if (!user) {
+            if (!sessionUser || !currentChildId) {
                 setAllergies([]);
                 setMedications([]);
+                setDietaryNeeds(defaultDietaryNeeds);
                 setHealthStatus(defaultHealthStatus);
+                setHealthFlags(defaultHealthFlags);
                 setIsLoaded(true);
                 return;
             }
 
-            // V2: Get children this user has access to via child_access
-            const { data: childAccess } = await supabase
-                .from("child_access")
-                .select("child_id")
-                .eq("user_id", user.id);
-
-            if (!childAccess || childAccess.length === 0) {
-                setIsLoaded(true);
-                return;
-            }
-
-            // Use first child for now (multi-child support can be added later)
-            const currentChildId = childAccess[0].child_id;
-            setChildId(currentChildId);
-
-            // Fetch health status from child_health_status table
+            // Fetch health status from child_health_status table for the selected child
             const { data: healthStatusData, error: healthStatusError } = await supabase
                 .from("child_health_status")
                 .select("*")
@@ -194,29 +182,9 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                     noDietaryRestrictions: healthStatusData.dietary_status === "none",
                 });
             } else {
-                // No health status record yet - try legacy flags from children
-                const { data: childData } = await supabase
-                    .from("children")
-                    .select("*")
-                    .eq("id", currentChildId)
-                    .single();
-
-                if (childData) {
-                    // Check if there are legacy health flags
-                    const migratedStatus: HealthStatus = {
-                        allergiesStatus: "skipped",
-                        allergiesDetails: null,
-                        medicationStatus: "skipped",
-                        medicationDetails: null,
-                        dietaryStatus: "skipped",
-                        dietaryDetails: null,
-                    };
-                    setHealthStatus(migratedStatus);
-                    setHealthFlags(defaultHealthFlags);
-                } else {
-                    setHealthStatus(defaultHealthStatus);
-                    setHealthFlags(defaultHealthFlags);
-                }
+                // No health status record yet
+                setHealthStatus(defaultHealthStatus);
+                setHealthFlags(defaultHealthFlags);
             }
 
             // Fetch allergies for this child
@@ -229,6 +197,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
                 if (allergiesError) {
                     console.warn("Could not fetch allergies:", allergiesError.message);
+                    setAllergies([]);
                 } else if (allergiesData) {
                     const mappedAllergies: Allergy[] = allergiesData.map((a: any) => ({
                         id: a.id,
@@ -240,6 +209,8 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                         notes: a.notes,
                     }));
                     setAllergies(mappedAllergies);
+                } else {
+                    setAllergies([]);
                 }
             } catch (allergiesErr) {
                 console.warn("Allergies fetch failed:", allergiesErr);
@@ -256,6 +227,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
                 if (medicationsError) {
                     console.warn("Could not fetch medications:", medicationsError.message);
+                    setMedications([]);
                 } else if (medicationsData) {
                     const mappedMedications: Medication[] = medicationsData.map((m: any) => ({
                         id: m.id,
@@ -273,6 +245,8 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                         fileSize: m.file_size,
                     }));
                     setMedications(mappedMedications);
+                } else {
+                    setMedications([]);
                 }
             } catch (medsErr) {
                 console.warn("Medications fetch failed:", medsErr);
@@ -311,11 +285,16 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsLoaded(true);
         }
-    };
+    }, [currentChildId]);
 
+    // Fetch health data when child changes or on mount
     useEffect(() => {
+        setIsLoaded(false);
         fetchData();
+    }, [fetchData]);
 
+    // Also listen to auth state changes
+    useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             setIsLoaded(false);
             fetchData();
@@ -324,7 +303,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         return () => {
             subscription.unsubscribe();
         };
-    }, []);
+    }, [fetchData]);
 
     // Update health status for a specific category
     const updateHealthStatus = async (
@@ -332,8 +311,8 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         status: HealthStatusValue,
         details?: string | null
     ): Promise<{ success: boolean; error?: string }> => {
-        if (!childId) {
-            return { success: false, error: "No child found" };
+        if (!currentChildId) {
+            return { success: false, error: "No child selected" };
         }
 
         try {
@@ -349,21 +328,21 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             const { data: existing } = await supabase
                 .from("child_health_status")
                 .select("id")
-                .eq("child_id", childId)
+                .eq("child_id", currentChildId)
                 .single();
 
             if (existing) {
                 const { error } = await supabase
                     .from("child_health_status")
                     .update(updateData)
-                    .eq("child_id", childId);
+                    .eq("child_id", currentChildId);
 
                 if (error) throw error;
             } else {
                 const { error } = await supabase
                     .from("child_health_status")
                     .insert({
-                        child_id: childId,
+                        child_id: currentChildId,
                         ...updateData,
                     });
 
@@ -395,10 +374,10 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
     // Skip all health categories for now
     const skipAllHealthForNow = async (overrideChildId?: string): Promise<{ success: boolean; error?: string }> => {
-        const targetChildId = overrideChildId || childId;
+        const targetChildId = overrideChildId || currentChildId;
 
         if (!targetChildId) {
-            return { success: false, error: "No child found" };
+            return { success: false, error: "No child selected" };
         }
 
         try {
@@ -454,15 +433,15 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     };
 
     const addAllergy = async (allergy: Omit<Allergy, "id">): Promise<{ success: boolean; error?: string }> => {
-        if (!childId) {
-            return { success: false, error: "No child found" };
+        if (!currentChildId) {
+            return { success: false, error: "No child selected" };
         }
 
         try {
             const { data, error } = await supabase
                 .from("allergies")
                 .insert({
-                    child_id: childId,
+                    child_id: currentChildId,
                     name: allergy.name,
                     category: allergy.category,
                     severity: allergy.severity,
@@ -538,13 +517,13 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     };
 
     const uploadFile = async (file: File): Promise<{ success: boolean; path?: string; error?: string }> => {
-        if (!childId) {
-            return { success: false, error: "No child found" };
+        if (!currentChildId) {
+            return { success: false, error: "No child selected" };
         }
 
         try {
             const fileExt = file.name.split(".").pop();
-            const fileName = `${childId}/health/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const fileName = `${currentChildId}/health/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
             const { error } = await supabase.storage
                 .from("documents")
@@ -576,15 +555,15 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     };
 
     const addMedication = async (medication: Omit<Medication, "id">): Promise<{ success: boolean; error?: string }> => {
-        if (!childId) {
-            return { success: false, error: "No child found" };
+        if (!currentChildId) {
+            return { success: false, error: "No child selected" };
         }
 
         try {
             const { data, error } = await supabase
                 .from("medications")
                 .insert({
-                    child_id: childId,
+                    child_id: currentChildId,
                     name: medication.name,
                     dose: medication.dose,
                     frequency: medication.frequency,
@@ -684,15 +663,15 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     };
 
     const updateDietaryNeeds = async (needs: DietaryNeeds): Promise<{ success: boolean; error?: string }> => {
-        if (!childId) {
-            return { success: false, error: "No child found" };
+        if (!currentChildId) {
+            return { success: false, error: "No child selected" };
         }
 
         try {
             const { data: existing } = await supabase
                 .from("dietary_needs")
                 .select("id")
-                .eq("child_id", childId)
+                .eq("child_id", currentChildId)
                 .single();
 
             if (existing) {
@@ -712,7 +691,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 const { error } = await supabase
                     .from("dietary_needs")
                     .insert({
-                        child_id: childId,
+                        child_id: currentChildId,
                         diet_type: needs.dietType || null,
                         custom_description: needs.customDescription || null,
                         instructions: needs.instructions || null,
@@ -739,10 +718,10 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
     // Legacy method - updates health flags
     const updateHealthFlags = async (flags: Partial<HealthFlags>, overrideChildId?: string): Promise<{ success: boolean; error?: string }> => {
-        const targetChildId = overrideChildId || childId;
+        const targetChildId = overrideChildId || currentChildId;
 
         if (!targetChildId) {
-            return { success: false, error: "No child found" };
+            return { success: false, error: "No child selected" };
         }
 
         try {
@@ -768,10 +747,10 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
     // Legacy convenience method - marks all as "none"
     const confirmNoHealthNeeds = async (overrideChildId?: string): Promise<{ success: boolean; error?: string }> => {
-        const targetChildId = overrideChildId || childId;
+        const targetChildId = overrideChildId || currentChildId;
 
         if (!targetChildId) {
-            return { success: false, error: "No child found" };
+            return { success: false, error: "No child selected" };
         }
 
         try {

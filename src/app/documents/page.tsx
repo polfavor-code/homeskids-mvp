@@ -31,11 +31,17 @@ const categoryLabels: Record<string, string> = {
 
 export default function DocumentsPage() {
     useEnsureOnboarding();
-    const { child, currentChild } = useAppState();
+    const { child, currentChild, accessibleHomes } = useAppState();
     const { documents, isLoaded, addDocument, deleteDocument, updateDocument, uploadFile, getFileUrl, getPinnedDocuments } = useDocuments();
 
     const activeChild = currentChild || child;
-    const childName = activeChild?.name || "your child";
+    
+    // Check if user has home access - no access means empty list
+    const hasHomeAccess = accessibleHomes.length > 0;
+    
+    // Only show child name if user has home access
+    const childName = hasHomeAccess ? (activeChild?.name || "your child") : "your child";
+    const accessibleDocuments = hasHomeAccess ? documents : [];
 
     const [showAddForm, setShowAddForm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -56,7 +62,8 @@ export default function DocumentsPage() {
         expiryDate: "",
     });
 
-    const pinnedDocuments = getPinnedDocuments();
+    // Filter pinned documents by home access
+    const pinnedDocuments = hasHomeAccess ? getPinnedDocuments() : [];
 
     const resetForm = () => {
         setNewDocument({
@@ -175,9 +182,14 @@ export default function DocumentsPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="font-dmSerif text-2xl text-forest">{childName}&apos;s Documents</h1>
+                    <h1 className="font-dmSerif text-2xl text-forest">
+                        {hasHomeAccess ? `${childName}'s Documents` : "Documents"}
+                    </h1>
                     <p className="text-sm text-textSub mt-1">
-                        A shared place for everything important for {childName}.
+                        {hasHomeAccess 
+                            ? `A shared place for everything important for ${childName}.`
+                            : "A shared place for important documents."
+                        }
                     </p>
                 </div>
 
@@ -376,12 +388,12 @@ export default function DocumentsPage() {
                 )}
 
                 {/* All Documents */}
-                {documents.filter(d => !d.isPinned).length > 0 && (
+                {accessibleDocuments.filter(d => !d.isPinned).length > 0 && (
                     <div className="card-organic p-5">
                         <h2 className="font-bold text-forest text-lg mb-4">All Documents</h2>
 
                         <div className="space-y-3">
-                            {documents.filter(d => !d.isPinned).map((doc) => {
+                            {accessibleDocuments.filter(d => !d.isPinned).map((doc) => {
                                 const colors = categoryColors[doc.category] || categoryColors.other;
                                 return (
                                     <div
@@ -440,14 +452,17 @@ export default function DocumentsPage() {
                 )}
 
                 {/* Empty State */}
-                {documents.length === 0 && !showAddForm && (
+                {accessibleDocuments.length === 0 && !showAddForm && (
                     <div className="card-organic p-8 text-center">
                         <div className="w-16 h-16 rounded-full bg-softGreen/50 flex items-center justify-center text-forest mx-auto mb-4">
                             <DocumentsIcon size={32} />
                         </div>
                         <h3 className="font-bold text-forest text-lg mb-2">No documents yet</h3>
                         <p className="text-sm text-textSub mb-4">
-                            Add {childName}'s important documents to keep everything organized.
+                            {!hasHomeAccess 
+                                ? "Once you're added to a home, documents will appear here automatically."
+                                : `Add ${childName}'s important documents to keep everything organized.`
+                            }
                         </p>
                     </div>
                 )}
@@ -495,8 +510,8 @@ export default function DocumentsPage() {
                     </div>
                 </div>
 
-                {/* Add Document Button */}
-                {!showAddForm && (
+                {/* Add Document Button - only show if user has home access */}
+                {!showAddForm && hasHomeAccess && (
                     <button
                         onClick={() => setShowAddForm(true)}
                         className="w-full py-3 rounded-xl border-2 border-dashed border-forest/30 text-forest text-sm font-semibold hover:border-forest hover:bg-softGreen/20 transition-colors flex items-center justify-center gap-2"

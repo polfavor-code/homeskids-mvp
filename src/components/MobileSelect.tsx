@@ -7,6 +7,10 @@ export interface SelectOption {
     value: string;
     label: string;
     description?: string;
+    // Avatar support
+    avatarUrl?: string;
+    avatarInitials?: string;
+    avatarColor?: string;
 }
 
 interface MobileSelectProps {
@@ -94,16 +98,33 @@ export default function MobileSelect({
                             key={option.value}
                             type="button"
                             onClick={() => handleSelect(option.value)}
-                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
+                            className={`w-full flex items-center gap-3 text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
                                 value === option.value
                                     ? "text-forest font-semibold bg-softGreen/30"
                                     : "text-gray-700"
                             }`}
                         >
-                            <span>{option.label}</span>
-                            {option.description && (
-                                <span className="block text-xs text-gray-400 mt-0.5">{option.description}</span>
+                            {/* Avatar */}
+                            {(option.avatarUrl || option.avatarInitials) && (
+                                <div 
+                                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                    style={{ backgroundColor: option.avatarColor || '#2D5A47' }}
+                                >
+                                    {option.avatarUrl ? (
+                                        <img src={option.avatarUrl} alt={option.label || 'Avatar'} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-white text-sm font-medium">
+                                            {option.avatarInitials || option.label.charAt(0).toUpperCase()}
+                                        </span>
+                                    )}
+                                </div>
                             )}
+                            <div className="flex-1 min-w-0">
+                                <span className="block truncate">{option.label}</span>
+                                {option.description && (
+                                    <span className="block text-xs text-gray-400 mt-0.5 truncate">{option.description}</span>
+                                )}
+                            </div>
                         </button>
                     ))}
                 </div>
@@ -142,16 +163,31 @@ export default function MobileSelect({
                                     key={option.value}
                                     type="button"
                                     onClick={() => handleSelect(option.value)}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                                         value === option.value
                                             ? "bg-softGreen text-forest font-semibold"
                                             : "text-gray-700 hover:bg-gray-50"
                                     }`}
                                 >
-                                    <div className="text-left">
-                                        <span>{option.label}</span>
+                                    {/* Avatar */}
+                                    {(option.avatarUrl || option.avatarInitials) && (
+                                        <div 
+                                            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                            style={{ backgroundColor: option.avatarColor || '#2D5A47' }}
+                                        >
+                                            {option.avatarUrl ? (
+                                                <img src={option.avatarUrl} alt={option.label || 'Avatar'} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-white text-base font-medium">
+                                                    {option.avatarInitials || option.label.charAt(0).toUpperCase()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0 text-left">
+                                        <span className="block truncate">{option.label}</span>
                                         {option.description && (
-                                            <span className="block text-xs text-gray-400 mt-0.5">{option.description}</span>
+                                            <span className="block text-xs text-gray-400 mt-0.5 truncate">{option.description}</span>
                                         )}
                                     </div>
                                     {value === option.value && (

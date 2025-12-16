@@ -8,6 +8,7 @@ import AwaitingLocationAlert from "@/components/home/MissingItemAlert";
 import HomesHorizontalSection from "@/components/home/HomesHorizontalSection";
 import WelcomeDashboard from "@/components/home/WelcomeDashboard";
 import SetupSteps from "@/components/home/SetupSteps";
+import NoHomeAccessEmptyState from "@/components/NoHomeAccessEmptyState";
 import { ToastContainer, ToastData } from "@/components/Toast";
 import { useItems } from "@/lib/ItemsContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -28,11 +29,12 @@ export default function Home() {
         child,
         caregivers,
         homes,
-        activeHomes, // Only active homes for dashboard display
+        accessibleHomes, // Homes the current user can access (filtered by home_memberships)
         currentHomeId,
         isChildAtUserHome, // True if child is at logged-in user's home
         switchChildHomeAndMovePackedItems,
         currentJuneCaregiverId, // Legacy fallback
+        inviteInfo, // Info about who invited this user (for no-home-access state)
         isLoaded: appStateLoaded
     } = useAppState();
 
@@ -103,9 +105,9 @@ export default function Home() {
         });
     };
 
-    // Get current home - must be an ACTIVE home
-    const currentHome = activeHomes.length > 0
-        ? (activeHomes.find((h) => h.id === currentHomeId) ?? activeHomes[0])
+    // Get current home - must be a home the user can ACCESS
+    const currentHome = accessibleHomes.length > 0
+        ? (accessibleHomes.find((h) => h.id === currentHomeId) ?? accessibleHomes[0])
         : undefined;
 
     // Legacy fallback for current caregiver (for travel bag, etc.)
@@ -116,9 +118,9 @@ export default function Home() {
     // Filter missing items
     const missingItems = items.filter((item) => item.isMissing);
 
-    // Separate current home and other active homes (only show active homes on dashboard)
+    // Separate current home and other accessible homes (only show homes user can access)
     const activeHome = currentHome;
-    const otherHomes = activeHomes.filter((h) => h.id !== currentHomeId);
+    const otherHomes = accessibleHomes.filter((h) => h.id !== currentHomeId);
 
     // Get items for a specific home (NEW: by home_id)
     // Falls back to caregiver-based location for items without home_id
@@ -162,8 +164,31 @@ export default function Home() {
         return null;
     }
 
-    // If no ACTIVE homes configured yet, show a prompt to set up homes
-    if (activeHomes.length === 0) {
+    // If user has no accessible homes, show appropriate empty state
+    if (accessibleHomes.length === 0) {
+        // If user was invited but has no home access, show the invited caregiver empty state
+        if (inviteInfo) {
+            return (
+                <AppShell>
+                    <NoHomeAccessEmptyState
+                        inviterName={inviteInfo.inviterName}
+                        onCreateHome={() => router.push("/setup-home?new=true")}
+                        onWaitForAccess={() => {
+                            // Could show a toast or just stay on the page
+                            addToast({
+                                title: "Got it!",
+                                message: `We'll let you know when ${inviteInfo.inviterName} adds you to a home.`,
+                                type: "info",
+                            });
+                        }}
+                    />
+                    {/* Toast notifications - needed for addToast to render */}
+                    <ToastContainer toasts={toasts} onDismiss={removeToast} />
+                </AppShell>
+            );
+        }
+
+        // Otherwise, show the standard "set up your homes" prompt
         return (
             <AppShell>
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -220,7 +245,7 @@ export default function Home() {
     };
 
     // Get the home where the child currently is (for display when not at user's home)
-    const childCurrentHome = activeHomes.find(h => h.id === currentHomeId);
+    const childCurrentHome = accessibleHomes.find(h => h.id === currentHomeId);
     const childHomeOwner = childCurrentHome ? caregivers.find(c => c.id === childCurrentHome.ownerCaregiverId) : null;
 
     // Build dynamic subtitle

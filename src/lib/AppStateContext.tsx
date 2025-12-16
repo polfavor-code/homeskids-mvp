@@ -116,6 +116,17 @@ export type ChildSpace = {
     childId: string;
     homeId: string;
     homeName: string;
+    status: 'active' | 'inactive';
+};
+
+// ChildHome with full status info (for UI that shows both active and inactive)
+export type ChildHomeWithStatus = {
+    childSpaceId: string;
+    homeId: string;
+    homeName: string;
+    status: 'active' | 'inactive';
+    createdAt?: string;
+    updatedAt?: string;
 };
 
 // V2: Contact for a child_space (responsible adult)
@@ -145,6 +156,14 @@ export interface SwitchHomeResult {
     error?: string;
 }
 
+// Info about the invite that the current user accepted (if any)
+export type InviteInfo = {
+    inviterName: string;
+    inviterId: string;
+    childName: string;
+    hasOwnHome: boolean; // Whether they were asked to create their own home
+} | null;
+
 interface AppStateContextType {
     // V2: User can have access to multiple children
     children: ChildProfile[];
@@ -164,7 +183,7 @@ interface AppStateContextType {
     homes: HomeProfile[];
     setHomes: (homes: HomeProfile[]) => void;
     activeHomes: HomeProfile[]; // V1 compatibility: only active homes
-    hiddenHomes: HomeProfile[]; // V1 compatibility: only hidden homes
+    pendingHomes: HomeProfile[]; // V1 compatibility: homes with no caregivers (pending setup)
     childSpaces: ChildSpace[];
 
     // Current home (where child is now)
@@ -191,6 +210,9 @@ interface AppStateContextType {
 
     // Contacts for current child_space
     contacts: ChildSpaceContact[];
+
+    // Info about the invite the current user accepted (null if created own account)
+    inviteInfo: InviteInfo;
 
     // Onboarding
     onboardingCompleted: boolean;
@@ -220,6 +242,12 @@ interface AppStateContextType {
     getHomesForChild: (childId: string) => HomeProfile[]; // Get ALL homes for a specific child
     getAccessibleHomesForChild: (childId: string) => HomeProfile[]; // Get homes USER can access for a child
     accessibleHomes: HomeProfile[]; // Homes the current user can access for the current child
+    
+    // Child-Home linking helpers
+    getChildHomesWithStatus: (childId: string) => Promise<ChildHomeWithStatus[]>; // Get all homes for a child with status
+    toggleChildHomeStatus: (childId: string, homeId: string, newStatus: 'active' | 'inactive') => Promise<{ success: boolean; error?: string }>;
+    linkChildToHome: (childId: string, homeId: string, inviteId?: string) => Promise<{ success: boolean; error?: string }>;
+    getHomeChildrenWithStatus: (homeId: string) => Promise<{ childId: string; childName: string; childAvatarUrl?: string; status: 'active' | 'inactive' }[]>;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -261,6 +289,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // All child spaces (for all children) - needed for home lookup before child is selected
     const [allChildSpaces, setAllChildSpaces] = useState<ChildSpace[]>([]);
     
+    // Info about the invite the current user accepted (null if created own account)
+    const [inviteInfo, setInviteInfo] = useState<InviteInfo>(null);
+    
     // Clear all state when user changes (prevents data leakage between users)
     useEffect(() => {
         const currentUserId = user?.id || null;
@@ -281,6 +312,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setIsLoaded(false);
             setAllChildSpaces([]);
             setUpcomingStays([]);
+            setInviteInfo(null);
         }
         
         prevUserIdRef.current = currentUserId;
@@ -534,6 +566,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             }
 
             // 2. Get ALL child_spaces for all children (needed for home lookup)
+            // Filter by status='active' to only show active child-home links
             const allChildIds = loadedChildren.map(c => c.id);
             const { data: allChildSpacesData } = await supabase
                 .from("child_spaces")
@@ -541,6 +574,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     id,
                     child_id,
                     home_id,
+                    status,
                     homes (
                         id,
                         name,
@@ -550,7 +584,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         owner_caregiver_id
                     )
                 `)
-                .in("child_id", allChildIds);
+                .in("child_id", allChildIds)
+                .eq("status", "active");
                 
             // Build all child spaces list
             const loadedAllChildSpaces: ChildSpace[] = [];
@@ -561,6 +596,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         childId: cs.child_id,
                         homeId: cs.home_id,
                         homeName: cs.homes?.name || "Unknown",
+                        status: cs.status || "active",
                     });
                 }
             }
@@ -607,7 +643,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            // 3. Get child_spaces for the current child
+            // 3. Get child_spaces for the current child (only active links)
             const childIdToUse = activeChildId;
 
             const { data: childSpacesData } = await supabase
@@ -616,6 +652,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     id,
                     child_id,
                     home_id,
+                    status,
                     homes (
                         id,
                         name,
@@ -625,7 +662,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         owner_caregiver_id
                     )
                 `)
-                .eq("child_id", childIdToUse);
+                .eq("child_id", childIdToUse)
+                .eq("status", "active");
 
             const loadedChildSpaces: ChildSpace[] = [];
             const loadedHomes: HomeProfile[] = [];
@@ -638,6 +676,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         childId: cs.child_id,
                         homeId: cs.home_id,
                         homeName: cs.homes?.name || "Unknown",
+                        status: cs.status || "active",
                     });
 
                     if (cs.homes) {
@@ -661,6 +700,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             }
 
             // Get home_memberships to find which users are connected to each home
+            // Store at higher scope so we can use it for caregiver access derivation
+            let membershipsByHome: Record<string, string[]> = {};
             if (homeIds.length > 0) {
                 const { data: homeMemberships } = await supabase
                     .from("home_memberships")
@@ -669,7 +710,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
                 if (homeMemberships) {
                     // Group memberships by home_id
-                    const membershipsByHome = homeMemberships.reduce((acc, hm) => {
+                    membershipsByHome = homeMemberships.reduce((acc, hm) => {
                         if (!acc[hm.home_id]) acc[hm.home_id] = [];
                         acc[hm.home_id].push(hm.user_id);
                         return acc;
@@ -783,19 +824,28 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     ) || [];
 
                     // Determine accessible child_spaces:
-                    // - If user has explicit child_space_access records, use those (respects invite scoping)
-                    // - If user is a guardian with NO explicit records (legacy), give them all homes
-                    // - Helpers only get their explicitly granted access
+                    // - GUARDIANS get access to ALL homes for the child (this is the key fix!)
+                    // - Helpers: use explicit child_space_access records if they have any
+                    // - Otherwise: derive from home_memberships
                     let accessibleChildSpaceIds: string[];
-                    if (userSpaceAccess.length > 0) {
-                        // User has explicit access records - use those
+                    
+                    if (ca.role_type === "guardian") {
+                        // Guardians can access ALL homes linked to this child
+                        accessibleChildSpaceIds = loadedChildSpaces.map(cs => cs.id);
+                    } else if (userSpaceAccess.length > 0) {
+                        // Helper has explicit child_space_access records - use those
                         accessibleChildSpaceIds = userSpaceAccess.map((sa: any) => sa.child_space_id);
-                    } else if (ca.role_type === "guardian") {
-                        // Legacy guardian with no explicit access - give all homes for backwards compatibility
-                        accessibleChildSpaceIds = childSpaceIds;
                     } else {
-                        // Helper with no access - empty list
-                        accessibleChildSpaceIds = [];
+                        // Fall back to deriving from home_memberships
+                        // Check which homes this user has access to via home_memberships
+                        const userHomeIds = Object.entries(membershipsByHome)
+                            .filter(([_, userIds]) => (userIds as string[]).includes(ca.user_id))
+                            .map(([homeId]) => homeId);
+                        
+                        // Map home IDs to child_space IDs
+                        accessibleChildSpaceIds = loadedChildSpaces
+                            .filter(cs => userHomeIds.includes(cs.homeId))
+                            .map(cs => cs.id);
                     }
 
                     // V1 compatibility: derive accessibleHomeIds from child_space_ids
@@ -804,6 +854,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         return cs?.homeId;
                     }).filter(Boolean) as string[];
 
+                    // Derive status from home access
+                    // Active = connected to >= 1 home for this child
+                    // Inactive = connected to 0 homes for this child
+                    const caregiverStatus: CaregiverStatus = accessibleHomeIds.length > 0 ? "active" : "inactive";
+                    
                     loadedCaregivers.push({
                         id: ca.profiles.id,
                         name: ca.profiles.name || "Unknown",
@@ -829,7 +884,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         // V1 compatibility fields
                         relationship: ca.role_type === "guardian" ? "parent" : ca.helper_type,
                         accessibleHomeIds,
-                        status: "active" as CaregiverStatus,
+                        status: caregiverStatus,
                     });
                 }
             }
@@ -979,6 +1034,35 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 .single();
             setOnboardingCompleted(profileData?.onboarding_completed || false);
 
+            // 5b. Load invite info if user was invited (for no-home-access empty state)
+            const { data: acceptedInvite } = await supabase
+                .from("invites")
+                .select(`
+                    invited_by,
+                    has_own_home,
+                    child_id,
+                    children (name),
+                    inviter:profiles!invited_by (name, label)
+                `)
+                .eq("accepted_by", user.id)
+                .eq("status", "accepted")
+                .order("accepted_at", { ascending: false })
+                .limit(1)
+                .single();
+
+            if (acceptedInvite) {
+                const inviterProfile = acceptedInvite.inviter as any;
+                const childData = acceptedInvite.children as any;
+                setInviteInfo({
+                    inviterName: inviterProfile?.label || inviterProfile?.name || "Someone",
+                    inviterId: acceptedInvite.invited_by,
+                    childName: childData?.name || "your child",
+                    hasOwnHome: acceptedInvite.has_own_home || false,
+                });
+            } else {
+                setInviteInfo(null);
+            }
+
             // 6. Fetch upcoming stays for contextual bag visibility
             const now = new Date();
             const futureDate = new Date();
@@ -1116,7 +1200,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     // V1 compatibility: computed values
     const activeHomes = homes.filter(h => h.status === "active");
-    const hiddenHomes = homes.filter(h => h.status === "hidden");
+    const pendingHomes = homes.filter(h => h.status === "hidden");
     const currentJuneCaregiverId = currentUserCaregiver?.id || "";
 
     // V1 compatibility: setters that update the internal state
@@ -1274,6 +1358,229 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // ==========================================
+    // Child-Home Linking Helpers
+    // ==========================================
+    
+    // Get all homes for a child with their status (active and inactive)
+    const getChildHomesWithStatus = useCallback(async (childId: string): Promise<ChildHomeWithStatus[]> => {
+        try {
+            const { data, error } = await supabase
+                .from("child_spaces")
+                .select(`
+                    id,
+                    home_id,
+                    status,
+                    created_at,
+                    updated_at,
+                    homes (
+                        id,
+                        name
+                    )
+                `)
+                .eq("child_id", childId)
+                .order("status", { ascending: true }); // Active first (a < i alphabetically)
+            
+            if (error) {
+                console.error("Error fetching child homes with status:", error);
+                return [];
+            }
+            
+            return (data || []).map((cs: any) => ({
+                childSpaceId: cs.id,
+                homeId: cs.home_id,
+                homeName: cs.homes?.name || "Unknown",
+                status: cs.status || "active",
+                createdAt: cs.created_at,
+                updatedAt: cs.updated_at,
+            }));
+        } catch (err) {
+            console.error("Error in getChildHomesWithStatus:", err);
+            return [];
+        }
+    }, []);
+    
+    // Toggle a child-home link status (activate or deactivate)
+    const toggleChildHomeStatus = useCallback(async (
+        childId: string, 
+        homeId: string, 
+        newStatus: 'active' | 'inactive'
+    ): Promise<{ success: boolean; error?: string }> => {
+        try {
+            // First check if link exists
+            const { data: existing, error: fetchError } = await supabase
+                .from("child_spaces")
+                .select("id, status")
+                .eq("child_id", childId)
+                .eq("home_id", homeId)
+                .single();
+            
+            if (fetchError && fetchError.code !== "PGRST116") { // PGRST116 = not found
+                console.error("Error checking existing child_space:", fetchError);
+                return { success: false, error: fetchError.message };
+            }
+            
+            if (existing) {
+                // Update existing
+                const { error: updateError } = await supabase
+                    .from("child_spaces")
+                    .update({ status: newStatus })
+                    .eq("id", existing.id);
+                
+                if (updateError) {
+                    console.error("Error updating child_space status:", updateError);
+                    return { success: false, error: updateError.message };
+                }
+            } else if (newStatus === "active") {
+                // Create new link (only if activating)
+                const { error: insertError } = await supabase
+                    .from("child_spaces")
+                    .insert({
+                        child_id: childId,
+                        home_id: homeId,
+                        status: "active",
+                    });
+                
+                if (insertError) {
+                    console.error("Error creating child_space:", insertError);
+                    return { success: false, error: insertError.message };
+                }
+            } else {
+                return { success: false, error: "Cannot deactivate a link that doesn't exist" };
+            }
+            
+            // Refresh data to update UI
+            await refreshData();
+            return { success: true };
+        } catch (err) {
+            console.error("Error in toggleChildHomeStatus:", err);
+            return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+    }, [refreshData]);
+    
+    // Link a child to a home (create or reactivate)
+    const linkChildToHome = useCallback(async (
+        childId: string, 
+        homeId: string, 
+        inviteId?: string
+    ): Promise<{ success: boolean; error?: string }> => {
+        try {
+            // Check if link exists
+            const { data: existing, error: fetchError } = await supabase
+                .from("child_spaces")
+                .select("id, status")
+                .eq("child_id", childId)
+                .eq("home_id", homeId)
+                .single();
+            
+            if (fetchError && fetchError.code !== "PGRST116") {
+                console.error("Error checking existing child_space:", fetchError);
+                return { success: false, error: fetchError.message };
+            }
+            
+            if (existing) {
+                // Reactivate existing link
+                const { error: updateError } = await supabase
+                    .from("child_spaces")
+                    .update({ status: "active" })
+                    .eq("id", existing.id);
+                
+                if (updateError) {
+                    console.error("Error reactivating child_space:", updateError);
+                    return { success: false, error: updateError.message };
+                }
+            } else {
+                // Create new link
+                const insertData: any = {
+                    child_id: childId,
+                    home_id: homeId,
+                    status: "active",
+                };
+                if (inviteId) {
+                    insertData.created_by_invite_id = inviteId;
+                }
+                
+                const { error: insertError } = await supabase
+                    .from("child_spaces")
+                    .insert(insertData);
+                
+                if (insertError) {
+                    console.error("Error creating child_space:", insertError);
+                    return { success: false, error: insertError.message };
+                }
+            }
+
+            // Ensure the current user has a home_membership for this home
+            // This is needed so guardians can see homes they link to their children
+            // (especially when linking a home from another child's space)
+            // We use a security definer function to bypass RLS restrictions
+            if (user) {
+                const { error: membershipError } = await supabase
+                    .rpc("ensure_guardian_home_membership", {
+                        p_home_id: homeId,
+                        p_user_id: user.id
+                    });
+                
+                if (membershipError) {
+                    // Log but don't fail - the child_spaces link was created successfully
+                    console.warn("Could not ensure home_membership for user:", membershipError);
+                }
+            }
+            
+            // Refresh data to update UI
+            await refreshData();
+            return { success: true };
+        } catch (err) {
+            console.error("Error in linkChildToHome:", err);
+            return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+    }, [user, refreshData]);
+    
+    // Get all children for a home with their status
+    const getHomeChildrenWithStatus = useCallback(async (homeId: string): Promise<{ childId: string; childName: string; childAvatarUrl?: string; status: 'active' | 'inactive' }[]> => {
+        try {
+            const { data, error } = await supabase
+                .from("child_spaces")
+                .select(`
+                    id,
+                    child_id,
+                    status,
+                    children (
+                        id,
+                        name,
+                        avatar_url
+                    )
+                `)
+                .eq("home_id", homeId)
+                .order("status", { ascending: true }); // Active first (a < i alphabetically)
+            
+            if (error) {
+                console.error("Error fetching home children with status:", error);
+                return [];
+            }
+            
+            const result: { childId: string; childName: string; childAvatarUrl?: string; status: 'active' | 'inactive' }[] = [];
+            
+            for (const cs of (data || []) as any[]) {
+                let avatarUrl: string | undefined;
+                if (cs.children?.avatar_url) {
+                    avatarUrl = await getAvatarUrl(cs.children.avatar_url);
+                }
+                result.push({
+                    childId: cs.child_id,
+                    childName: cs.children?.name || "Unknown",
+                    childAvatarUrl: avatarUrl,
+                    status: cs.status || "active",
+                });
+            }
+            
+            return result;
+        } catch (err) {
+            console.error("Error in getHomeChildrenWithStatus:", err);
+            return [];
+        }
+    }, []);
+
     return (
         <AppStateContext.Provider
             value={{
@@ -1294,6 +1601,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 isChildAtUserHome,
                 currentUserPermissions,
                 contacts,
+                inviteInfo,
                 onboardingCompleted,
                 setOnboardingCompleted,
                 refreshData,
@@ -1307,7 +1615,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 child: currentChild,
                 setChild,
                 activeHomes,
-                hiddenHomes,
+                pendingHomes,
                 currentJuneCaregiverId,
                 setCurrentJuneCaregiverId,
                 switchChildHomeAndMovePackedItems,
@@ -1319,6 +1627,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 getHomesForChild,
                 getAccessibleHomesForChild,
                 accessibleHomes,
+                // Child-Home linking helpers
+                getChildHomesWithStatus,
+                toggleChildHomeStatus,
+                linkChildToHome,
+                getHomeChildrenWithStatus,
             }}
         >
             {children}

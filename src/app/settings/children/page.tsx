@@ -7,11 +7,12 @@ import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import ImageCropper from "@/components/ImageCropper";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState, HomeProfile } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { processImageForUpload } from "@/lib/imageUtils";
 import { ToastContainer, ToastData } from "@/components/Toast";
+import MobileMultiSelect from "@/components/MobileMultiSelect";
 
 // Calculate age from birthdate
 function calculateAge(birthdate: string): string {
@@ -38,7 +39,7 @@ export default function ChildrenPage() {
 
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
-    const { children, setCurrentChildId, refreshData, isLoaded, homes, childSpaces } = useAppState();
+    const { children, setCurrentChildId, refreshData, isLoaded, homes, childSpaces, currentHomeId } = useAppState();
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [toasts, setToasts] = useState<ToastData[]>([]);
@@ -197,6 +198,7 @@ export default function ChildrenPage() {
                     onChildAdded={handleChildAdded}
                     homes={homes}
                     childSpaces={childSpaces}
+                    currentHomeId={currentHomeId}
                 />
             )}
 
@@ -210,11 +212,12 @@ export default function ChildrenPage() {
 interface AddChildModalProps {
     onClose: () => void;
     onChildAdded: (childName: string) => void;
-    homes: { id: string; name: string }[];
+    homes: HomeProfile[];
     childSpaces: { id: string; childId: string; homeId: string }[];
+    currentHomeId?: string;
 }
 
-function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
+function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChildModalProps) {
     const { user } = useAuth();
     const { setCurrentChildId, refreshData } = useAppState();
     
@@ -228,6 +231,17 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
     const [error, setError] = useState("");
     const [cropperImage, setCropperImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Connected homes - preselect current home if available, otherwise select all if only one
+    const [selectedHomeIds, setSelectedHomeIds] = useState<string[]>(() => {
+        if (currentHomeId && homes.some(h => h.id === currentHomeId)) {
+            return [currentHomeId];
+        }
+        if (homes.length === 1) {
+            return [homes[0].id];
+        }
+        return [];
+    });
 
     const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!event.target.files || event.target.files.length === 0) {
@@ -323,6 +337,10 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
             setError("Please enter a name");
             return;
         }
+        if (selectedHomeIds.length === 0) {
+            setError("Please select at least one home for the child");
+            return;
+        }
         if (!user) {
             setError("Authentication error. Please try again.");
             return;
@@ -413,14 +431,16 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
                 }
             }
 
-            // Link child to all existing homes the user has access to
-            for (const home of homes) {
-                // Create child_space for each home
+            // Link child to SELECTED homes only (not all homes)
+            const selectedHomes = homes.filter(h => selectedHomeIds.includes(h.id));
+            for (const home of selectedHomes) {
+                // Create child_space for each selected home with status='active'
                 const { data: newChildSpace, error: csError } = await supabase
                     .from("child_spaces")
                     .insert({
                         home_id: home.id,
                         child_id: newChild.id,
+                        status: "active", // Explicitly set active status
                     })
                     .select()
                     .single();
@@ -441,6 +461,8 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
                     console.error("[AddChild] Error creating child_space_access:", csaError);
                 }
             }
+            
+            console.log("[AddChild] Linked child to", selectedHomes.length, "homes");
 
             // Set the newly created child as active
             setCurrentChildId(newChild.id);
@@ -611,6 +633,89 @@ function AddChildModal({ onClose, onChildAdded, homes }: AddChildModalProps) {
                             >
                                 Clear selection
                             </button>
+                        )}
+                    </div>
+
+                    {/* Connected Homes - Required */}
+                    <div>
+                        <label className="block text-sm font-semibold text-forest mb-1.5">
+                            Connected Homes <span className="text-red-500">*</span>
+                        </label>
+                        <p className="text-xs text-textSub mb-3">
+                            Select which homes this child stays in.
+                        </p>
+                        {homes.length === 0 ? (
+                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                                <p className="text-sm text-amber-700">
+                                    You need to create at least one home before adding a child.
+                                </p>
+                            </div>
+                        ) : homes.length === 1 ? (
+                            // Single home - show as pre-selected with info
+                            <div className="p-4 bg-softGreen/30 rounded-xl border border-forest/20">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-forest flex items-center justify-center flex-shrink-0">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-forest">{homes[0].name}</p>
+                                        <p className="text-xs text-textSub">This child will be added to your home.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            // Multiple homes - show multi-select
+                            <div className="space-y-2">
+                                {homes.map((home) => {
+                                    const isSelected = selectedHomeIds.includes(home.id);
+                                    return (
+                                        <button
+                                            key={home.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedHomeIds(prev => 
+                                                    prev.includes(home.id) 
+                                                        ? prev.filter(id => id !== home.id)
+                                                        : [...prev, home.id]
+                                                );
+                                            }}
+                                            className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                                                isSelected
+                                                    ? "bg-softGreen/30 border-forest/20"
+                                                    : "bg-white border-border hover:border-forest/30"
+                                            }`}
+                                        >
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                                isSelected
+                                                    ? "border-forest bg-forest"
+                                                    : "border-gray-300"
+                                            }`}>
+                                                {isSelected && (
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={isSelected ? "text-forest" : "text-textSub"}>
+                                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                                    <polyline points="9 22 9 12 15 12 15 22" />
+                                                </svg>
+                                                <span className={`text-sm font-medium truncate ${isSelected ? "text-forest" : "text-textSub"}`}>
+                                                    {home.name}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                                {selectedHomeIds.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                        Select at least one home
+                                    </p>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>

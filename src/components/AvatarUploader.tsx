@@ -18,32 +18,41 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
     const [uploading, setUploading] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string>("");
     const [error, setError] = useState("");
-    const [familyId, setFamilyId] = useState<string | null>(null);
+    const [storagePath, setStoragePath] = useState<string | null>(null);
     const [cropperImage, setCropperImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch user's family ID on mount
+    // Determine storage path: use family_id if available (V1), otherwise use user_id directly (V2)
     useEffect(() => {
-        const fetchFamilyId = async () => {
+        const determineStoragePath = async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session?.user) return;
 
+                // Try V1 approach: look for family_members entry
                 const { data: familyMember } = await supabase
                     .from("family_members")
                     .select("family_id")
                     .eq("user_id", session.user.id)
                     .single();
 
-                if (familyMember) {
-                    setFamilyId(familyMember.family_id);
+                if (familyMember?.family_id) {
+                    // V1 user with family
+                    setStoragePath(familyMember.family_id);
+                } else {
+                    // V2 user: use user_id as the folder path
+                    setStoragePath(`user_${session.user.id}`);
                 }
             } catch (err) {
-                console.error("Failed to fetch family ID:", err);
+                // V2 fallback: use user_id
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    setStoragePath(`user_${session.user.id}`);
+                }
             }
         };
 
-        fetchFamilyId();
+        determineStoragePath();
     }, []);
 
     useEffect(() => {
@@ -77,9 +86,9 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
             return;
         }
 
-        if (!familyId) {
-            console.log("No familyId");
-            setError("No family found. Please complete onboarding.");
+        if (!storagePath) {
+            console.log("No storagePath determined");
+            setError("Unable to upload. Please try again.");
             return;
         }
 
@@ -115,8 +124,8 @@ export default function AvatarUploader({ userId, currentAvatarUrl, userName, onU
             const croppedFile = new File([croppedBlob], "cropped.jpg", { type: "image/jpeg" });
             const processed = await processImageForUpload(croppedFile);
 
-            const originalPath = `${familyId}/${userId}-${timestamp}-${random}_original.jpg`;
-            const displayPath = `${familyId}/${userId}-${timestamp}-${random}_display.jpg`;
+            const originalPath = `${storagePath}/${userId}-${timestamp}-${random}_original.jpg`;
+            const displayPath = `${storagePath}/${userId}-${timestamp}-${random}_display.jpg`;
 
             // Upload original (full resolution)
             const { error: originalError } = await supabase.storage

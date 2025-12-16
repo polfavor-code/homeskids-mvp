@@ -19,7 +19,7 @@ export const navItems: NavItem[] = [
         route: '/',
     },
     {
-        label: "June's Items",
+        label: "{childName}'s Items",
         icon: 'ItemsIcon',
         route: '/items',
     },
@@ -51,7 +51,7 @@ export const navItems: NavItem[] = [
 ];
 
 export const accountNavItem: NavItem = {
-    label: "Daddy's Account",
+    label: "{userName}'s Account",
     icon: 'UserIcon',
     route: '/settings/account',
 };

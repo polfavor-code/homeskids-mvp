@@ -32,7 +32,7 @@ const dietTypeLabels: Record<DietType, string> = {
 
 export default function HealthPage() {
     useEnsureOnboarding();
-    const { child } = useAppState();
+    const { child, accessibleHomes } = useAppState();
     const {
         healthStatus,
         allergies,
@@ -42,8 +42,13 @@ export default function HealthPage() {
         hasAnyHealthData,
         updateHealthStatus,
     } = useHealth();
-    const childName = child?.name || "your child";
     const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
+    
+    // Check if user has home access
+    const hasHomeAccess = accessibleHomes.length > 0;
+    
+    // Only show child name if user has home access
+    const childName = hasHomeAccess ? (child?.name || "your child") : "your child";
 
     // Get severity badge colors
     const getSeverityStyle = (severity: string) => {
@@ -86,6 +91,34 @@ export default function HealthPage() {
             <AppShell>
                 <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-forest"></div>
+                </div>
+            </AppShell>
+        );
+    }
+
+    // No home access - show empty state with message
+    if (!hasHomeAccess) {
+        return (
+            <AppShell>
+                <div className="space-y-6">
+                    {/* Page Header */}
+                    <div>
+                        <h1 className="font-dmSerif text-2xl text-forest mt-2">Health</h1>
+                        <p className="text-sm text-textSub mt-1">
+                            Health information for your children.
+                        </p>
+                    </div>
+
+                    {/* Empty state for no home access */}
+                    <div className="card-organic p-8 text-center">
+                        <div className="w-16 h-16 rounded-full bg-softGreen/50 flex items-center justify-center text-forest mx-auto mb-4">
+                            <HealthIcon size={32} />
+                        </div>
+                        <h3 className="font-bold text-forest text-lg mb-2">No health information yet</h3>
+                        <p className="text-sm text-textSub">
+                            Add a child and set up a home to track health details.
+                        </p>
+                    </div>
                 </div>
             </AppShell>
         );
