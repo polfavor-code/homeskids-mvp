@@ -113,8 +113,25 @@ export default function DesktopNav() {
         currentHome,
         setCurrentChildId,
         refreshData,
+        accessibleHomes,
     } = useAppState();
     const { user } = useAuth();
+
+    // Check if user has home access (needed to show/hide child switcher)
+    const hasHomeAccess = accessibleHomes.length > 0;
+    
+    // Helper to replace placeholders in nav labels
+    // For users without home access, don't show child name in nav labels
+    const getLabel = (label: string): string => {
+        if (!hasHomeAccess) {
+            // Remove child name references for users without home access
+            return label
+                .replace("{childName}'s ", "")
+                .replace("{childName}", "");
+        }
+        const childName = currentChild?.name || "Child";
+        return label.replace("{childName}", childName);
+    };
     
     // Persist sidebar collapsed state in localStorage
     const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -262,7 +279,7 @@ export default function DesktopNav() {
                                 {!isCollapsed && (
                                     <>
                                         <span className="flex-1 text-[15px] whitespace-nowrap">
-                                            {item.label}
+                                            {getLabel(item.label)}
                                         </span>
                                         {hasSubItems && (
                                             <div className="flex-shrink-0">
@@ -305,7 +322,8 @@ export default function DesktopNav() {
             </div>
 
             {/* Child Switcher - Footer Card Style */}
-            {childrenList.length > 0 && (
+            {/* Only show when user has home access (helpers without homes see blank UI) */}
+            {childrenList.length > 0 && hasHomeAccess && (
                 <div className={`flex-shrink-0 border-t border-border py-3 ${isCollapsed ? 'px-2' : 'px-3'}`}>
                     {isCollapsed ? (
                         /* Collapsed: Show avatar stack */

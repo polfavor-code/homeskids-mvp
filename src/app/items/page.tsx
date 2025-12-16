@@ -18,7 +18,21 @@ function ItemsPageContent() {
     const pathname = usePathname();
 
     const { items } = useItems();
-    const { child, caregivers, homes } = useAppState();
+    const { child, caregivers, accessibleHomes } = useAppState();
+    
+    // Use only accessible homes for display
+    const homes = accessibleHomes;
+    const hasHomeAccess = accessibleHomes.length > 0;
+    
+    // Filter items to only show those in accessible homes (or unassigned items if user has access)
+    const accessibleItems = hasHomeAccess 
+        ? items.filter(item => {
+            // Show unassigned items
+            if (!item.locationHomeId) return true;
+            // Show items in accessible homes
+            return accessibleHomes.some(h => h.id === item.locationHomeId);
+          })
+        : []; // No home access = empty list
 
     // Home filter state from URL
     const filterParam = searchParams.get("filter");
@@ -83,9 +97,9 @@ function ItemsPageContent() {
         return caregiver ? `${caregiver.label}'s Home` : "No home yet";
     };
 
-    // Filter items by home or status
+    // Filter items by home or status (using accessibleItems as base)
     const getFilteredItems = () => {
-        let filtered = items;
+        let filtered = accessibleItems;
 
         if (homeFilter === "awaiting-location") {
             // Filter to show only items awaiting location
@@ -109,19 +123,19 @@ function ItemsPageContent() {
 
     const filteredItems = getFilteredItems();
 
-    // Calculate counts
-    const awaitingLocationCount = items.filter((item) => item.isMissing).length;
-    const totalCount = items.length;
-    const unassignedCount = items.filter((item) => !item.isMissing && !item.locationHomeId).length;
+    // Calculate counts (based on accessible items)
+    const awaitingLocationCount = accessibleItems.filter((item) => item.isMissing).length;
+    const totalCount = accessibleItems.length;
+    const unassignedCount = accessibleItems.filter((item) => !item.isMissing && !item.locationHomeId).length;
     
     // Determine if we should show the no-home banner
     const hasNoHomes = homes.length === 0;
     const hasUnassignedItems = unassignedCount > 0;
     const shouldShowNoHomeBanner = hasNoHomes && !isNoHomeBannerDismissed;
 
-    // Get home item count
+    // Get home item count (based on accessible items)
     const getHomeItemCount = (homeId: string) => {
-        return items.filter((item) => {
+        return accessibleItems.filter((item) => {
             if (item.isMissing) return false;
             if (item.locationHomeId) {
                 return item.locationHomeId === homeId;
@@ -202,8 +216,8 @@ function ItemsPageContent() {
         return "Packed";
     };
 
-    // Get unassigned item IDs for first home prompt
-    const unassignedItemIds = items
+    // Get unassigned item IDs for first home prompt (from accessible items)
+    const unassignedItemIds = accessibleItems
         .filter(item => !item.isMissing && !item.locationHomeId)
         .map(item => item.id);
 
@@ -221,8 +235,12 @@ function ItemsPageContent() {
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
                 <div>
-                    <h1 className="font-dmSerif text-2xl text-forest mt-2">{child?.name || "Child"}&apos;s Things</h1>
-                    <p className="text-sm text-textSub mt-1">All items across every home.</p>
+                    <h1 className="font-dmSerif text-2xl text-forest mt-2">
+                        {hasHomeAccess ? `${child?.name || "Child"}'s Things` : "Items"}
+                    </h1>
+                    <p className="text-sm text-textSub mt-1">
+                        {hasHomeAccess ? "All items across every home." : "Track items across homes."}
+                    </p>
                 </div>
                 <Link
                     href="/items/new"
@@ -464,7 +482,10 @@ function ItemsPageContent() {
                         </div>
                         <h3 className="font-bold text-gray-900 mb-1">No items yet</h3>
                         <p className="text-sm text-gray-500 max-w-xs mx-auto">
-                            Add clothes, toys, school stuff and more so you can keep track of them.
+                            {!hasHomeAccess 
+                                ? "Once you're added to a home, items will appear here automatically."
+                                : "Add clothes, toys, school stuff and more so you can keep track of them."
+                            }
                         </p>
                     </div>
                 )}

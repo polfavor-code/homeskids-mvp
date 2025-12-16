@@ -379,12 +379,16 @@ export default function OnboardingPage() {
                 });
 
                 // Link each child to this home (child_space)
+                // NOTE: During initial onboarding, we link all children to all homes
+                // because the parent is setting up their own environment.
+                // For invite-driven flows, see setup-home/page.tsx which scopes to specific child.
                 for (const childId of createdChildIds) {
                     const { data: newChildSpace, error: csError } = await supabase
                         .from("child_spaces")
                         .insert({
                             home_id: newHome.id,
                             child_id: childId,
+                            status: "active", // Explicitly set active status
                         })
                         .select()
                         .single();

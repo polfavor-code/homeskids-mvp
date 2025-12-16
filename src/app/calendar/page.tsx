@@ -44,8 +44,11 @@ function AppleCalendarIcon({ size = 14 }: { size?: number }) {
 
 function CalendarContent() {
     const { view, error, isLoading } = useCalendar();
-    const { currentChild, isLoaded: appLoaded } = useAppState();
+    const { currentChild, isLoaded: appLoaded, accessibleHomes } = useAppState();
     const [showAddModal, setShowAddModal] = useState(false);
+    
+    // Check if user has home access
+    const hasHomeAccess = accessibleHomes.length > 0;
     
     // Calendar sync status
     const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
@@ -68,6 +71,30 @@ function CalendarContent() {
             <AppShell>
                 <div className="flex items-center justify-center py-20">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta"></div>
+                </div>
+            </AppShell>
+        );
+    }
+    
+    // No home access - show empty state
+    if (!hasHomeAccess) {
+        return (
+            <AppShell>
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="font-dmSerif text-2xl text-forest mt-2">Calendar</h1>
+                        <p className="text-sm text-textSub mt-1">Events and schedules.</p>
+                    </div>
+                    
+                    <div className="card-organic p-8 text-center">
+                        <div className="w-16 h-16 bg-softGreen rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CalendarIcon size={32} className="text-forest" />
+                        </div>
+                        <h2 className="font-dmSerif text-xl text-forest mb-2">No events yet</h2>
+                        <p className="text-textSub">
+                            Once you&apos;re added to a home, calendar events will appear here automatically.
+                        </p>
+                    </div>
                 </div>
             </AppShell>
         );
