@@ -1378,12 +1378,9 @@ export default function CaregiversPage() {
                                             {caregiver.name !== caregiver.label && (
                                                 <p className="text-sm text-textSub truncate">{caregiver.name}</p>
                                             )}
-                                            {caregiver.childRoles.length > 0 && (
+                                            {caregiver.childRoles && caregiver.childRoles.length > 0 && (
                                                 <p className="text-xs text-forest/70 mt-0.5">
-                                                    {formatChildRoles(caregiver.childRoles.map(cr => ({ 
-                                                        childName: cr.childName, 
-                                                        role: ROLE_OPTIONS.find(r => r.label === cr.role)?.value || cr.role.toLowerCase().replace(' ', '_')
-                                                    })))}
+                                                    {formatChildRoles(caregiver.childRoles)}
                                                 </p>
                                             )}
                                         </div>
