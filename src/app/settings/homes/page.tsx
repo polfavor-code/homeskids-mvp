@@ -17,7 +17,7 @@ interface PhoneEntry {
     number: string;
 }
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState, HomeProfile, CaregiverProfile, HomeStatus } from "@/lib/AppStateContext";
+import { useAppState, HomeProfile, CaregiverProfile, HomeStatus, ArchivedHome } from "@/lib/AppStateContext";
 import { useItems } from "@/lib/ItemsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
@@ -369,7 +369,12 @@ export default function HomeSetupPage() {
         linkChildToHome,
         toggleChildHomeStatus,
         currentUserPermissions,
-        accessibleHomes
+        accessibleHomes,
+        // Archive (soft-delete) functions
+        archiveHome,
+        restoreHome,
+        getArchivedHomes,
+        permanentlyDeleteHome,
     } = useAppState();
     
     // Check if user has home access
@@ -426,6 +431,28 @@ export default function HomeSetupPage() {
         caregiverCount: number;
     };
     const [homeAddedToast, setHomeAddedToast] = useState<HomeAddedToast>({ show: false, homeName: "", homeId: "", caregiverCount: 0 });
+    
+    // Archived homes state
+    const [archivedHomes, setArchivedHomes] = useState<ArchivedHome[]>([]);
+    const [showArchivedSection, setShowArchivedSection] = useState(false);
+    const [loadingArchivedHomes, setLoadingArchivedHomes] = useState(false);
+    const [permanentDeleteModal, setPermanentDeleteModal] = useState<{ homeId: string; homeName: string; itemCount: number } | null>(null);
+    const [deleteConfirmText, setDeleteConfirmText] = useState("");
+    
+    // Item relocation state
+    type ArchivedHomeItem = {
+        id: string;
+        name: string;
+        category?: string;
+        photoUrl?: string;
+        childSpaceId: string;
+    };
+    const [itemRelocationModal, setItemRelocationModal] = useState<{ homeId: string; homeName: string } | null>(null);
+    const [archivedHomeItems, setArchivedHomeItems] = useState<ArchivedHomeItem[]>([]);
+    const [loadingItems, setLoadingItems] = useState(false);
+    const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+    const [destinationHomeId, setDestinationHomeId] = useState<string>("");
+    const [movingItems, setMovingItems] = useState(false);
 
     // Auto-show add form if ?add=true is in URL
     useEffect(() => {
@@ -628,7 +655,26 @@ export default function HomeSetupPage() {
         
         loadOtherHomes();
     }, [currentChildId, user, children, homes]); // Re-run when homes changes (after add/remove)
-    
+
+    // Load archived homes when section is expanded
+    useEffect(() => {
+        const loadArchivedHomesData = async () => {
+            if (!showArchivedSection) return;
+            
+            setLoadingArchivedHomes(true);
+            try {
+                const archived = await getArchivedHomes();
+                setArchivedHomes(archived);
+            } catch (err) {
+                console.error("Error loading archived homes:", err);
+            } finally {
+                setLoadingArchivedHomes(false);
+            }
+        };
+        
+        loadArchivedHomesData();
+    }, [showArchivedSection, getArchivedHomes]);
+
     // Handle adding a home to current child (reactivate or create new link)
     const handleAddHomeToChild = async (homeId: string) => {
         if (!currentChildId) return;
@@ -1032,30 +1078,213 @@ export default function HomeSetupPage() {
         }
     };
 
-    const handleDeleteHome = async (homeId: string, homeName: string) => {
-        if (!confirm(`Permanently remove "${homeName}"? This action cannot be undone. Items in this home will need to be reassigned.`)) return;
+    // Archive home (soft-delete) - home is hidden but data preserved
+    const handleArchiveHome = async (homeId: string, homeName: string) => {
+        if (!confirm(`Archive "${homeName}"? This home will be hidden but all items and data will be preserved. You can restore it anytime from the Archived homes section below.`)) return;
 
         try {
             setSaving(true);
+            const result = await archiveHome(homeId);
+            
+            if (!result.success) {
+                throw new Error(result.error || "Failed to archive home");
+            }
 
-            await supabase
-                .from("home_access")
-                .delete()
-                .eq("home_id", homeId);
-
-            const { error: deleteError } = await supabase
-                .from("homes")
-                .delete()
-                .eq("id", homeId);
-
-            if (deleteError) throw deleteError;
-
-            await refreshData();
-            setSuccessMessage("Home removed");
+            setSuccessMessage(`"${homeName}" has been archived`);
             setTimeout(() => setSuccessMessage(""), 3000);
+            // Refresh archived homes list if section is expanded
+            if (showArchivedSection) {
+                const archived = await getArchivedHomes();
+                setArchivedHomes(archived);
+            }
         } catch (err: any) {
-            console.error("Error deleting home:", err);
-            setError(err.message || "Failed to remove home");
+            console.error("Error archiving home:", err);
+            setError(err.message || "Failed to archive home");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Restore an archived home
+    const handleRestoreHome = async (homeId: string, homeName: string) => {
+        try {
+            setSaving(true);
+            const result = await restoreHome(homeId);
+            
+            if (!result.success) {
+                throw new Error(result.error || "Failed to restore home");
+            }
+
+            setSuccessMessage(`"${homeName}" has been restored`);
+            setTimeout(() => setSuccessMessage(""), 3000);
+            // Refresh archived homes list
+            const archived = await getArchivedHomes();
+            setArchivedHomes(archived);
+        } catch (err: any) {
+            console.error("Error restoring home:", err);
+            setError(err.message || "Failed to restore home");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Load items from an archived home for relocation
+    const loadArchivedHomeItems = async (homeId: string) => {
+        setLoadingItems(true);
+        try {
+            // Get child_spaces for this home
+            const { data: childSpacesData } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .eq("home_id", homeId);
+            
+            const childSpaceIds = (childSpacesData || []).map(cs => cs.id);
+            if (childSpaceIds.length === 0) {
+                setArchivedHomeItems([]);
+                return;
+            }
+            
+            // Get items in these child_spaces
+            const { data: itemsData, error: itemsError } = await supabase
+                .from("items")
+                .select("id, name, category, photo_url, child_space_id")
+                .in("child_space_id", childSpaceIds)
+                .order("name");
+            
+            if (itemsError) {
+                console.error("Error loading items:", itemsError);
+                setArchivedHomeItems([]);
+                return;
+            }
+            
+            // Get signed URLs for photos
+            const items: ArchivedHomeItem[] = [];
+            for (const item of (itemsData || [])) {
+                let photoUrl: string | undefined;
+                if (item.photo_url) {
+                    try {
+                        const { data } = await supabase.storage
+                            .from("item-photos")
+                            .createSignedUrl(item.photo_url, 3600);
+                        photoUrl = data?.signedUrl;
+                    } catch {
+                        // Ignore photo URL errors
+                    }
+                }
+                items.push({
+                    id: item.id,
+                    name: item.name,
+                    category: item.category,
+                    photoUrl,
+                    childSpaceId: item.child_space_id,
+                });
+            }
+            
+            setArchivedHomeItems(items);
+        } catch (err) {
+            console.error("Error in loadArchivedHomeItems:", err);
+            setArchivedHomeItems([]);
+        } finally {
+            setLoadingItems(false);
+        }
+    };
+    
+    // Open item relocation modal
+    const openItemRelocationModal = async (homeId: string, homeName: string) => {
+        setItemRelocationModal({ homeId, homeName });
+        setSelectedItemIds(new Set());
+        setDestinationHomeId("");
+        await loadArchivedHomeItems(homeId);
+    };
+    
+    // Move selected items to destination home
+    const handleMoveItems = async () => {
+        if (!destinationHomeId || selectedItemIds.size === 0 || !currentChildId) return;
+        
+        setMovingItems(true);
+        try {
+            // Get the destination child_space
+            const { data: destChildSpace, error: csError } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .eq("home_id", destinationHomeId)
+                .eq("child_id", currentChildId)
+                .single();
+            
+            if (csError || !destChildSpace) {
+                throw new Error("Could not find destination space for this child");
+            }
+            
+            // Update items to new child_space
+            const itemIds = Array.from(selectedItemIds);
+            const { error: updateError } = await supabase
+                .from("items")
+                .update({ child_space_id: destChildSpace.id })
+                .in("id", itemIds);
+            
+            if (updateError) {
+                throw new Error(updateError.message);
+            }
+            
+            const movedCount = itemIds.length;
+            setSuccessMessage(`Moved ${movedCount} item${movedCount !== 1 ? 's' : ''} to ${activeHomes.find(h => h.id === destinationHomeId)?.name || 'new home'}`);
+            setTimeout(() => setSuccessMessage(""), 3000);
+            
+            // Refresh the items list
+            if (itemRelocationModal) {
+                await loadArchivedHomeItems(itemRelocationModal.homeId);
+            }
+            
+            // Clear selection
+            setSelectedItemIds(new Set());
+            
+            // Refresh archived homes to update item counts
+            const archived = await getArchivedHomes();
+            setArchivedHomes(archived);
+            
+            // If no more items, close the modal
+            if (archivedHomeItems.length <= movedCount) {
+                setItemRelocationModal(null);
+            }
+        } catch (err: any) {
+            console.error("Error moving items:", err);
+            setError(err.message || "Failed to move items");
+        } finally {
+            setMovingItems(false);
+        }
+    };
+
+    // Permanently delete an archived home
+    const handlePermanentDelete = async () => {
+        if (!permanentDeleteModal) return;
+        
+        const { homeId, homeName, itemCount } = permanentDeleteModal;
+        
+        // Require typing home name if items exist
+        if (itemCount > 0 && deleteConfirmText !== homeName) {
+            setError("Please type the home name exactly to confirm deletion");
+            return;
+        }
+
+        try {
+            setSaving(true);
+            const result = await permanentlyDeleteHome(homeId);
+            
+            if (!result.success) {
+                throw new Error(result.error || "Failed to delete home");
+            }
+
+            setSuccessMessage(`"${homeName}" has been permanently deleted`);
+            setTimeout(() => setSuccessMessage(""), 3000);
+            // Reset modal state
+            setPermanentDeleteModal(null);
+            setDeleteConfirmText("");
+            // Refresh archived homes list
+            const archived = await getArchivedHomes();
+            setArchivedHomes(archived);
+        } catch (err: any) {
+            console.error("Error permanently deleting home:", err);
+            setError(err.message || "Failed to delete home");
         } finally {
             setSaving(false);
         }
@@ -1548,10 +1777,10 @@ export default function HomeSetupPage() {
                                     )}
                                 </div>
                                 <button
-                                    onClick={() => handleDeleteHome(home.id, home.name)}
-                                    className="text-sm text-textSub hover:text-red-500 transition-colors"
+                                    onClick={() => handleArchiveHome(home.id, home.name)}
+                                    className="text-sm text-textSub hover:text-amber-600 transition-colors"
                                 >
-                                    Remove
+                                    Archive
                                 </button>
                             </div>
                         </div>
@@ -2004,6 +2233,331 @@ export default function HomeSetupPage() {
                         </p>
 
                         {pendingHomes.map((home) => renderHomeCard(home, true))}
+                    </div>
+                )}
+
+                {/* ARCHIVED HOMES SECTION */}
+                <div className="pt-4 border-t border-border/30">
+                    <button
+                        onClick={() => setShowArchivedSection(!showArchivedSection)}
+                        className="w-full flex items-center justify-between py-2 text-left"
+                    >
+                        <h2 className="text-sm font-medium text-textSub flex items-center gap-2">
+                            <svg 
+                                width="16" 
+                                height="16" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="2"
+                                className={`transform transition-transform ${showArchivedSection ? 'rotate-90' : ''}`}
+                            >
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                            Archived homes
+                            {archivedHomes.length > 0 && (
+                                <span className="text-xs font-normal">({archivedHomes.length})</span>
+                            )}
+                        </h2>
+                    </button>
+                    
+                    {showArchivedSection && (
+                        <div className="mt-3 space-y-3">
+                            {loadingArchivedHomes ? (
+                                <div className="text-center py-4">
+                                    <div className="w-6 h-6 border-2 border-forest/30 border-t-forest rounded-full animate-spin mx-auto"></div>
+                                    <p className="text-xs text-textSub mt-2">Loading archived homes...</p>
+                                </div>
+                            ) : archivedHomes.length === 0 ? (
+                                <p className="text-sm text-textSub text-center py-4">
+                                    No archived homes
+                                </p>
+                            ) : (
+                                archivedHomes.map((home) => (
+                                    <div 
+                                        key={home.id}
+                                        className="card-organic p-4 bg-gray-50/50 border border-gray-200"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1">
+                                                <h3 className="font-medium text-gray-600">{home.name}</h3>
+                                                <div className="flex items-center gap-3 mt-1 text-xs text-textSub">
+                                                    <span>
+                                                        Archived {new Date(home.archivedAt).toLocaleDateString()}
+                                                    </span>
+                                                    <span>•</span>
+                                                    <span>
+                                                        {home.itemCount} item{home.itemCount !== 1 ? 's' : ''} remaining
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                                                {home.itemCount > 0 && (
+                                                    <button
+                                                        onClick={() => openItemRelocationModal(home.id, home.name)}
+                                                        disabled={saving}
+                                                        className="text-xs px-3 py-1.5 border border-forest text-forest rounded-lg font-medium hover:bg-forest/5 transition-colors disabled:opacity-50"
+                                                    >
+                                                        View items
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleRestoreHome(home.id, home.name)}
+                                                    disabled={saving}
+                                                    className="text-xs px-3 py-1.5 bg-forest text-white rounded-lg font-medium hover:bg-forest/90 transition-colors disabled:opacity-50"
+                                                >
+                                                    Restore
+                                                </button>
+                                                <button
+                                                    onClick={() => setPermanentDeleteModal({ 
+                                                        homeId: home.id, 
+                                                        homeName: home.name, 
+                                                        itemCount: home.itemCount 
+                                                    })}
+                                                    disabled={saving}
+                                                    className="text-xs px-3 py-1.5 text-red-600 hover:text-red-700 font-medium transition-colors disabled:opacity-50"
+                                                >
+                                                    Delete forever
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Permanent Delete Confirmation Modal */}
+                {permanentDeleteModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div 
+                            className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
+                            onClick={() => {
+                                setPermanentDeleteModal(null);
+                                setDeleteConfirmText("");
+                            }} 
+                        />
+                        <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+                            <div className="text-center">
+                                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-600">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                    </svg>
+                                </div>
+                                <h2 className="text-xl font-dmSerif text-forest">
+                                    Permanently delete "{permanentDeleteModal.homeName}"?
+                                </h2>
+                            </div>
+                            
+                            {permanentDeleteModal.itemCount > 0 ? (
+                                <>
+                                    <p className="text-sm text-textSub text-center">
+                                        This home still has <strong>{permanentDeleteModal.itemCount} item{permanentDeleteModal.itemCount !== 1 ? 's' : ''}</strong>. 
+                                        You can move them to another home first, or delete everything.
+                                    </p>
+                                    <p className="text-sm text-red-600 text-center font-medium">
+                                        This will permanently delete this home and all items stored in it. This action cannot be undone.
+                                    </p>
+                                    <div className="space-y-2">
+                                        <label className="block text-sm text-textSub">
+                                            To confirm, type "<strong>{permanentDeleteModal.homeName}</strong>" below:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={deleteConfirmText}
+                                            onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                            placeholder="Type home name to confirm"
+                                            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <p className="text-sm text-textSub text-center">
+                                    This home has no items. This action cannot be undone.
+                                </p>
+                            )}
+                            
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setPermanentDeleteModal(null);
+                                        setDeleteConfirmText("");
+                                    }}
+                                    className="flex-1 btn-secondary"
+                                >
+                                    Cancel
+                                </button>
+                                {permanentDeleteModal.itemCount > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            setPermanentDeleteModal(null);
+                                            setDeleteConfirmText("");
+                                            openItemRelocationModal(permanentDeleteModal.homeId, permanentDeleteModal.homeName);
+                                        }}
+                                        className="flex-1 btn-secondary"
+                                    >
+                                        Move items first
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handlePermanentDelete}
+                                    disabled={saving || (permanentDeleteModal.itemCount > 0 && deleteConfirmText !== permanentDeleteModal.homeName)}
+                                    className="flex-1 bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {saving ? "Deleting..." : "Delete permanently"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Item Relocation Modal */}
+                {itemRelocationModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div 
+                            className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
+                            onClick={() => setItemRelocationModal(null)} 
+                        />
+                        <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] flex flex-col">
+                            {/* Header */}
+                            <div className="p-4 border-b border-border/30 flex-shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-forest text-lg">Items in {itemRelocationModal.homeName}</h3>
+                                        <p className="text-sm text-textSub mt-1">
+                                            Select items to move to another home
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setItemRelocationModal(null)}
+                                        className="p-2 text-textSub hover:text-forest rounded-lg"
+                                    >
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Items List */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                                {loadingItems ? (
+                                    <div className="text-center py-8">
+                                        <div className="w-6 h-6 border-2 border-forest/30 border-t-forest rounded-full animate-spin mx-auto"></div>
+                                        <p className="text-xs text-textSub mt-2">Loading items...</p>
+                                    </div>
+                                ) : archivedHomeItems.length === 0 ? (
+                                    <p className="text-sm text-textSub text-center py-8">
+                                        No items in this home
+                                    </p>
+                                ) : (
+                                    <>
+                                        {/* Select all checkbox */}
+                                        <div className="flex items-center gap-2 pb-2 border-b border-border/30">
+                                            <input
+                                                type="checkbox"
+                                                id="select-all"
+                                                checked={selectedItemIds.size === archivedHomeItems.length && archivedHomeItems.length > 0}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedItemIds(new Set(archivedHomeItems.map(i => i.id)));
+                                                    } else {
+                                                        setSelectedItemIds(new Set());
+                                                    }
+                                                }}
+                                                className="w-4 h-4 rounded border-gray-300 text-forest focus:ring-forest"
+                                            />
+                                            <label htmlFor="select-all" className="text-sm font-medium text-forest">
+                                                Select all ({archivedHomeItems.length} items)
+                                            </label>
+                                        </div>
+                                        
+                                        {archivedHomeItems.map((item) => (
+                                            <label
+                                                key={item.id}
+                                                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                                                    selectedItemIds.has(item.id) 
+                                                        ? 'border-forest bg-softGreen/30' 
+                                                        : 'border-border hover:border-forest/30'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedItemIds.has(item.id)}
+                                                    onChange={(e) => {
+                                                        const newSet = new Set(selectedItemIds);
+                                                        if (e.target.checked) {
+                                                            newSet.add(item.id);
+                                                        } else {
+                                                            newSet.delete(item.id);
+                                                        }
+                                                        setSelectedItemIds(newSet);
+                                                    }}
+                                                    className="w-4 h-4 rounded border-gray-300 text-forest focus:ring-forest"
+                                                />
+                                                {item.photoUrl ? (
+                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                                        <img 
+                                                            src={item.photoUrl} 
+                                                            alt={item.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
+                                                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                                                            <circle cx="8.5" cy="8.5" r="1.5" />
+                                                            <path d="M21 15l-5-5L5 21" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-forest truncate">{item.name}</p>
+                                                    {item.category && (
+                                                        <p className="text-xs text-textSub">{item.category}</p>
+                                                    )}
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </>
+                                )}
+                            </div>
+                            
+                            {/* Footer with destination and move button */}
+                            {archivedHomeItems.length > 0 && (
+                                <div className="p-4 border-t border-border/30 space-y-3 flex-shrink-0">
+                                    <div>
+                                        <label className="block text-sm font-medium text-forest mb-1">
+                                            Move {selectedItemIds.size > 0 ? selectedItemIds.size : 'selected'} item{selectedItemIds.size !== 1 ? 's' : ''} to:
+                                        </label>
+                                        <select
+                                            value={destinationHomeId}
+                                            onChange={(e) => setDestinationHomeId(e.target.value)}
+                                            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                                        >
+                                            <option value="">Select destination home</option>
+                                            {activeHomes.map((home) => (
+                                                <option key={home.id} value={home.id}>
+                                                    {home.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={handleMoveItems}
+                                        disabled={movingItems || selectedItemIds.size === 0 || !destinationHomeId}
+                                        className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {movingItems ? "Moving..." : `Move ${selectedItemIds.size} item${selectedItemIds.size !== 1 ? 's' : ''}`}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
