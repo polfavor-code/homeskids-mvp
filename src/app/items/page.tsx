@@ -18,7 +18,7 @@ function ItemsPageContent() {
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
-    const { items, refreshItems } = useItems();
+    const { items, refetchItems } = useItems();
     const { child, caregivers, accessibleHomes, getItemsInArchivedHomes, currentChildId } = useAppState();
     
     // Archived home items state
@@ -225,8 +225,8 @@ function ItemsPageContent() {
             const destHome = homes.find(h => h.id === destinationHomeId);
             
             // Refresh items list
-            if (refreshItems) {
-                await refreshItems();
+            if (refetchItems) {
+                await refetchItems();
             }
             
             // Clear selection
@@ -279,8 +279,8 @@ function ItemsPageContent() {
             const deletedCount = itemIds.length;
             
             // Refresh items list
-            if (refreshItems) {
-                await refreshItems();
+            if (refetchItems) {
+                await refetchItems();
             }
             
             // Clear selection
