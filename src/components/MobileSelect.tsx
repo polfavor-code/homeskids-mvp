@@ -111,7 +111,7 @@ export default function MobileSelect({
                                     style={{ backgroundColor: option.avatarColor || '#2D5A47' }}
                                 >
                                     {option.avatarUrl ? (
-                                        <img src={option.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                        <img src={option.avatarUrl} alt={option.label || 'Avatar'} className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-white text-sm font-medium">
                                             {option.avatarInitials || option.label.charAt(0).toUpperCase()}
@@ -176,7 +176,7 @@ export default function MobileSelect({
                                             style={{ backgroundColor: option.avatarColor || '#2D5A47' }}
                                         >
                                             {option.avatarUrl ? (
-                                                <img src={option.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                                <img src={option.avatarUrl} alt={option.label || 'Avatar'} className="w-full h-full object-cover" />
                                             ) : (
                                                 <span className="text-white text-base font-medium">
                                                     {option.avatarInitials || option.label.charAt(0).toUpperCase()}
