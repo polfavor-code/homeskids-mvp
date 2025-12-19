@@ -86,25 +86,25 @@ export async function POST(request: NextRequest) {
         // Build notification content
         const title = "New items added";
         const itemWord = itemCount === 1 ? "item" : "items";
-        let body = `${userName} added ${itemCount} ${itemWord}`;
+        let messageBody = `${userName} added ${itemCount} ${itemWord}`;
         
         // Add item names if provided (up to 3)
         if (itemNames && itemNames.length > 0) {
             const displayNames = itemNames.slice(0, 3);
             if (itemNames.length > 3) {
-                body = `${userName} added ${displayNames.join(", ")} and ${itemNames.length - 3} more`;
+                messageBody = `${userName} added ${displayNames.join(", ")} and ${itemNames.length - 3} more`;
             } else {
-                body = `${userName} added ${displayNames.join(", ")}`;
+                messageBody = `${userName} added ${displayNames.join(", ")}`;
             }
         }
 
-        body += ` for ${childName}`;
+        messageBody += ` for ${childName}`;
 
         // Create notifications for each caregiver
         const notifications = otherCaregivers.map((caregiver) => ({
             user_id: caregiver.user_id,
             title,
-            body,
+            body: messageBody,
             url: "/items",
             tag: "items-added",
             data: {
