@@ -299,7 +299,6 @@ interface HomeFormData {
     wifiName: string;
     wifiPassword: string;
     notes: string;
-    isPrimary: boolean;
     accessibleCaregiverIds: string[];
     selectedChildIds: string[]; // Which children this home belongs to
     inviteLater: boolean; // If true, create home with 0 caregivers (user will invite later)
@@ -323,7 +322,6 @@ const getDefaultFormData = (currentChildId?: string): HomeFormData => ({
     wifiName: "",
     wifiPassword: "",
     notes: "",
-    isPrimary: false,
     accessibleCaregiverIds: [],
     selectedChildIds: currentChildId ? [currentChildId] : [], // Default to current child
     inviteLater: false, // Default: user should select caregivers
@@ -802,7 +800,6 @@ export default function HomeSetupPage() {
             wifiName: home.wifiName || "",
             wifiPassword: home.wifiPassword || "",
             notes: home.notes || "",
-            isPrimary: home.isPrimary || false,
             accessibleCaregiverIds: home.accessibleCaregiverIds || [],
             // For edits, child scope is not changed (managed via child_spaces table)
             selectedChildIds: currentChildId ? [currentChildId] : [],
@@ -844,24 +841,6 @@ export default function HomeSetupPage() {
                 .eq("user_id", user?.id)
                 .single();
 
-            // If setting as primary, unset other homes first
-            // Scope by user's accessible homes via home_memberships (works for both V1 and V2)
-            if (formData.isPrimary && user?.id) {
-                // Get all home IDs the user has access to
-                const { data: userHomes } = await supabase
-                    .from("home_memberships")
-                    .select("home_id")
-                    .eq("user_id", user.id);
-                
-                if (userHomes && userHomes.length > 0) {
-                    const userHomeIds = userHomes.map(h => h.home_id);
-                    await supabase
-                        .from("homes")
-                        .update({ is_primary: false })
-                        .in("id", userHomeIds);
-                }
-            }
-
             const homeData = {
                 name: formData.name.trim(),
                 address: formData.address.trim() || null,
@@ -877,7 +856,6 @@ export default function HomeSetupPage() {
                 wifi_name: formData.wifiName.trim() || null,
                 wifi_password: formData.wifiPassword.trim() || null,
                 notes: formData.notes.trim() || null,
-                is_primary: formData.isPrimary,
                 // Note: accessible_caregiver_ids is managed through child_space_access table
             };
 
@@ -1397,11 +1375,6 @@ export default function HomeSetupPage() {
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold text-forest text-base">{home.name}</h3>
-                            {home.isPrimary && (
-                                <span className="text-xs bg-softGreen text-forest px-2 py-0.5 rounded-full font-medium">
-                                    Primary
-                                </span>
-                            )}
                             {isHidden && (
                                 <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
                                     Pending
@@ -2891,18 +2864,6 @@ function HomeForm({
                     />
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        id="isPrimary"
-                        checked={formData.isPrimary}
-                        onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })}
-                        className="w-4 h-4 text-forest border-border rounded focus:ring-forest/20"
-                    />
-                    <label htmlFor="isPrimary" className="text-sm text-forest">
-                        Set as primary home
-                    </label>
-                </div>
             </div>
 
             {/* Location */}

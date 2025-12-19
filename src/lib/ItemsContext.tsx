@@ -145,6 +145,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     const [accessibleChildSpaceIds, setAccessibleChildSpaceIds] = useState<string[]>([]);
     const hasCompletedFetchRef = useRef(false);
     const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    const awaitingLocationChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     
     // Broadcast item update to all caregivers
     const broadcastItemUpdate = useCallback(() => {
@@ -154,6 +155,24 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 event: "items-updated",
                 payload: { timestamp: Date.now() },
             });
+        }
+    }, []);
+    
+    // Broadcast "awaiting location" event to notify all caregivers
+    const broadcastAwaitingLocation = useCallback((itemId: string, itemName: string, markedByUserId: string, childId: string) => {
+        if (awaitingLocationChannelRef.current) {
+            awaitingLocationChannelRef.current.send({
+                type: "broadcast",
+                event: "item-awaiting-location",
+                payload: { 
+                    itemId, 
+                    itemName, 
+                    markedByUserId, 
+                    childId,
+                    timestamp: Date.now() 
+                },
+            });
+            console.log("[Items] Broadcasted awaiting location event for:", itemName);
         }
     }, []);
 
@@ -373,10 +392,24 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             });
 
         broadcastChannelRef.current = broadcastChannel;
+        
+        // Also set up the awaiting location channel for sending notifications
+        const awaitingLocationChannelName = `awaiting-location-${currentChildId}`;
+        console.log("[Items] Setting up awaiting location channel:", awaitingLocationChannelName);
+        
+        const awaitingLocationChannel = supabase
+            .channel(awaitingLocationChannelName)
+            .subscribe((status) => {
+                console.log("[Items] Awaiting location channel status:", status);
+            });
+        
+        awaitingLocationChannelRef.current = awaitingLocationChannel;
 
         return () => {
             supabase.removeChannel(broadcastChannel);
+            supabase.removeChannel(awaitingLocationChannel);
             broadcastChannelRef.current = null;
+            awaitingLocationChannelRef.current = null;
         };
     }, [currentChildId, fetchItems]);
 
@@ -918,18 +951,43 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
         if (newLocation.toBeFound !== undefined) {
             const isMissing = newLocation.toBeFound;
             const status = isMissing ? "lost" as const : "at_home" as const;
-            setItems(prev => prev.map(item =>
-                item.id === itemId
-                    ? { ...item, isMissing, status }
-                    : item
+            
+            // Get the item to find its name and child_id for the broadcast
+            const item = items.find(i => i.id === itemId);
+            
+            setItems(prev => prev.map(i =>
+                i.id === itemId
+                    ? { ...i, isMissing, status }
+                    : i
             ));
 
             await supabase
                 .from("items")
                 .update({ status: newLocation.toBeFound ? "lost" : "at_home" })
                 .eq("id", itemId);
-            
+
             broadcastItemUpdate();
+            
+            // If marking as awaiting location, broadcast notification to other caregivers
+            if (isMissing && item && currentUserId && currentChildId) {
+                broadcastAwaitingLocation(itemId, item.name, currentUserId, currentChildId);
+                
+                // Also send push notification
+                try {
+                    await fetch("/api/push/notify-awaiting-location", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            childId: currentChildId,
+                            itemId: item.id,
+                            itemName: item.name,
+                        }),
+                    });
+                } catch (err) {
+                    console.error("[Items] Failed to send awaiting location push notification:", err);
+                }
+            }
+            
             return;
         }
         

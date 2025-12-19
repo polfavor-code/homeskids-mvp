@@ -14,7 +14,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
     {
-        label: 'Homes',
+        label: 'Dashboard',
         icon: 'HomeIcon',
         route: '/',
     },
@@ -44,6 +44,16 @@ export const navItems: NavItem[] = [
         route: '/health',
     },
     {
+        label: 'Homes',
+        icon: 'HomeIcon',
+        route: '/settings/homes',
+    },
+    {
+        label: 'Caregivers',
+        icon: 'FamilyIcon',
+        route: '/settings/caregivers',
+    },
+    {
         label: 'Settings',
         icon: 'SettingsIcon',
         route: '/settings',
@@ -64,6 +74,16 @@ export function isRouteActive(pathname: string, route: string): boolean {
     if (route === '/') {
         return pathname === '/';
     }
+    
+    // Special case for /settings - don't match if on /settings/homes or /settings/caregivers
+    // since those have their own nav items
+    if (route === '/settings') {
+        if (pathname === '/settings') return true;
+        if (pathname.startsWith('/settings/homes')) return false;
+        if (pathname.startsWith('/settings/caregivers')) return false;
+        return pathname.startsWith('/settings/');
+    }
+    
     return pathname === route || pathname.startsWith(route + '/');
 }
 
