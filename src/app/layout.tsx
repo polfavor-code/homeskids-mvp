@@ -25,9 +25,12 @@ export const metadata: Metadata = {
         title: "homes.kids",
     },
     icons: {
-        apple: [
-            { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        icon: [
+            { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+            { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+            { url: "/favicon.png", sizes: "48x48", type: "image/png" },
         ],
+        apple: "/apple-touch-icon.png",
     },
     openGraph: {
         title: "homes.kids",
@@ -43,7 +46,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-    themeColor: "#4A90E2",
+    themeColor: "#2C3E2D",
     width: "device-width",
     initialScale: 1,
     maximumScale: 1,
