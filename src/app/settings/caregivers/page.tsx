@@ -140,6 +140,10 @@ export default function CaregiversPage() {
     // Adding caregiver state
     const [addingCaregiverId, setAddingCaregiverId] = useState<string | null>(null);
     
+    // Collapsible sections state (collapsed by default)
+    const [isInactiveExpanded, setIsInactiveExpanded] = useState(false);
+    const [isOtherExpanded, setIsOtherExpanded] = useState(false);
+    
     // Role picker modal state
     const [rolePickerModal, setRolePickerModal] = useState<{
         isOpen: boolean;
@@ -1192,16 +1196,38 @@ export default function CaregiversPage() {
                     </div>
                 )}
 
-                {/* Inactive Caregivers List */}
+                {/* Inactive Caregivers List - Collapsible */}
                 {inactiveCaregivers.length > 0 && (
                     <div className="space-y-3">
-                        <h2 className="text-sm font-semibold text-forest">
-                            Inactive caregivers ({inactiveCaregivers.length})
-                        </h2>
-                        <p className="text-xs text-textSub -mt-1 mb-2">
-                            These caregivers have no home access yet. Add them to a home to activate their access.
-                        </p>
-                        {inactiveCaregivers.map(renderCaregiverCard)}
+                        <button
+                            onClick={() => setIsInactiveExpanded(!isInactiveExpanded)}
+                            className="w-full flex items-center gap-2 text-left group"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className={`text-textSub transition-transform ${isInactiveExpanded ? 'rotate-90' : ''}`}
+                            >
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                            <h2 className="text-sm font-semibold text-textSub group-hover:text-forest transition-colors">
+                                Inactive caregivers ({inactiveCaregivers.length})
+                            </h2>
+                        </button>
+                        {isInactiveExpanded && (
+                            <>
+                                <p className="text-xs text-textSub ml-6">
+                                    These caregivers have no home access yet. Add them to a home to activate their access.
+                                </p>
+                                <div className="space-y-3">
+                                    {inactiveCaregivers.map(renderCaregiverCard)}
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -1334,75 +1360,94 @@ export default function CaregiversPage() {
                     </div>
                 )}
 
-                {/* Other Caregivers Section - caregivers in account not connected to this child */}
+                {/* Other Caregivers Section - collapsible, caregivers in account not connected to this child */}
                 {(otherCaregivers.length > 0 || loadingOtherCaregivers) && (
                     <div className="space-y-3 pt-2">
-                        <div>
-                            <h2 className="text-sm font-semibold text-forest flex items-center gap-2">
+                        <button
+                            onClick={() => setIsOtherExpanded(!isOtherExpanded)}
+                            className="w-full flex items-center gap-2 text-left group"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className={`text-textSub transition-transform ${isOtherExpanded ? 'rotate-90' : ''}`}
+                            >
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                            <h2 className="text-sm font-semibold text-textSub group-hover:text-forest transition-colors flex items-center gap-2">
                                 Other caregivers
                                 {!loadingOtherCaregivers && (
-                                    <span className="text-sm font-normal text-textSub">({otherCaregivers.length})</span>
+                                    <span className="text-sm font-normal">({otherCaregivers.length})</span>
                                 )}
                             </h2>
-                            <p className="text-xs text-textSub mt-1">
-                                Caregivers in your account who aren't connected to {child?.name || "this child"} yet.
-                            </p>
-                        </div>
+                        </button>
 
-                        {loadingOtherCaregivers ? (
-                            <div className="flex items-center justify-center py-6">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-forest"></div>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {otherCaregivers.map((caregiver) => (
-                                    <div
-                                        key={caregiver.id}
-                                        className="card-organic p-4 flex items-center gap-4"
-                                    >
-                                        {/* Avatar */}
-                                        <div 
-                                            className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
-                                            style={{ backgroundColor: caregiver.avatarUrl ? 'transparent' : caregiver.avatarColor }}
-                                        >
-                                            {caregiver.avatarUrl ? (
-                                                <img 
-                                                    src={caregiver.avatarUrl} 
-                                                    alt={caregiver.label}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <span className="text-white font-bold text-sm">
-                                                    {caregiver.avatarInitials}
-                                                </span>
-                                            )}
-                                        </div>
+                        {isOtherExpanded && (
+                            <>
+                                <p className="text-xs text-textSub ml-6">
+                                    Caregivers in your account who aren't connected to {child?.name || "this child"} yet.
+                                </p>
 
-                                        {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-forest text-base truncate">{caregiver.label}</h3>
-                                            {caregiver.name !== caregiver.label && (
-                                                <p className="text-sm text-textSub truncate">{caregiver.name}</p>
-                                            )}
-                                            {caregiver.childRoles && caregiver.childRoles.length > 0 && (
-                                                <p className="text-xs text-forest/70 mt-0.5">
-                                                    {formatChildRoles(caregiver.childRoles)}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Add Button - Guardians only */}
-                                        {isGuardian && (
-                                            <button
-                                                onClick={() => setRolePickerModal({ isOpen: true, caregiver, selectedRole: "", nickname: "" })}
-                                                className="px-4 py-2 bg-forest text-white rounded-xl text-sm font-medium hover:bg-forest/90 transition-colors flex-shrink-0"
-                                            >
-                                                Add to {child?.name || "child"}&apos;s caregivers
-                                            </button>
-                                        )}
+                                {loadingOtherCaregivers ? (
+                                    <div className="flex items-center justify-center py-6">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-forest"></div>
                                     </div>
-                                ))}
-                            </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {otherCaregivers.map((caregiver) => (
+                                            <div
+                                                key={caregiver.id}
+                                                className="card-organic p-4 flex items-center gap-4"
+                                            >
+                                                {/* Avatar */}
+                                                <div 
+                                                    className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                                    style={{ backgroundColor: caregiver.avatarUrl ? 'transparent' : caregiver.avatarColor }}
+                                                >
+                                                    {caregiver.avatarUrl ? (
+                                                        <img 
+                                                            src={caregiver.avatarUrl} 
+                                                            alt={caregiver.label}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-white font-bold text-sm">
+                                                            {caregiver.avatarInitials}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-bold text-forest text-base truncate">{caregiver.label}</h3>
+                                                    {caregiver.name !== caregiver.label && (
+                                                        <p className="text-sm text-textSub truncate">{caregiver.name}</p>
+                                                    )}
+                                                    {caregiver.childRoles && caregiver.childRoles.length > 0 && (
+                                                        <p className="text-xs text-forest/70 mt-0.5">
+                                                            {formatChildRoles(caregiver.childRoles)}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Add Button - Guardians only */}
+                                                {isGuardian && (
+                                                    <button
+                                                        onClick={() => setRolePickerModal({ isOpen: true, caregiver, selectedRole: "", nickname: "" })}
+                                                        className="px-4 py-2 bg-forest text-white rounded-xl text-sm font-medium hover:bg-forest/90 transition-colors flex-shrink-0"
+                                                    >
+                                                        Add to {child?.name || "child"}&apos;s caregivers
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 )}
