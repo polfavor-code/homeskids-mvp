@@ -6,10 +6,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
 const iconsDir = join(publicDir, 'icons');
 
-// SVG content for the logo icon - houses are bigger (scale factor increased)
+// SVG content for the logo icon
 const createIconSvg = (size, cornerRadius) => {
-    // Make houses bigger - use size/95 instead of size/140 for ~45% larger
-    const scale = size / 95;
+    // Scale houses - size/105 gives good visibility without being too big
+    const scale = size / 105;
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -26,9 +26,9 @@ const createIconSvg = (size, cornerRadius) => {
 </svg>`;
 };
 
-// Favicon SVG - even bigger houses for tiny sizes
+// Favicon SVG - slightly bigger for tiny sizes to maintain visibility
 const createFaviconSvg = (size) => {
-    const scale = size / 75;
+    const scale = size / 82;
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -46,7 +46,7 @@ const createFaviconSvg = (size) => {
 };
 
 async function convertIcons() {
-    console.log('Converting icons with bigger houses...');
+    console.log('Converting icons...');
     
     // 192x192 icon
     const svg192 = Buffer.from(createIconSvg(192, 38));
@@ -90,7 +90,7 @@ async function convertIcons() {
         .toFile(join(publicDir, 'favicon.png'));
     console.log('✓ Created favicon.png');
     
-    console.log('Done! Houses are now ~45% bigger.');
+    console.log('Done! Icons regenerated.');
 }
 
 convertIcons().catch(console.error);
