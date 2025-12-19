@@ -26,9 +26,9 @@ const createIconSvg = (size, cornerRadius) => {
 </svg>`;
 };
 
-// Favicon SVG - slightly bigger for tiny sizes to maintain visibility
+// Favicon SVG - smaller scale to add padding around houses
 const createFaviconSvg = (size) => {
-    const scale = size / 86;
+    const scale = size / 105;
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
