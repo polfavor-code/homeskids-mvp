@@ -227,26 +227,28 @@ export default function HomesHorizontalSection({
                         <div className="home-card">
                             {/* Top row: section label + pagination aligned */}
                             <div className="card-label-row">
-                                <span className="card-section-label">NEXT DESTINATION(S)</span>
-                                <div className="card-pagination">
-                                    <button
-                                        className="pagination-arrow"
-                                        onClick={(e) => { e.stopPropagation(); prevDestination(); }}
-                                        aria-label="Previous home"
-                                    >
-                                        ‹
-                                    </button>
-                                    <span className="pagination-indicator">
-                                        {currentDestinationIndex + 1}/{otherHomes.length}
-                                    </span>
-                                    <button
-                                        className="pagination-arrow"
-                                        onClick={(e) => { e.stopPropagation(); nextDestination(); }}
-                                        aria-label="Next home"
-                                    >
-                                        ›
-                                    </button>
-                                </div>
+                                <span className="card-section-label">NEXT DESTINATION{otherHomes.length > 1 ? "(S)" : ""}</span>
+                                {otherHomes.length > 1 && (
+                                    <div className="card-pagination">
+                                        <button
+                                            className="pagination-arrow"
+                                            onClick={(e) => { e.stopPropagation(); prevDestination(); }}
+                                            aria-label="Previous home"
+                                        >
+                                            ‹
+                                        </button>
+                                        <span className="pagination-indicator">
+                                            {currentDestinationIndex + 1}/{otherHomes.length}
+                                        </span>
+                                        <button
+                                            className="pagination-arrow"
+                                            onClick={(e) => { e.stopPropagation(); nextDestination(); }}
+                                            aria-label="Next home"
+                                        >
+                                            ›
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             {/* Title with Next stay badge/button */}
                             <div className="card-title-row">

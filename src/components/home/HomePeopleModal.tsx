@@ -48,6 +48,29 @@ export default function HomePeopleModal({
         return name.charAt(0).toUpperCase();
     };
 
+    // Convert Tailwind bg class to actual CSS color
+    const getAvatarBgColor = (avatarColor?: string): string => {
+        if (!avatarColor) return "#2C3E2D";
+        // If it's already a hex/rgb color, use it directly
+        if (avatarColor.startsWith("#") || avatarColor.startsWith("rgb")) return avatarColor;
+        // Map common Tailwind bg classes to colors
+        const colorMap: Record<string, string> = {
+            "bg-gray-500": "#6B7280",
+            "bg-gray-400": "#9CA3AF",
+            "bg-gray-600": "#4B5563",
+            "bg-red-500": "#EF4444",
+            "bg-blue-500": "#3B82F6",
+            "bg-green-500": "#22C55E",
+            "bg-yellow-500": "#EAB308",
+            "bg-purple-500": "#A855F7",
+            "bg-pink-500": "#EC4899",
+            "bg-indigo-500": "#6366F1",
+            "bg-teal-500": "#14B8A6",
+            "bg-orange-500": "#F97316",
+        };
+        return colorMap[avatarColor] || "#2C3E2D";
+    };
+
     // Get relationship label
     const getRelationshipLabel = (relationship?: string): string | null => {
         if (!relationship) return null;
@@ -95,18 +118,22 @@ export default function HomePeopleModal({
                         <div className="flex items-center gap-3">
                             {/* Avatar */}
                             <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                                style={{ backgroundColor: caregiver.avatarColor || "#2C3E2D" }}
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden relative"
+                                style={{ backgroundColor: getAvatarBgColor(caregiver.avatarColor) }}
                             >
-                                {caregiver.avatarUrl ? (
+                                {/* Always show initials as base layer */}
+                                <span className="z-0">{getInitials(caregiver.name)}</span>
+                                {/* Overlay image if available */}
+                                {caregiver.avatarUrl && caregiver.avatarUrl.trim() !== "" && (
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img
                                         src={caregiver.avatarUrl}
                                         alt={caregiver.name}
-                                        className="w-full h-full rounded-full object-cover"
+                                        className="absolute inset-0 w-full h-full rounded-full object-cover z-10"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                        }}
                                     />
-                                ) : (
-                                    getInitials(caregiver.name)
                                 )}
                             </div>
 
