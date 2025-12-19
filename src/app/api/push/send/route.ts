@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
 
 // Helper to mark notification as failed
 async function markFailed(
-    supabase: ReturnType<typeof createClient>,
+    supabase: any,
     notificationId: string,
     error: string
 ) {
