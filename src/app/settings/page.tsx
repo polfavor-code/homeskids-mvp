@@ -6,7 +6,7 @@ import AppShell from "@/components/layout/AppShell";
 import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
-import { SettingsIcon, UserIcon, HomeIcon } from "@/components/icons/DuotoneIcons";
+import { SettingsIcon, UserIcon } from "@/components/icons/DuotoneIcons";
 import Avatar from "@/components/Avatar";
 
 export default function SettingsPage() {
@@ -125,52 +125,6 @@ export default function SettingsPage() {
                             </svg>
                         </Link>
 
-                        {/* Homes */}
-                        <Link
-                            href="/settings/homes"
-                            className="flex items-center gap-4 p-4 rounded-xl bg-green-50/50 border border-green-100 hover:border-green-200 transition-colors group"
-                        >
-                            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:scale-105 transition-transform">
-                                <HomeIcon size={24} />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-semibold text-forest">Homes</h3>
-                                <p className="text-xs text-textSub mt-0.5">
-                                    {activeHomesCount} home{activeHomesCount !== 1 ? "s" : ""} set up &middot; Add or edit homes
-                                </p>
-                            </div>
-                            <svg className="w-5 h-5 text-textSub/50 group-hover:text-forest transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                        </Link>
-
-                        {/* Caregivers */}
-                        <Link
-                            href="/settings/caregivers"
-                            className="flex items-center gap-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100 hover:border-blue-200 transition-colors group"
-                        >
-                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-105 transition-transform">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                </svg>
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-semibold text-forest">Caregivers</h3>
-                                <p className="text-xs text-textSub mt-0.5">
-                                    {hasHomeAccess 
-                                        ? `${visibleCaregivers} caregiver${visibleCaregivers !== 1 ? "s" : ""} · Invite & manage access`
-                                        : "Invite & manage access"
-                                    }
-                                </p>
-                            </div>
-                            <svg className="w-5 h-5 text-textSub/50 group-hover:text-forest transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                        </Link>
-
                         {/* Permissions */}
                         <Link
                             href="/settings/permissions"
@@ -207,6 +161,28 @@ export default function SettingsPage() {
                                 <h3 className="font-semibold text-forest">Integrations</h3>
                                 <p className="text-xs text-textSub mt-0.5">
                                     Connect Google Calendar & more
+                                </p>
+                            </div>
+                            <svg className="w-5 h-5 text-textSub/50 group-hover:text-forest transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </Link>
+
+                        {/* Notifications */}
+                        <Link
+                            href="/settings/notifications"
+                            className="flex items-center gap-4 p-4 rounded-xl bg-amber-50/50 border border-amber-100 hover:border-amber-200 transition-colors group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-105 transition-transform">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-forest">Notifications</h3>
+                                <p className="text-xs text-textSub mt-0.5">
+                                    Push notifications &amp; alerts
                                 </p>
                             </div>
                             <svg className="w-5 h-5 text-textSub/50 group-hover:text-forest transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -470,7 +470,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         name,
                         dob,
                         avatar_url,
-                        gender
+                        gender,
+                        current_home_id
                     )
                 `)
                 .eq("user_id", user.id);
@@ -502,9 +503,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
             // Build children list (deduplicated by child name to handle duplicate DB entries)
             // Also build a map of child name -> all child IDs with that name (for loading invites)
+            // And track current_home_id from database (source of truth for home location)
             const loadedChildren: ChildProfile[] = [];
             const seenChildNames = new Set<string>();
             const childNameToAllIds: Record<string, string[]> = {};
+            const childCurrentHomeMap: Record<string, string> = {}; // childId -> current_home_id from DB
             
             console.log("📊 Raw childAccessData:", JSON.stringify(childAccessData, null, 2));
             
@@ -522,6 +525,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         childNameToAllIds[childName] = [];
                     }
                     childNameToAllIds[childName].push(ca.children.id);
+                    
+                    // Track the current_home_id from database (source of truth)
+                    if (ca.children.current_home_id) {
+                        childCurrentHomeMap[ca.children.id] = ca.children.current_home_id;
+                    }
                     
                     // Only add to visible list if not already seen
                     if (!seenChildNames.has(childName)) {
@@ -771,23 +779,41 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 ? loadedHomes  // Guardians can access all homes
                 : loadedHomes.filter(h => h.accessibleCaregiverIds?.includes(user.id));
 
-            // Validate stored home ID - must be in user's ACCESSIBLE homes
+            // Determine active home ID based on selection logic:
+            // PRIORITY 1: Use child's current_home_id from database (source of truth for where child is)
+            // PRIORITY 2: Fall back to localStorage if DB value not accessible
+            // PRIORITY 3: Auto-select first accessible home
+            const dbCurrentHomeId = childCurrentHomeMap[childIdToUse] || "";
+            const dbHomeValid = dbCurrentHomeId && userAccessibleHomes.some(h => h.id === dbCurrentHomeId);
             const storedHomeValid = storedHomeId && userAccessibleHomes.some(h => h.id === storedHomeId);
             
-            // Determine active home ID based on selection logic:
-            // 1. If stored home is valid and accessible, use it
-            // 2. Otherwise, auto-select the first accessible home
-            // Home selection is non-blocking - always auto-select to avoid blocking login
             let activeHomeId = "";
-            if (storedHomeValid) {
+            if (dbHomeValid) {
+                // Database says child is at this home - use it (source of truth)
+                activeHomeId = dbCurrentHomeId;
+                // Update localStorage to match
+                if (typeof window !== "undefined" && homeKey) {
+                    localStorage.setItem(homeKey, activeHomeId);
+                }
+            } else if (storedHomeValid) {
+                // Fall back to localStorage if DB home not set or not accessible
                 activeHomeId = storedHomeId;
             } else if (userAccessibleHomes.length >= 1) {
+                // Auto-select first accessible home
                 activeHomeId = userAccessibleHomes[0].id;
-                // Persist the auto-selection
                 if (typeof window !== "undefined" && homeKey) {
                     localStorage.setItem(homeKey, activeHomeId);
                 }
             }
+            
+            console.log("[AppState] Home selection:", {
+                dbCurrentHomeId,
+                dbHomeValid,
+                storedHomeId,
+                storedHomeValid,
+                activeHomeId,
+                childIdToUse
+            });
             
             if (activeHomeId && activeHomeId !== currentHomeId) {
                 setCurrentHomeIdState(activeHomeId);

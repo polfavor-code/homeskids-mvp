@@ -12,6 +12,8 @@ import { HomeSwitchAlertProvider } from "@/lib/HomeSwitchAlertContext";
 import { HomeSwitchToastContainer } from "@/components/HomeSwitchToast";
 import { DocumentAddedAlertProvider } from "@/lib/DocumentAddedAlertContext";
 import { DocumentAddedToastContainer } from "@/components/DocumentAddedToast";
+import { AwaitingLocationAlertProvider } from "@/lib/AwaitingLocationAlertContext";
+import { AwaitingLocationToastContainer } from "@/components/AwaitingLocationToast";
 import "../styles/globals.css";
 import Script from "next/script";
 
@@ -70,10 +72,13 @@ export default function RootLayout({
                                             <HealthProvider>
                                                 <DocumentsProvider>
                                                     <DocumentAddedAlertProvider>
-                                                        {children}
-                                                        <ItemsAddedToastContainer />
-                                                        <HomeSwitchToastContainer />
-                                                        <DocumentAddedToastContainer />
+                                                        <AwaitingLocationAlertProvider>
+                                                            {children}
+                                                            <ItemsAddedToastContainer />
+                                                            <HomeSwitchToastContainer />
+                                                            <DocumentAddedToastContainer />
+                                                            <AwaitingLocationToastContainer />
+                                                        </AwaitingLocationAlertProvider>
                                                     </DocumentAddedAlertProvider>
                                                 </DocumentsProvider>
                                             </HealthProvider>

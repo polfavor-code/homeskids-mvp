@@ -14,6 +14,8 @@ import {
     HealthIcon,
     SettingsIcon,
     UserIcon,
+    HomeIcon,
+    FamilyIcon,
 } from '@/components/icons/DuotoneIcons';
 
 // Logo icon for center home button - matches Logo.tsx exactly
@@ -89,6 +91,8 @@ export default function MobileNav() {
     // Check if any "more" item is active
     const isMoreActive = isRouteActive(pathname, '/documents') ||
         isRouteActive(pathname, '/health') ||
+        isRouteActive(pathname, '/settings/homes') ||
+        isRouteActive(pathname, '/settings/caregivers') ||
         isRouteActive(pathname, '/settings');
 
     return (
@@ -208,6 +212,34 @@ export default function MobileNav() {
                                 >
                                     <HealthIcon size={22} />
                                     <span className="text-[15px]">Health</span>
+                                </Link>
+
+                                {/* Homes */}
+                                <Link
+                                    href="/settings/homes"
+                                    onClick={() => setShowMoreMenu(false)}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                        isRouteActive(pathname, '/settings/homes')
+                                            ? 'bg-softGreen text-forest font-semibold'
+                                            : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <HomeIcon size={22} />
+                                    <span className="text-[15px]">Homes</span>
+                                </Link>
+
+                                {/* Caregivers */}
+                                <Link
+                                    href="/settings/caregivers"
+                                    onClick={() => setShowMoreMenu(false)}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                        isRouteActive(pathname, '/settings/caregivers')
+                                            ? 'bg-softGreen text-forest font-semibold'
+                                            : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <FamilyIcon size={22} />
+                                    <span className="text-[15px]">Caregivers</span>
                                 </Link>
 
                                 {/* Settings */}

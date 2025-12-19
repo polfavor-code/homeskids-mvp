@@ -18,6 +18,8 @@ import {
     UserIcon,
     ChevronDownIcon,
     ChevronRightIcon,
+    HomeIcon,
+    FamilyIcon,
 } from '@/components/icons/DuotoneIcons';
 
 // Logo icon for home button - matches the brand logo
@@ -101,6 +103,8 @@ const iconMap = {
     HealthIcon,
     SettingsIcon,
     UserIcon,
+    HomeIcon,
+    FamilyIcon,
 };
 
 export default function DesktopNav() {
@@ -468,25 +472,25 @@ export default function DesktopNav() {
             <div className={`flex-shrink-0 border-t border-border py-4 ${isCollapsed ? 'flex justify-center' : 'px-3'}`}>
                 <Link
                     href={accountNavItem.route}
-                    className={`flex items-center transition-colors rounded-full ${isCollapsed
-                        ? 'justify-center w-12 h-12 p-0'
-                        : 'gap-3 px-2 py-2'
+                    className={`flex items-center h-12 transition-colors rounded-2xl ${isCollapsed
+                        ? 'justify-center w-12 p-0'
+                        : 'gap-4 px-4'
                         } ${isRouteActive(pathname, accountNavItem.route)
-                            ? 'bg-softGreen'
-                            : 'hover:bg-black/5'
+                            ? 'bg-gradient-forest text-white shadow-active font-bold'
+                            : 'text-gray-700 hover:bg-softGreen hover:text-forest font-semibold'
                         }`}
                     title={isCollapsed ? `${userLabel}` : undefined}
                 >
                     <Avatar
                         src={userAvatarUrl}
                         initial={userInitials}
-                        size={36}
-                        bgColor="#2C3E2D"
+                        size={24}
+                        bgColor={isRouteActive(pathname, accountNavItem.route) ? "#FFFFFF" : "#2C3E2D"}
                     />
                     {!isCollapsed && (
-                        <div className="text-sm font-bold text-forest whitespace-nowrap">
-                            {userLabel}'s Account
-                        </div>
+                        <span className="text-[15px] whitespace-nowrap">
+                            {userLabel}&apos;s Account
+                        </span>
                     )}
                 </Link>
             </div>
