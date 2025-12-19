@@ -150,10 +150,19 @@ export default function NotificationsSettingsPage() {
                 throw new Error("Invalid subscription");
             }
 
-            // Send to server
+            // Get the current session for auth header
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                throw new Error("Not authenticated");
+            }
+
+            // Send to server with Authorization header
             const response = await fetch("/api/push/subscribe", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`,
+                },
                 body: JSON.stringify({
                     endpoint: subJson.endpoint,
                     p256dh: subJson.keys.p256dh,
@@ -193,10 +202,16 @@ export default function NotificationsSettingsPage() {
                 await subscription.unsubscribe();
             }
 
+            // Get session for auth header
+            const { data: { session } } = await supabase.auth.getSession();
+
             // Tell server
             await fetch("/api/push/unsubscribe", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    ...(session?.access_token && { "Authorization": `Bearer ${session.access_token}` }),
+                },
                 body: JSON.stringify({ endpoint: subscriptionEndpoint }),
             });
 

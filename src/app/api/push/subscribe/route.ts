@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
     try {
@@ -15,15 +14,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get authenticated user
-        const cookieStore = await cookies();
+        // Get authenticated user via Authorization header (Bearer token)
+        const authHeader = request.headers.get("authorization");
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return NextResponse.json({ error: "Missing authorization header" }, { status: 401 });
+        }
+
+        const accessToken = authHeader.replace("Bearer ", "");
+
+        // Create Supabase client with the user's token
         const supabase = createClient(supabaseUrl, supabaseAnonKey, {
             global: {
                 headers: {
-                    cookie: cookieStore.toString(),
+                    Authorization: `Bearer ${accessToken}`,
                 },
             },
         });
@@ -42,8 +48,14 @@ export async function POST(request: NextRequest) {
             ? platform
             : "unknown";
 
+        // Use admin client for database operations (bypasses RLS)
+        const supabaseAdmin = createClient(
+            supabaseUrl,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
         // Upsert subscription (update if endpoint exists, insert if new)
-        const { error: upsertError } = await supabase
+        const { error: upsertError } = await supabaseAdmin
             .from("push_subscriptions")
             .upsert(
                 {

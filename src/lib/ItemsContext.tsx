@@ -589,15 +589,22 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
             // Send push notification to other caregivers (fire and forget)
             const childIdForNotification = childSpaceData?.child_id || currentChildId;
             if (childIdForNotification) {
-                fetch("/api/push/notify-items-added", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        childId: childIdForNotification,
-                        itemCount: 1,
-                        itemNames: [item.name],
-                    }),
-                }).catch((e) => console.warn("Push notification failed:", e));
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.access_token) {
+                        fetch("/api/push/notify-items-added", {
+                            method: "POST",
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${session.access_token}`,
+                            },
+                            body: JSON.stringify({
+                                childId: childIdForNotification,
+                                itemCount: 1,
+                                itemNames: [item.name],
+                            }),
+                        }).catch((e) => console.warn("Push notification failed:", e));
+                    }
+                });
             }
             
             return { success: true, item: newItem };
@@ -974,15 +981,21 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                 
                 // Also send push notification
                 try {
-                    await fetch("/api/push/notify-awaiting-location", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            childId: currentChildId,
-                            itemId: item.id,
-                            itemName: item.name,
-                        }),
-                    });
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.access_token) {
+                        await fetch("/api/push/notify-awaiting-location", {
+                            method: "POST",
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${session.access_token}`,
+                            },
+                            body: JSON.stringify({
+                                childId: currentChildId,
+                                itemId: item.id,
+                                itemName: item.name,
+                            }),
+                        });
+                    }
                 } catch (err) {
                     console.error("[Items] Failed to send awaiting location push notification:", err);
                 }

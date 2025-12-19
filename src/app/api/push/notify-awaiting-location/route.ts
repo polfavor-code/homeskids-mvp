@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 
 // API route to create notifications when an item is marked as "awaiting location"
 // Called by the client after marking an item as lost/missing
@@ -17,15 +16,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get authenticated user
-        const cookieStore = await cookies();
+        // Get authenticated user via Authorization header (Bearer token)
+        const authHeader = request.headers.get("authorization");
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return NextResponse.json({ error: "Missing authorization header" }, { status: 401 });
+        }
+
+        const accessToken = authHeader.replace("Bearer ", "");
+
+        // Create Supabase client with the user's token
         const supabase = createClient(supabaseUrl, supabaseAnonKey, {
             global: {
                 headers: {
-                    cookie: cookieStore.toString(),
+                    Authorization: `Bearer ${accessToken}`,
                 },
             },
         });
@@ -41,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         // Get admin client for cross-user operations
         const supabaseAdmin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            supabaseUrl,
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
 
