@@ -411,7 +411,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // Always clear home when switching children
         // The home auto-selection will be handled by refreshData() based on user access
         setCurrentHomeIdState("");
-    }, [user?.id]);
+    }, [user?.id, currentChildId, homes]);
 
     const setCurrentHomeId = useCallback((homeId: string) => {
         setCurrentHomeIdState(homeId);
@@ -1142,9 +1142,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // Trigger refreshData when user changes OR when currentChildId changes
+    // This ensures child-specific homes are loaded when switching children
     useEffect(() => {
         refreshData();
-    }, [user]);
+    }, [user, currentChildId]);
 
     // Track current home ID in a ref to avoid stale closure issues in realtime callback
     const currentHomeIdRef = useRef<string>(currentHomeId);
