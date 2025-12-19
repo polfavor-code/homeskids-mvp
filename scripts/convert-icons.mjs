@@ -8,8 +8,8 @@ const iconsDir = join(publicDir, 'icons');
 
 // SVG content for the logo icon
 const createIconSvg = (size, cornerRadius) => {
-    // Scale houses - size/105 gives good visibility without being too big
-    const scale = size / 105;
+    // Scale houses - size/110 for balanced size
+    const scale = size / 110;
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -28,7 +28,7 @@ const createIconSvg = (size, cornerRadius) => {
 
 // Favicon SVG - slightly bigger for tiny sizes to maintain visibility
 const createFaviconSvg = (size) => {
-    const scale = size / 82;
+    const scale = size / 86;
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
