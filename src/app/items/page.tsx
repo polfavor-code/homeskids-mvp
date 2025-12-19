@@ -19,7 +19,7 @@ function ItemsPageContent() {
     const pathname = usePathname();
 
     const { items, refetchItems } = useItems();
-    const { child, caregivers, accessibleHomes, getItemsInArchivedHomes, currentChildId } = useAppState();
+    const { child, caregivers, accessibleHomes, getItemsInArchivedHomes, currentChildId, childSpaces } = useAppState();
     
     // Archived home items state
     const [archivedItemsCount, setArchivedItemsCount] = useState(0);
@@ -45,9 +45,19 @@ function ItemsPageContent() {
     const homes = accessibleHomes;
     const hasHomeAccess = accessibleHomes.length > 0;
     
-    // Filter items to only show those in accessible homes (or unassigned items if user has access)
+    // Get child_space IDs for the current child to filter items
+    const currentChildSpaceIds = React.useMemo(() => {
+        if (!currentChildId || !childSpaces) return [];
+        return childSpaces.filter((cs: any) => cs.childId === currentChildId).map((cs: any) => cs.id);
+    }, [currentChildId, childSpaces]);
+    
+    // Filter items to only show those for the current child AND in accessible homes
     const accessibleItems = hasHomeAccess 
         ? items.filter(item => {
+            // First, filter by current child's child_spaces
+            if (currentChildSpaceIds.length > 0 && !currentChildSpaceIds.includes(item.childSpaceId)) {
+                return false;
+            }
             // Show unassigned items
             if (!item.locationHomeId) return true;
             // Show items in accessible homes

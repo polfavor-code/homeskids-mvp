@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,15 +13,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get authenticated user
-        const cookieStore = await cookies();
+        // Get authenticated user via Authorization header (Bearer token)
+        const authHeader = request.headers.get("authorization");
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return NextResponse.json({ error: "Missing authorization header" }, { status: 401 });
+        }
+
+        const accessToken = authHeader.replace("Bearer ", "");
+
+        // Create Supabase client with the user's token
         const supabase = createClient(supabaseUrl, supabaseAnonKey, {
             global: {
                 headers: {
-                    cookie: cookieStore.toString(),
+                    Authorization: `Bearer ${accessToken}`,
                 },
             },
         });
@@ -36,9 +42,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        // Use admin client for database operations (bypasses RLS)
+        const supabaseAdmin = createClient(
+            supabaseUrl,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
         // Soft-delete: set is_active to false
         // This preserves the record for debugging but prevents notifications
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
             .from("push_subscriptions")
             .update({ is_active: false })
             .eq("endpoint", endpoint)

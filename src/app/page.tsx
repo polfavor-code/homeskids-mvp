@@ -119,8 +119,10 @@ export default function Home() {
     const missingItems = items.filter((item) => item.isMissing);
 
     // Separate current home and other accessible homes (only show homes user can access)
+    // FIX: Use currentHome.id instead of currentHomeId to ensure consistency
+    // This prevents the same home appearing as both current AND destination
     const activeHome = currentHome;
-    const otherHomes = accessibleHomes.filter((h) => h.id !== currentHomeId);
+    const otherHomes = accessibleHomes.filter((h) => h.id !== currentHome?.id);
 
     // Get items for a specific home (NEW: by home_id)
     // Falls back to caregiver-based location for items without home_id

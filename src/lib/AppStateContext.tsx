@@ -364,15 +364,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         canViewContacts: currentUserCaregiver?.canViewContacts || false,
     };
     
-    // Derived: homes the current user has access to (filtered by user access, not all homes for child)
-    // - Guardians have access to all homes for the child
-    // - Helpers only have access to homes via their accessibleHomeIds
-    const accessibleHomes = homes.filter(home => {
-        // If no current user caregiver info yet, assume all homes accessible (will refine when loaded)
-        if (!currentUserCaregiver) return true;
-        // Check if this home is in the user's accessible homes
-        return currentUserCaregiver.accessibleHomeIds.includes(home.id);
-    });
+    // Derived: homes visible for the current child's dashboard
+    // ALL caregivers for a child should see ALL homes where that child can be
+    // This ensures everyone sees the same view of where the child is and can go
+    // Note: `homes` is already scoped to the current child via child_spaces
+    // Membership restrictions should apply to management actions, not visibility
+    const accessibleHomes = homes;
     
     // Derived: needs child selection (multiple children, none selected)
     const needsChildSelection = childrenList.length > 1 && !currentChildId;
@@ -772,18 +769,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             // Determine which homes the current user can access
             // - Guardians have access to all homes for the child
             // - Helpers only have access to homes via home_memberships
+            // - IMPORTANT: Always include the child's CURRENT home so all caregivers see the same location
             const userChildAccess = childAccessData?.find((ca: any) => ca.child_id === childIdToUse);
             const isUserGuardian = userChildAccess?.role_type === "guardian";
+            const dbCurrentHomeId = childCurrentHomeMap[childIdToUse] || "";
             
-            const userAccessibleHomes = isUserGuardian 
+            let userAccessibleHomes = isUserGuardian 
                 ? loadedHomes  // Guardians can access all homes
                 : loadedHomes.filter(h => h.accessibleCaregiverIds?.includes(user.id));
+            
+            // CRITICAL FIX: Always include the child's current home in accessible homes
+            // This ensures ALL caregivers see the same "WHERE CHILD IS" card
+            if (dbCurrentHomeId && !userAccessibleHomes.some(h => h.id === dbCurrentHomeId)) {
+                const currentHomeFromDb = loadedHomes.find(h => h.id === dbCurrentHomeId);
+                if (currentHomeFromDb) {
+                    // Add current home to accessible homes (at the start for visibility)
+                    userAccessibleHomes = [currentHomeFromDb, ...userAccessibleHomes];
+                }
+            }
 
             // Determine active home ID based on selection logic:
             // PRIORITY 1: Use child's current_home_id from database (source of truth for where child is)
             // PRIORITY 2: Fall back to localStorage if DB value not accessible
             // PRIORITY 3: Auto-select first accessible home
-            const dbCurrentHomeId = childCurrentHomeMap[childIdToUse] || "";
+            // Note: dbCurrentHomeId was already declared above for the accessible homes fix
             const dbHomeValid = dbCurrentHomeId && userAccessibleHomes.some(h => h.id === dbCurrentHomeId);
             const storedHomeValid = storedHomeId && userAccessibleHomes.some(h => h.id === storedHomeId);
             
