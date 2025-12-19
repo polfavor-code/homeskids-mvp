@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 
 export default function MyAccountPage() {
     useEnsureOnboarding();
@@ -37,6 +38,9 @@ export default function MyAccountPage() {
     const [confirmNewPassword, setConfirmNewPassword] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [savingPassword, setSavingPassword] = useState(false);
+
+    // Push notifications - just check subscription status for display
+    const { isSubscribed: pushSubscribed } = usePushNotifications();
 
     useEffect(() => {
         if (user) {
@@ -481,6 +485,32 @@ export default function MyAccountPage() {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Notifications */}
+                <div className="card-organic p-6">
+                    <h2 className="font-bold text-forest text-lg mb-3">Notifications</h2>
+                    <Link
+                        href="/settings/notifications"
+                        className="flex items-center justify-between p-4 rounded-xl bg-cream/50 hover:bg-cream transition-colors"
+                    >
+                        <div>
+                            <p className="font-semibold text-forest text-sm">Push Notifications</p>
+                            <p className="text-xs text-textSub mt-0.5">
+                                {pushSubscribed
+                                    ? "Enabled on this device"
+                                    : "Get alerts when items are added or plans change"}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {pushSubscribed && (
+                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            )}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-textSub">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* Log Out */}
