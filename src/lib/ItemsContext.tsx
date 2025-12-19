@@ -552,6 +552,21 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
 
             setItems(prev => [...prev, newItem]);
             broadcastItemUpdate(); // Notify other caregivers
+            
+            // Send push notification to other caregivers (fire and forget)
+            const childIdForNotification = childSpaceData?.child_id || currentChildId;
+            if (childIdForNotification) {
+                fetch("/api/push/notify-items-added", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        childId: childIdForNotification,
+                        itemCount: 1,
+                        itemNames: [item.name],
+                    }),
+                }).catch((e) => console.warn("Push notification failed:", e));
+            }
+            
             return { success: true, item: newItem };
         } catch (error) {
             return { success: false, error: error instanceof Error ? error.message : "Unknown error" };

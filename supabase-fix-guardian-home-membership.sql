@@ -104,3 +104,4 @@ ORDER BY p.name, h.name, c.name;
 -- 2. The new function can be called from the app to add memberships
 -- 3. Refresh your browser to see the changes
 -- ============================================
+
