@@ -190,7 +190,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
             // Subscribe to push
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
             });
 
             // Get subscription details
