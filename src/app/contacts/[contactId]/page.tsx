@@ -32,7 +32,7 @@ export default function ContactDetailPage() {
     const params = useParams();
     const contactId = params.contactId as string;
     const { contacts, isLoaded, updateContact, deleteContact, toggleFavorite } = useContacts();
-    const { caregivers } = useAppState();
+    const { caregivers, children, currentChildId } = useAppState();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isEditing, setIsEditing] = useState(false);
@@ -45,6 +45,7 @@ export default function ContactDetailPage() {
     const [name, setName] = useState("");
     const [role, setRole] = useState("");
     const [category, setCategory] = useState<ContactCategory>("other");
+    const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
     const [email, setEmail] = useState("");
     const [telegram, setTelegram] = useState("");
@@ -103,6 +104,42 @@ export default function ContactDetailPage() {
     const allOption = {
         value: "all",
         label: caregivers.length > 2 ? "All caregivers" : "Both sides",
+    };
+
+    // Child options for selection (only used when multiple children)
+    const childOptions = children.map((child) => ({
+        value: child.id,
+        label: child.name,
+    }));
+
+    // "All children" option for the multi-select
+    const allChildrenOption = {
+        value: "all",
+        label: children.length > 2 ? "All children" : "Both children",
+    };
+
+    // Show child selector only when there are multiple children
+    const showChildSelector = children.length > 1;
+
+    // Get the child name for display
+    const getChildName = (childId?: string) => {
+        if (!childId) return null;
+        const child = children.find(c => c.id === childId);
+        return child?.name || null;
+    };
+
+    // Get display text for selected children (for view mode)
+    const getSelectedChildrenLabel = () => {
+        if (selectedChildIds.length === 0) return null;
+        const allIds = children.map(c => c.id);
+        if (allIds.length > 1 && allIds.every(id => selectedChildIds.includes(id))) {
+            return children.length > 2 ? "All children" : "Both children";
+        }
+        const names = selectedChildIds
+            .map(id => children.find(c => c.id === id)?.name)
+            .filter(Boolean);
+        if (names.length <= 2) return names.join(", ");
+        return `${names.length} children`;
     };
 
     // Handle photo upload
@@ -293,6 +330,10 @@ export default function ContactDetailPage() {
             setAddressLat(contact.addressLat);
             setAddressLng(contact.addressLng);
             
+            // Child ID - initialize as array for MobileMultiSelect
+            const initialChildId = contact.childId || currentChildId || "";
+            setSelectedChildIds(initialChildId ? [initialChildId] : []);
+            
             // Avatar
             setAvatarUrl(contact.avatarUrl || null);
             if (contact.avatarUrl) {
@@ -332,6 +373,7 @@ export default function ContactDetailPage() {
             name: name.trim(),
             role: role.trim(),
             category,
+            childId: selectedChildIds[0] || undefined,
             phoneNumbers: validPhoneNumbers,
             email: email.trim() || undefined,
             telegram: telegram.trim() || undefined,
@@ -522,7 +564,7 @@ export default function ContactDetailPage() {
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full font-dmSerif text-xl text-forest border-b border-border focus:outline-none focus:border-forest pb-1"
+                                className="w-full font-dmSerif text-xl text-forest border-b border-border focus:outline-none focus:border-forest pb-1 bg-transparent"
                             />
                         ) : (
                             <div className="flex items-center gap-2">
@@ -545,7 +587,7 @@ export default function ContactDetailPage() {
                                 value={role}
                                 onChange={(e) => setRole(e.target.value)}
                                 placeholder="Role / Title"
-                                className="w-full text-sm text-textSub border-b border-border focus:outline-none focus:border-forest pb-1 mt-2"
+                                className="w-full text-sm text-textSub border-b border-border focus:outline-none focus:border-forest pb-1 mt-2 bg-transparent"
                             />
                         ) : (
                             contact.role && (
@@ -579,6 +621,29 @@ export default function ContactDetailPage() {
                                 {contact.category}
                             </span>
                         )}
+
+                        {/* Child Selection - only show when multiple children */}
+                        {showChildSelector && (
+                            isEditing ? (
+                                <div className="mt-3">
+                                    <label className="block text-xs text-textSub mb-1">For child:</label>
+                                    <MobileMultiSelect
+                                        values={selectedChildIds}
+                                        onChange={setSelectedChildIds}
+                                        options={childOptions}
+                                        allOption={allChildrenOption}
+                                        placeholder="Select children..."
+                                        title="Select children"
+                                    />
+                                </div>
+                            ) : (
+                                getChildName(contact.childId) && (
+                                    <span className="inline-block mt-2 ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-softGreen text-forest">
+                                        {getChildName(contact.childId)}
+                                    </span>
+                                )
+                            )
+                        )}
                     </div>
 
                     {/* Edit/Save Button */}
@@ -598,6 +663,8 @@ export default function ContactDetailPage() {
                                     setName(contact.name);
                                     setRole(contact.role || "");
                                     setCategory(contact.category);
+                                    const resetChildId = contact.childId || currentChildId || "";
+                                    setSelectedChildIds(resetChildId ? [resetChildId] : []);
                                     // Reset phoneNumbers
                                     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
                                         setPhoneNumbers(contact.phoneNumbers);
@@ -695,7 +762,7 @@ export default function ContactDetailPage() {
             )}
 
             {/* Contact Details */}
-            <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-border">
                 {/* Phone Numbers */}
                 <div className="p-4 border-b border-border/50">
                     <label className="block text-xs text-textSub mb-2">Phone</label>
@@ -741,7 +808,7 @@ export default function ContactDetailPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Add email address"
-                            className="w-full text-sm text-forest focus:outline-none"
+                            className="w-full text-sm text-forest focus:outline-none bg-transparent"
                         />
                     ) : (
                         <p className="text-sm text-forest">
@@ -816,7 +883,7 @@ export default function ContactDetailPage() {
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Add notes"
                             rows={3}
-                            className="w-full text-sm text-forest focus:outline-none resize-none"
+                            className="w-full text-sm text-forest focus:outline-none resize-none bg-transparent"
                         />
                     ) : (
                         <p className="text-sm text-forest whitespace-pre-line">

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase, FEATURES } from "@/lib/supabase";
+import { useAppState } from "@/lib/AppStateContext";
 
 // ==============================================
 // V2 CONTACTS CONTEXT
@@ -33,6 +34,7 @@ export interface PhoneNumber {
 // Legacy contact type (general contacts like doctors, schools)
 export interface Contact {
     id: string;
+    childId?: string; // Which child this contact belongs to
     name: string;
     role: string;
     category: ContactCategory;
@@ -98,7 +100,8 @@ interface ContactsContextType {
     responsibleAdults: HomeContact[];
     isLoaded: boolean;
     // Legacy operations
-    addContact: (contact: Omit<Contact, "id" | "createdAt">) => Promise<{ success: boolean; error?: string }>;
+    // Optional targetChildId parameter allows creating contact for a specific child
+    addContact: (contact: Omit<Contact, "id" | "createdAt">, targetChildId?: string) => Promise<{ success: boolean; error?: string }>;
     updateContact: (id: string, updates: Partial<Contact>) => Promise<{ success: boolean; error?: string }>;
     deleteContact: (id: string) => Promise<{ success: boolean; error?: string }>;
     toggleFavorite: (id: string) => Promise<void>;
@@ -122,6 +125,9 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [childId, setChildId] = useState<string | null>(null);
     const [childSpaceIds, setChildSpaceIds] = useState<string[]>([]);
+    
+    // Get current child from AppState - contacts should sync with selected child
+    const { currentChildId } = useAppState();
 
     useEffect(() => {
         let isMounted = true;
@@ -165,7 +171,11 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 }
 
                 const childIds = childAccess.map(ca => ca.child_id);
-                setChildId(childIds[0]);
+                // Use currentChildId from AppState if available, otherwise fall back to first child
+                const activeChildId = currentChildId && childIds.includes(currentChildId) 
+                    ? currentChildId 
+                    : childIds[0];
+                setChildId(activeChildId);
 
                 // Get child_spaces for these children
                 const { data: childSpaces } = await supabase
@@ -230,7 +240,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 const { data: contactsData, error } = await supabase
                     .from("contacts")
                     .select("*")
-                    .eq("child_id", childIds[0])
+                    .eq("child_id", activeChildId)
                     .order("is_favorite", { ascending: false })
                     .order("name", { ascending: true });
                 
@@ -271,6 +281,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
                         return {
                             id: c.id,
+                            childId: c.child_id,
                             name: c.name,
                             role: c.role || "",
                             category: c.category || "other",
@@ -322,15 +333,17 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
             isMounted = false;
             subscription.unsubscribe();
         };
-    }, []);
+    }, [currentChildId]); // Refetch when child changes
 
     // Legacy: Add contact (doctors, schools, etc.)
-    const addContact = async (contact: Omit<Contact, "id" | "createdAt">): Promise<{ success: boolean; error?: string }> => {
+    const addContact = async (contact: Omit<Contact, "id" | "createdAt">, targetChildId?: string): Promise<{ success: boolean; error?: string }> => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return { success: false, error: "Not authenticated" };
 
-            if (!childId) return { success: false, error: "No child found" };
+            // Use targetChildId if provided, otherwise fall back to context's childId
+            const effectiveChildId = targetChildId || childId;
+            if (!effectiveChildId) return { success: false, error: "No child found" };
 
             // Build insert object - only include new fields if they have values
             // This ensures backwards compatibility before migration is run
@@ -341,7 +354,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
             const legacyCountryCode = firstPhone?.countryCode || contact.phoneCountryCode || null;
             
             const insertData: any = {
-                child_id: childId,
+                child_id: effectiveChildId,
                 created_by_user_id: user.id,
                 name: contact.name,
                 role: contact.role,
@@ -459,6 +472,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
         try {
             const dbUpdates: any = {};
+            if (updates.childId !== undefined) dbUpdates.child_id = updates.childId;
             if (updates.name !== undefined) dbUpdates.name = updates.name;
             if (updates.role !== undefined) dbUpdates.role = updates.role;
             if (updates.category !== undefined) dbUpdates.category = updates.category;
