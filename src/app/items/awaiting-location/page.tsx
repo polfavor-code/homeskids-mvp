@@ -13,14 +13,36 @@ export default function AwaitingLocationItemsPage() {
     useEnsureOnboarding();
 
     const { items } = useItems();
-    const { child, caregivers, homes } = useAppState();
+    const { child, caregivers, homes, accessibleHomes, childSpaces, currentChildId } = useAppState();
 
-    // Filter to only items awaiting location
-    const awaitingLocationItems = items.filter((item) => item.isMissing);
+    // Get child_space IDs for current child (same logic as main items page)
+    const currentChildSpaceIds = childSpaces
+        .filter(cs => cs.childId === currentChildId)
+        .map(cs => cs.id);
 
-    // Calculate counts
+    // Check if user has any home access
+    const hasHomeAccess = accessibleHomes.length > 0;
+
+    // Filter items to only show those for the current child AND in accessible homes (same as main page)
+    const accessibleItems = hasHomeAccess
+        ? items.filter(item => {
+            // First, filter by current child's child_spaces
+            if (currentChildSpaceIds.length > 0 && !currentChildSpaceIds.includes(item.childSpaceId)) {
+                return false;
+            }
+            // Show unassigned items
+            if (!item.locationHomeId) return true;
+            // Show items in accessible homes
+            return accessibleHomes.some(h => h.id === item.locationHomeId);
+          })
+        : items;
+
+    // Filter to only items awaiting location (from accessible items)
+    const awaitingLocationItems = accessibleItems.filter((item) => item.isMissing);
+
+    // Calculate counts (from accessible items for consistency)
     const awaitingLocationCount = awaitingLocationItems.length;
-    const totalCount = items.length;
+    const totalCount = accessibleItems.length;
 
     // Helper to get last known location (if any)
     const getLastKnownLocation = (item: { locationHomeId?: string | null; locationCaregiverId?: string | null }) => {
