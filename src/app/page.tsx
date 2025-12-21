@@ -35,8 +35,31 @@ export default function Home() {
         switchChildHomeAndMovePackedItems,
         currentJuneCaregiverId, // Legacy fallback
         inviteInfo, // Info about who invited this user (for no-home-access state)
-        isLoaded: appStateLoaded
+        isLoaded: appStateLoaded,
+        currentChildId,
+        childSpaces
     } = useAppState();
+
+    // #region agent log
+    // Get child_space IDs for the current child to filter items
+    const currentChildSpaceIds = React.useMemo(() => {
+        if (!currentChildId || !childSpaces) return [];
+        return childSpaces.filter((cs: any) => cs.childId === currentChildId).map((cs: any) => cs.id);
+    }, [currentChildId, childSpaces]);
+    
+    // Filter items to only show those for the current child
+    const currentChildItems = React.useMemo(() => {
+        if (currentChildSpaceIds.length === 0) return items;
+        return items.filter(item => currentChildSpaceIds.includes(item.childSpaceId));
+    }, [items, currentChildSpaceIds]);
+    
+    // Debug instrumentation
+    React.useEffect(() => {
+        if (itemsLoaded && appStateLoaded) {
+            fetch('http://127.0.0.1:7243/ingest/53bbbc81-700c-4dc6-a9fa-0e7f21e94415',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:dashboard',message:'Items count debug POST-FIX',data:{allItemsLength:items.length,currentChildItemsLength:currentChildItems.length,displayedCount:currentChildItems.length,childName:child?.name,currentChildId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+        }
+    }, [items, itemsLoaded, appStateLoaded, currentChildId, currentChildSpaceIds, currentChildItems, child]);
+    // #endregion
 
     // Health context for health step
     const {
@@ -115,8 +138,8 @@ export default function Home() {
         ? (caregivers.find((c) => c.id === currentJuneCaregiverId) ?? caregivers[0])
         : undefined;
 
-    // Filter missing items
-    const missingItems = items.filter((item) => item.isMissing);
+    // Filter missing items (from current child's items only)
+    const missingItems = currentChildItems.filter((item) => item.isMissing);
 
     // Separate current home and other accessible homes (only show homes user can access)
     // FIX: Use currentHome.id instead of currentHomeId to ensure consistency
@@ -126,9 +149,10 @@ export default function Home() {
 
     // Get items for a specific home (NEW: by home_id)
     // Falls back to caregiver-based location for items without home_id
+    // Uses currentChildItems to only show items for the active child
     const getItemsForHome = (homeId: string) => {
         const home = homes.find(h => h.id === homeId);
-        return items.filter((item) => {
+        return currentChildItems.filter((item) => {
             if (item.isMissing) return false;
             // Primary: check location_home_id
             if (item.locationHomeId === homeId) return true;
@@ -215,7 +239,7 @@ export default function Home() {
     }
 
     // Global empty state for items - Show generic welcome dashboard
-    if (items.length === 0) {
+    if (currentChildItems.length === 0) {
         // Get current user's first name only (e.g. "Paul")
         const currentUser = caregivers.find(c => c.isCurrentUser);
         const welcomeUserName = (currentUser?.name?.split(' ')[0]) || (user?.user_metadata?.name?.split(' ')[0]) || 'there';
@@ -234,8 +258,8 @@ export default function Home() {
     const currentUser = caregivers.find(c => c.isCurrentUser);
     const userName = (currentUser?.name?.split(' ')[0]) || (user?.user_metadata?.name?.split(' ')[0]) || 'there';
 
-    // Get requested items count and who requested them
-    const requestedItems = items.filter(item => item.isRequestedForNextVisit && !item.isMissing);
+    // Get requested items count and who requested them (from current child's items only)
+    const requestedItems = currentChildItems.filter(item => item.isRequestedForNextVisit && !item.isMissing);
     const requestedByOthers = requestedItems.filter(item => item.requestedBy && item.requestedBy !== currentUser?.id);
 
     // Find who requested items (get the first requester's name for simplicity)
@@ -304,7 +328,7 @@ export default function Home() {
                         className="bg-white p-4 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-right min-w-[100px] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-shadow"
                     >
                         <span className="block text-2xl font-bold text-forest leading-none mb-1">
-                            {items.length}
+                            {currentChildItems.length}
                         </span>
                         <span className="text-[11px] text-forest/60 uppercase font-bold tracking-wide">
                             ITEMS TOTAL
@@ -365,14 +389,14 @@ export default function Home() {
                     getValidCaregiverCount={getValidCaregiverCount}
                     onSwitchHome={handleSwitchHome}
                     switchingHomeId={switchingHomeId}
-                    items={items}
+                    items={currentChildItems}
                     currentCaregiver={currentCaregiver}
                 />
 
                 {/* Bottom Advisor - Setup Steps (Dynamic) */}
                 <SetupSteps
                     child={child}
-                    items={items}
+                    items={currentChildItems}
                     caregivers={caregivers}
                     healthStatus={healthStatus}
                     isHealthReviewed={isHealthReviewed}
