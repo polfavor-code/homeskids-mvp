@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
+import LocationMap from "@/components/LocationMap";
 import { useAppState, CaregiverProfile, HomeProfile } from "@/lib/AppStateContext";
 import { useItems } from "@/lib/ItemsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
@@ -94,6 +95,30 @@ export default function HomeDetailPage() {
         return destination ? `https://www.google.com/maps/dir/?api=1&destination=${destination}` : null;
     };
 
+    // Get address query for geocoding
+    const getAddressQuery = () => {
+        if (!home) return null;
+
+        const addressParts = [
+            home.addressStreet,
+            home.addressCity,
+            home.addressState,
+            home.addressZip,
+            home.addressCountry,
+        ].filter(Boolean);
+
+        if (addressParts.length > 0) {
+            return addressParts.join(", ");
+        } else if (home.address) {
+            return home.address;
+        }
+
+        return null;
+    };
+
+    const addressQuery = getAddressQuery();
+    const hasCoordinates = home?.addressLat && home?.addressLng;
+
     // Get relationship label
     const getRelationshipLabel = (relationship?: string): string | null => {
         if (!relationship) return null;
@@ -107,6 +132,29 @@ export default function HomeDetailPage() {
             other: "Caregiver",
         };
         return labels[relationship] || null;
+    };
+
+    // Convert Tailwind bg class to actual CSS color
+    const getAvatarBgColor = (avatarColor?: string): string => {
+        if (!avatarColor) return "#2C3E2D";
+        // If it's already a hex/rgb color, use it directly
+        if (avatarColor.startsWith("#") || avatarColor.startsWith("rgb")) return avatarColor;
+        // Map common Tailwind bg classes to colors
+        const colorMap: Record<string, string> = {
+            "bg-gray-500": "#6B7280",
+            "bg-gray-400": "#9CA3AF",
+            "bg-gray-600": "#4B5563",
+            "bg-red-500": "#EF4444",
+            "bg-blue-500": "#3B82F6",
+            "bg-green-500": "#22C55E",
+            "bg-yellow-500": "#EAB308",
+            "bg-purple-500": "#A855F7",
+            "bg-pink-500": "#EC4899",
+            "bg-indigo-500": "#6366F1",
+            "bg-teal-500": "#14B8A6",
+            "bg-orange-500": "#F97316",
+        };
+        return colorMap[avatarColor] || "#2C3E2D";
     };
 
     const displayAddress = getDisplayAddress();
@@ -153,9 +201,6 @@ export default function HomeDetailPage() {
                         </span>
                     )}
                 </div>
-                <p className="text-sm text-textSub">
-                    {displayAddress ? displayAddress[0] : "No address added yet"}
-                </p>
             </div>
 
             {/* Address Section */}
@@ -174,6 +219,20 @@ export default function HomeDetailPage() {
                 ) : (
                     <p className="text-sm text-textSub/60 italic mb-4">No address added yet</p>
                 )}
+
+                {/* Interactive Map */}
+                {addressQuery && (
+                    <div className="mb-4">
+                        <LocationMap
+                            address={addressQuery}
+                            lat={home.addressLat}
+                            lng={home.addressLng}
+                            height="180px"
+                            className="w-full"
+                        />
+                    </div>
+                )}
+
                 {directionsUrl && (
                     <a
                         href={directionsUrl}
@@ -203,18 +262,22 @@ export default function HomeDetailPage() {
                                 className="flex items-center gap-3 p-3 rounded-xl bg-cream/50"
                             >
                                 <div
-                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                                    style={{ backgroundColor: caregiver.avatarColor || "#2C3E2D" }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden relative"
+                                    style={{ backgroundColor: getAvatarBgColor(caregiver.avatarColor) }}
                                 >
-                                    {caregiver.avatarUrl ? (
+                                    {/* Always show initials as base layer */}
+                                    <span className="z-0">{caregiver.avatarInitials || caregiver.name.charAt(0).toUpperCase()}</span>
+                                    {/* Overlay image if available */}
+                                    {caregiver.avatarUrl && caregiver.avatarUrl.trim() !== "" && (
                                         /* eslint-disable-next-line @next/next/no-img-element */
                                         <img
                                             src={caregiver.avatarUrl}
                                             alt={caregiver.name}
-                                            className="w-full h-full rounded-full object-cover"
+                                            className="absolute inset-0 w-full h-full rounded-full object-cover z-10"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                            }}
                                         />
-                                    ) : (
-                                        caregiver.name.charAt(0).toUpperCase()
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
