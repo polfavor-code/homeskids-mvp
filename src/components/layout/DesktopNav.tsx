@@ -279,7 +279,7 @@ export default function DesktopNav() {
                                         : 'text-gray-700 hover:bg-softGreen hover:text-forest font-semibold'
                                     }`}
                             >
-                                <div className={`flex-shrink-0 flex items-center justify-center ${item.icon === 'HomeIcon' ? 'w-8 h-6 -mt-[2px]' : 'w-6 h-6'}`}>
+                                <div className={`flex-shrink-0 flex items-center justify-center ${item.icon === 'HomeIcon' ? 'w-6 h-6 -mt-[2px] -ml-1' : 'w-6 h-6'}`}>
                                     {renderIcon(item.icon, item.icon === 'HomeIcon' ? 32 : 24, isActive || hasActiveSub)}
                                 </div>
                                 {!isCollapsed && (
@@ -330,7 +330,12 @@ export default function DesktopNav() {
             {/* Child Switcher - Footer Card Style */}
             {/* Only show when user has home access (helpers without homes see blank UI) */}
             {childrenList.length > 0 && hasHomeAccess && (
-                <div className={`flex-shrink-0 border-t border-border py-3 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+                <div className={`flex-shrink-0 border-t border-border pt-3 pb-3 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+                    {/* VIEWING label - visible in both collapsed and expanded */}
+                    <p className={`text-[10px] text-textSub font-medium uppercase tracking-wide mb-2 ${isCollapsed ? 'text-center' : ''}`}>
+                        Viewing
+                    </p>
+                    
                     {isCollapsed ? (
                         /* Collapsed: Show avatar stack */
                         <div className="flex flex-col items-center gap-2">
@@ -345,7 +350,7 @@ export default function DesktopNav() {
                                                 ? 'ring-2 ring-forest ring-offset-2 ring-offset-cream rounded-full'
                                                 : 'opacity-50 hover:opacity-100'
                                         }`}
-                                        title={`${isActive ? 'Viewing' : 'Switch to'} ${child.name}${isActive && currentHome ? ` — now at ${currentHome.name}` : ''}`}
+                                        title={`${isActive ? 'Viewing' : 'Switch to'} ${child.name}`}
                                     >
                                         <Avatar
                                             src={child.avatarUrl}
@@ -383,13 +388,7 @@ export default function DesktopNav() {
                                     )}
                                 </div>
                                 <div className="flex-1 text-left min-w-0">
-                                    <p className="text-[10px] text-textSub font-medium uppercase tracking-wide">Viewing</p>
-                                    <p className="text-sm font-semibold text-forest truncate">{currentChild?.name}'s Space</p>
-                                    {currentHome && (
-                                        <p className="text-xs text-textSub mt-0.5 truncate">
-                                            Now at {currentHome.name}
-                                        </p>
-                                    )}
+                                    <p className="text-sm font-semibold text-forest truncate">{currentChild?.name}</p>
                                 </div>
                                 {childrenList.length > 1 && (
                                     <div className={`flex items-center gap-1 text-teal transition-transform ${isChildSwitcherOpen ? 'rotate-180' : ''}`}>
@@ -422,7 +421,6 @@ export default function DesktopNav() {
                                                             handleChildSwitch(child.id);
                                                             setIsChildSwitcherOpen(false);
                                                         }}
-                                                        title={isActive && currentHome ? `Now at ${currentHome.name}` : undefined}
                                                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                                                             isActive
                                                                 ? 'bg-softGreen border border-forest/20'
@@ -441,15 +439,6 @@ export default function DesktopNav() {
                                                             }`}>
                                                                 {child.name}
                                                             </span>
-                                                            {isActive && currentHome && (
-                                                                <span className="text-[10px] text-textSub flex items-center gap-1">
-                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                                                                    </svg>
-                                                                    Now at {currentHome.name}
-                                                                </span>
-                                                            )}
                                                         </div>
                                                         {isActive && (
                                                             <div className="w-5 h-5 rounded-full bg-forest flex items-center justify-center flex-shrink-0">
@@ -470,31 +459,49 @@ export default function DesktopNav() {
                 </div>
             )}
 
-            {/* User Profile - Fixed at bottom */}
-            <div className={`flex-shrink-0 border-t border-border py-4 ${isCollapsed ? 'flex justify-center' : 'px-3'}`}>
-                <Link
-                    href={accountNavItem.route}
-                    className={`flex items-center h-12 transition-colors rounded-2xl ${isCollapsed
-                        ? 'justify-center w-12 p-0'
-                        : 'gap-4 px-4'
-                        } ${isRouteActive(pathname, accountNavItem.route)
-                            ? 'bg-gradient-forest text-white shadow-active font-bold'
-                            : 'text-gray-700 hover:bg-softGreen hover:text-forest font-semibold'
+            {/* User Profile - Fixed at bottom, matching child switcher style */}
+            <div className={`flex-shrink-0 border-t border-border py-3 ${isCollapsed ? 'px-2' : 'px-3'}`}>
+                {isCollapsed ? (
+                    /* Collapsed: Show avatar only */
+                    <Link
+                        href={accountNavItem.route}
+                        className="flex justify-center"
+                        title={`${userLabel}'s Account`}
+                    >
+                        <div className={`transition-all ${
+                            isRouteActive(pathname, accountNavItem.route)
+                                ? 'ring-2 ring-forest ring-offset-2 ring-offset-cream rounded-full'
+                                : 'opacity-70 hover:opacity-100'
+                        }`}>
+                            <Avatar
+                                src={userAvatarUrl}
+                                initial={userInitials}
+                                size={36}
+                                bgColor="#2C3E2D"
+                            />
+                        </div>
+                    </Link>
+                ) : (
+                    /* Expanded: Card style matching child switcher */
+                    <Link
+                        href={accountNavItem.route}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                            isRouteActive(pathname, accountNavItem.route)
+                                ? 'bg-white border-forest/20 shadow-sm'
+                                : 'bg-softGreen/50 border-border hover:border-forest/20 hover:bg-white'
                         }`}
-                    title={isCollapsed ? `${userLabel}` : undefined}
-                >
-                    <Avatar
-                        src={userAvatarUrl}
-                        initial={userInitials}
-                        size={24}
-                        bgColor={isRouteActive(pathname, accountNavItem.route) ? "#FFFFFF" : "#2C3E2D"}
-                    />
-                    {!isCollapsed && (
-                        <span className="text-[15px] whitespace-nowrap">
-                            {userLabel}&apos;s Account
-                        </span>
-                    )}
-                </Link>
+                    >
+                        <Avatar
+                            src={userAvatarUrl}
+                            initial={userInitials}
+                            size={36}
+                            bgColor="#2C3E2D"
+                        />
+                        <div className="flex-1 text-left min-w-0">
+                            <p className="text-sm font-semibold text-forest truncate">{userLabel}&apos;s Account</p>
+                        </div>
+                    </Link>
+                )}
             </div>
         </nav>
     );

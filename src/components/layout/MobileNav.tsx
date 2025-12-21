@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { isRouteActive } from '@/lib/navigation';
 import { useAppState } from '@/lib/AppStateContext';
 import { useAuth } from '@/lib/AuthContext';
+import Avatar from '@/components/Avatar';
 import {
     ItemsIcon,
     CalendarIcon,
@@ -13,7 +14,6 @@ import {
     DocumentsIcon,
     HealthIcon,
     SettingsIcon,
-    UserIcon,
     HomesIcon,
     CaregiversIcon,
 } from '@/components/icons/DuotoneIcons';
@@ -87,6 +87,9 @@ export default function MobileNav() {
     const currentUser = caregivers.find(c => c.isCurrentUser);
     const emailPrefix = user?.email?.split('@')[0] || "";
     const userLabel = currentUser?.label || currentUser?.name || emailPrefix || "Account";
+    const userName = currentUser?.name?.trim();
+    const userInitials = currentUser?.avatarInitials || (userName ? userName[0] : null) || (emailPrefix ? emailPrefix[0].toUpperCase() : "U");
+    const userAvatarUrl = currentUser?.avatarUrl;
 
     // Check if any "more" item is active
     const isMoreActive = isRouteActive(pathname, '/documents') ||
@@ -259,7 +262,7 @@ export default function MobileNav() {
                                 {/* Divider */}
                                 <div className="border-t border-gray-100 my-1 mx-2" />
 
-                                {/* Account */}
+                                {/* Account - with avatar matching child switcher style */}
                                 <Link
                                     href="/settings/account"
                                     onClick={() => setShowMoreMenu(false)}
@@ -269,7 +272,12 @@ export default function MobileNav() {
                                             : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                                 >
-                                    <UserIcon size={22} />
+                                    <Avatar
+                                        src={userAvatarUrl}
+                                        initial={userInitials}
+                                        size={28}
+                                        bgColor="#2C3E2D"
+                                    />
                                     <span className="text-[15px]">{userLabel}&apos;s Account</span>
                                 </Link>
                             </div>
