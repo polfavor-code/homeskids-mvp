@@ -36,7 +36,22 @@ export default function MobileMultiSelect({
     buttonClassName = "",
 }: MobileMultiSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [openUpward, setOpenUpward] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    // Calculate if dropdown should open upward
+    useEffect(() => {
+        if (isOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const dropdownHeight = 300; // max-h-[300px]
+            const bottomNavHeight = 90; // approximate bottom nav height
+            
+            // If not enough space below (accounting for bottom nav), open upward
+            setOpenUpward(spaceBelow < dropdownHeight + bottomNavHeight);
+        }
+    }, [isOpen]);
 
     // Check if "all" is effectively selected (all individual options selected)
     const allIndividualIds = options.map(o => o.value);
@@ -122,6 +137,7 @@ export default function MobileMultiSelect({
         <div className={`mobile-multi-select-container relative ${className}`} ref={containerRef}>
             {/* Trigger Button */}
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-full flex items-center justify-between px-4 py-3 border border-border rounded-xl text-sm bg-white focus:outline-none focus:border-forest transition-colors ${
@@ -138,7 +154,9 @@ export default function MobileMultiSelect({
             {/* Desktop Dropdown */}
             {isOpen && (
                 <div 
-                    className="hidden sm:block absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-[300px] overflow-y-auto py-1"
+                    className={`hidden sm:block absolute left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-[60] max-h-[300px] overflow-y-auto py-1 ${
+                        openUpward ? "bottom-full mb-1" : "top-full mt-1"
+                    }`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Individual options */}

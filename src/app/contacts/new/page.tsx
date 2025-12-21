@@ -28,13 +28,23 @@ export default function NewContactPage() {
     useEnsureOnboarding();
     const router = useRouter();
     const { addContact } = useContacts();
-    const { caregivers } = useAppState();
+    const { caregivers, children, currentChildId } = useAppState();
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Child selection state - defaults to currently active child
+    const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
+    
+    // Initialize selected children when currentChildId is available
+    useEffect(() => {
+        if (currentChildId && selectedChildIds.length === 0) {
+            setSelectedChildIds([currentChildId]);
+        }
+    }, [currentChildId, selectedChildIds.length]);
 
     // Form state
     const [name, setName] = useState("");
     const [role, setRole] = useState("");
-    const [category, setCategory] = useState<ContactCategory>("other");
+    const [category, setCategory] = useState<ContactCategory | null>(null);
     const [connectedWith, setConnectedWith] = useState<string[]>([]);
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
     const [email, setEmail] = useState("");
@@ -96,6 +106,21 @@ export default function NewContactPage() {
         value: "all",
         label: caregivers.length > 2 ? "All caregivers" : "Both sides",
     };
+
+    // Child options for MobileMultiSelect (only used when multiple children)
+    const childOptions = children.map((child) => ({
+        value: child.id,
+        label: child.name,
+    }));
+
+    // "All children" option
+    const allChildrenOption = {
+        value: "all",
+        label: children.length > 2 ? "All children" : "Both children",
+    };
+
+    // Show child selector only when there are multiple children
+    const showChildSelector = children.length > 1;
 
     // Handle photo upload
     const handlePhotoClick = () => {
@@ -234,6 +259,17 @@ export default function NewContactPage() {
             return;
         }
 
+        if (!category) {
+            setError("Please select a category");
+            return;
+        }
+
+        // Validate child selection when multiple children exist
+        if (showChildSelector && selectedChildIds.length === 0) {
+            setError("Please select at least one child");
+            return;
+        }
+
         setIsSaving(true);
         setError(null);
 
@@ -248,10 +284,11 @@ export default function NewContactPage() {
         // Get first phone for legacy fields (backward compatibility)
         const firstPhone = validPhoneNumbers[0];
 
-        const result = await addContact({
+        // Prepare contact data (category is validated above, so it's safe to use !)
+        const contactData = {
             name: name.trim(),
             role: role.trim(),
-            category,
+            category: category!,
             phone: firstPhone?.number || undefined,
             phoneCountryCode: firstPhone?.countryCode || undefined,
             phoneNumbers: validPhoneNumbers.length > 0 ? validPhoneNumbers : undefined,
@@ -271,12 +308,28 @@ export default function NewContactPage() {
             isFavorite,
             connectedWith: connectedWith.length > 0 ? connectedWith.join(",") : undefined,
             avatarUrl: avatarUrl || undefined,
-        });
+        };
 
-        if (result.success) {
+        // If multiple children are selected, create a contact for each
+        // Otherwise, addContact will use the current childId from context
+        const childIdsToCreate = showChildSelector ? selectedChildIds : [currentChildId];
+        
+        let allSuccess = true;
+        let lastError = "";
+
+        for (const childId of childIdsToCreate) {
+            // Pass the specific childId to create contact for that child
+            const result = await addContact(contactData, childId);
+            if (!result.success) {
+                allSuccess = false;
+                lastError = result.error || "Failed to add contact";
+            }
+        }
+
+        if (allSuccess) {
             router.push("/contacts");
         } else {
-            setError(result.error || "Failed to add contact");
+            setError(lastError);
             setIsSaving(false);
         }
     };
@@ -437,6 +490,26 @@ export default function NewContactPage() {
                                 ))}
                             </div>
                         </div>
+
+                        {/* Child Selection Card - only show when multiple children */}
+                        {showChildSelector && (
+                            <div className="bg-white rounded-2xl p-5 border border-border">
+                                <h3 className="text-xs font-semibold text-textSub uppercase tracking-wider mb-4">
+                                    For which child?
+                                </h3>
+                                <MobileMultiSelect
+                                    values={selectedChildIds}
+                                    onChange={setSelectedChildIds}
+                                    options={childOptions}
+                                    allOption={allChildrenOption}
+                                    placeholder="Select children..."
+                                    title="Select children"
+                                />
+                                <p className="text-xs text-textSub mt-2">
+                                    This contact will be available for the selected children
+                                </p>
+                            </div>
+                        )}
 
                         {/* Connected With Card */}
                         <div className="bg-white rounded-2xl p-5 border border-border">

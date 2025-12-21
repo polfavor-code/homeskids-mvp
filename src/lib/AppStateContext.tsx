@@ -854,6 +854,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 `)
                 .eq("child_id", childIdToUse);
 
+            // Also fetch guardian roles from child_guardians table
+            const { data: guardianRoles } = await supabase
+                .from("child_guardians")
+                .select("user_id, guardian_role")
+                .eq("child_id", childIdToUse);
+
             // Get permission overrides for all users
             const { data: permissionOverrides } = await supabase
                 .from("child_permission_overrides")
@@ -922,6 +928,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     // Inactive = connected to 0 homes for this child
                     const caregiverStatus: CaregiverStatus = accessibleHomeIds.length > 0 ? "active" : "inactive";
                     
+                    // Get guardian_role from child_guardians if this is a guardian
+                    const guardianRoleRecord = guardianRoles?.find((gr: any) => gr.user_id === ca.user_id);
+                    const guardianRole = ca.role_type === "guardian" 
+                        ? (guardianRoleRecord?.guardian_role as GuardianRole || "parent")
+                        : undefined;
+
                     loadedCaregivers.push({
                         id: ca.profiles.id,
                         name: ca.profiles.name || "Unknown",
@@ -931,7 +943,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         avatarUrl,
                         isCurrentUser,
                         roleType: ca.role_type,
-                        guardianRole: ca.role_type === "guardian" ? "parent" : undefined,
+                        guardianRole,
                         helperType: ca.helper_type,
                         accessLevel: ca.access_level,
                         canViewCalendar: override?.can_view_calendar ?? (ca.role_type === "guardian"),
@@ -945,7 +957,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                         accessibleChildSpaceIds,
                         phone: ca.profiles.phone,
                         // V1 compatibility fields
-                        relationship: ca.role_type === "guardian" ? "parent" : ca.helper_type,
+                        // Use guardianRole to get correct relationship (step_parent vs parent)
+                        relationship: ca.role_type === "guardian" 
+                            ? (guardianRole === "stepparent" ? "step_parent" : "parent")
+                            : ca.helper_type,
                         accessibleHomeIds,
                         status: caregiverStatus,
                     });
