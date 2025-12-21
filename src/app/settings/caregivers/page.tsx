@@ -263,14 +263,24 @@ export default function CaregiversPage() {
                     console.error("Error fetching all child_access:", accessError);
                     return;
                 }
+
+                // Also fetch guardian_role from child_guardians for all children
+                const { data: guardianRolesData } = await supabase
+                    .from("child_guardians")
+                    .select("user_id, child_id, guardian_role")
+                    .in("child_id", childIds);
                 
                 // Build map of caregivers with their connected children and roles
                 const caregiverMap = new Map<string, OtherCaregiver>();
                 
-                // Helper to get role label
+                // Helper to get role label - now includes guardian_role lookup
                 const getRoleLabelForAccess = (ca: any): string => {
                     if (ca.role_type === "guardian") {
-                        return "Parent";
+                        // Look up guardian_role from child_guardians
+                        const guardianRecord = guardianRolesData?.find(
+                            (gr: any) => gr.user_id === ca.user_id && gr.child_id === ca.child_id
+                        );
+                        return guardianRecord?.guardian_role === "stepparent" ? "Step-parent" : "Parent";
                     } else if (ca.helper_type) {
                         const helperLabels: Record<string, string> = {
                             "nanny": "Nanny",
@@ -421,6 +431,21 @@ export default function CaregiversPage() {
         }
     };
 
+    // Helper to get role value from roleType/helperType/guardianRole
+    const getRoleValueFromCaregiver = (caregiver: CaregiverProfile): string => {
+        if (caregiver.roleType === "guardian") {
+            // guardianRole from DB is "stepparent", form value needs "step_parent"
+            return caregiver.guardianRole === "stepparent" ? "step_parent" : "parent";
+        }
+        // Helper - map helperType to role value
+        switch (caregiver.helperType) {
+            case "nanny": return "nanny";
+            case "family_member": return "family_member";
+            case "friend": return "family_friend";
+            default: return caregiver.helperType || "family_member";
+        }
+    };
+
     const handleEditCaregiver = (caregiver: CaregiverProfile) => {
         if (caregiver.status === "pending") {
             showToast("Cannot edit pending caregivers. Wait for them to accept the invite.", true);
@@ -430,7 +455,8 @@ export default function CaregiversPage() {
         setExpandedCaregiverId(caregiver.id);
         setFormData({
             label: caregiver.label || "",
-            relationship: caregiver.relationship || "",
+            // Initialize with the actual role from child_access, not profiles.relationship
+            relationship: getRoleValueFromCaregiver(caregiver),
             phone: caregiver.phone || "",
         });
         setError("");
@@ -446,6 +472,7 @@ export default function CaregiversPage() {
             setSaving(true);
             setError("");
 
+            // Update profile (label, relationship display, phone)
             const { error: updateError } = await supabase
                 .from("profiles")
                 .update({
@@ -456,6 +483,58 @@ export default function CaregiversPage() {
                 .eq("id", editingCaregiverId);
 
             if (updateError) throw updateError;
+
+            // Also update the actual role in child_access if role was changed
+            if (formData.relationship && currentChildId && editingCaregiverId) {
+                const isGuardianRole = formData.relationship === "parent" || formData.relationship === "step_parent";
+                const roleType = isGuardianRole ? "guardian" : "helper";
+                const helperType = isGuardianRole ? null : mapRoleToHelperType(formData.relationship);
+                const accessLevel = isGuardianRole ? "manage" : "view";
+                // Map step_parent to stepparent for child_guardians table
+                const guardianRole = formData.relationship === "step_parent" ? "stepparent" : "parent";
+
+                // Update child_access
+                const { error: roleError } = await supabase
+                    .from("child_access")
+                    .update({
+                        role_type: roleType,
+                        helper_type: helperType,
+                        access_level: accessLevel,
+                    })
+                    .eq("user_id", editingCaregiverId)
+                    .eq("child_id", currentChildId);
+
+                if (roleError) {
+                    console.error("Error updating role in child_access:", roleError);
+                }
+
+                // Handle child_guardians table for guardian roles
+                if (isGuardianRole) {
+                    // Upsert into child_guardians with correct guardian_role (parent/stepparent)
+                    const { error: guardianError } = await supabase
+                        .from("child_guardians")
+                        .upsert({
+                            child_id: currentChildId,
+                            user_id: editingCaregiverId,
+                            guardian_role: guardianRole,
+                        }, { onConflict: "child_id,user_id" });
+
+                    if (guardianError) {
+                        console.error("Error upserting child_guardians:", guardianError);
+                    }
+                } else {
+                    // Helper role - remove from child_guardians if exists
+                    const { error: deleteError } = await supabase
+                        .from("child_guardians")
+                        .delete()
+                        .eq("child_id", currentChildId)
+                        .eq("user_id", editingCaregiverId);
+
+                    if (deleteError) {
+                        console.error("Error removing from child_guardians:", deleteError);
+                    }
+                }
+            }
 
             await refreshData();
             resetForm();
@@ -810,7 +889,7 @@ export default function CaregiversPage() {
         return (
             <div
                 key={caregiver.id}
-                className={`card-organic overflow-hidden transition-opacity ${
+                className={`card-organic transition-opacity ${
                     caregiver.status === "inactive" ? "opacity-70" : ""
                 }`}
             >
