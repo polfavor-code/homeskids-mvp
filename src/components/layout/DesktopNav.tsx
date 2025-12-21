@@ -279,7 +279,7 @@ export default function DesktopNav() {
                                         : 'text-gray-700 hover:bg-softGreen hover:text-forest font-semibold'
                                     }`}
                             >
-                                <div className={`flex-shrink-0 flex items-center justify-center ${item.icon === 'HomeIcon' ? 'w-6 h-6 -mt-[2px] -ml-1' : 'w-6 h-6'}`}>
+                                <div className={`flex-shrink-0 flex items-center justify-center ${item.icon === 'HomeIcon' ? 'w-6 h-6 -mt-[2px]' : 'w-6 h-6'}`}>
                                     {renderIcon(item.icon, item.icon === 'HomeIcon' ? 32 : 24, isActive || hasActiveSub)}
                                 </div>
                                 {!isCollapsed && (
