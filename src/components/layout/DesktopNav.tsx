@@ -19,7 +19,8 @@ import {
     ChevronDownIcon,
     ChevronRightIcon,
     HomeIcon,
-    FamilyIcon,
+    HomesIcon,
+    CaregiversIcon,
 } from '@/components/icons/DuotoneIcons';
 
 // Logo icon for home button - matches the brand logo
@@ -104,7 +105,8 @@ const iconMap = {
     SettingsIcon,
     UserIcon,
     HomeIcon,
-    FamilyIcon,
+    HomesIcon,
+    CaregiversIcon,
 };
 
 export default function DesktopNav() {

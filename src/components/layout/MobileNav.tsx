@@ -14,8 +14,8 @@ import {
     HealthIcon,
     SettingsIcon,
     UserIcon,
-    HomeIcon,
-    FamilyIcon,
+    HomesIcon,
+    CaregiversIcon,
 } from '@/components/icons/DuotoneIcons';
 
 // Logo icon for center home button - matches Logo.tsx exactly
@@ -224,7 +224,7 @@ export default function MobileNav() {
                                             : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                                 >
-                                    <HomeIcon size={22} />
+                                    <HomesIcon size={22} />
                                     <span className="text-[15px]">Homes</span>
                                 </Link>
 
@@ -238,7 +238,7 @@ export default function MobileNav() {
                                             : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                                 >
-                                    <FamilyIcon size={22} />
+                                    <CaregiversIcon size={22} />
                                     <span className="text-[15px]">Caregivers</span>
                                 </Link>
 

@@ -45,12 +45,12 @@ export const navItems: NavItem[] = [
     },
     {
         label: 'Homes',
-        icon: 'HomeIcon',
+        icon: 'HomesIcon',
         route: '/settings/homes',
     },
     {
         label: 'Caregivers',
-        icon: 'FamilyIcon',
+        icon: 'CaregiversIcon',
         route: '/settings/caregivers',
     },
     {

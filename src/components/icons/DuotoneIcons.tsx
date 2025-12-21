@@ -45,6 +45,27 @@ export function HomeIcon(props: IconProps) {
     );
 }
 
+// Homes Icon (Location pin with house - for Homes menu item)
+export function HomesIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="currentColor" fillOpacity="0.2" />
+            <path d="M12 6.5l4 3v4.5h-8v-4.5L12 6.5z" stroke="currentColor" fill="none" />
+        </DuotoneIcon>
+    );
+}
+
+// Caregivers Icon (Person with heart - for Caregivers menu item)
+export function CaregiversIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" fill="currentColor" fillOpacity="0.2" />
+            <circle cx="9" cy="7" r="4" fill="currentColor" fillOpacity="0.2" />
+            <path d="M19 10l.5-.5a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83L19 15.5l-3.33-3.17a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.5.5z" fill="currentColor" fillOpacity="0.3" stroke="currentColor" />
+        </DuotoneIcon>
+    );
+}
+
 export function ActivityIcon(props: IconProps) {
     return (
         <DuotoneIcon {...props}>
