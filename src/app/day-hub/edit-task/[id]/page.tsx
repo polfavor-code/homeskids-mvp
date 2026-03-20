@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useAppState } from "@/lib/AppStateContext";
-import { useDayHub, ScheduleType, FrequencyType, Regimen } from "@/lib/DayHubContext";
+import { useDayHub, ScheduleType, FrequencyType } from "@/lib/DayHubContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import FrequencyPicker from "@/components/day-hub/FrequencyPicker";
 import TimesPicker from "@/components/day-hub/TimesPicker";
@@ -39,7 +39,7 @@ export default function EditTaskPage() {
     const regimenId = params.id as string;
 
     const { children, pets, currentHomeId } = useAppState();
-    const { regimens, updateRegimen, uploadTaskImage, refreshData, isLoaded } = useDayHub();
+    const { regimens, updateRegimenFull, uploadTaskImage, refreshData, isLoaded } = useDayHub();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Loading state
@@ -255,18 +255,71 @@ export default function EditTaskPage() {
         setError(null);
 
         try {
-            // For now, we'll update the regimen name and basic info
-            // Full phase/task updates would require more complex logic
-            await updateRegimen(regimenId, {
-                name: regimenName,
-                // Note: Full phase updates would need a separate updateRegimenFull function
-            });
+            // 1. Upload any new images first
+            const phasesWithImages = await Promise.all(
+                phases.map(async (phase) => {
+                    const tasksWithImages = await Promise.all(
+                        phase.tasks.map(async (task) => {
+                            // If there's a new file to upload
+                            if (task.imageFile) {
+                                const uploadResult = await uploadTaskImage(task.imageFile);
+                                if (!uploadResult.success) {
+                                    throw new Error(`Failed to upload image: ${uploadResult.error}`);
+                                }
+                                return {
+                                    ...task,
+                                    imageUrl: uploadResult.url,
+                                };
+                            }
+                            return task;
+                        })
+                    );
+                    return {
+                        ...phase,
+                        tasks: tasksWithImages,
+                    };
+                })
+            );
 
+            // 2. Build the full payload and call updateRegimenFull
+            const result = await updateRegimenFull(
+                regimenId,
+                {
+                    name: regimenName,
+                    startDate: startDate,
+                },
+                phasesWithImages.map((phase) => ({
+                    id: phase.id,
+                    name: phase.name,
+                    durationDays: phase.durationType === "days" ? phase.durationDays : undefined,
+                    endDate: phase.durationType === "end_date" ? phase.endDate : undefined,
+                    tasks: phase.tasks.map((task) => ({
+                        id: task.id,
+                        name: task.name,
+                        description: task.description,
+                        taskType: task.taskType,
+                        frequencyType: task.frequencyType,
+                        frequencyValue: task.frequencyValue,
+                        scheduledTimes: task.scheduledTimes,
+                        daysOfWeek: task.daysOfWeek,
+                        imageUrl: task.imageUrl,
+                    })),
+                }))
+            );
+
+            // 3. Check the result for success/failure
+            if (!result.success) {
+                setError(result.error || "Failed to update task. Please try again.");
+                setIsSubmitting(false);
+                return;
+            }
+
+            // 4. Refresh data and navigate on success
             await refreshData();
             router.push("/day-hub");
         } catch (err) {
             console.error("Error updating task:", err);
-            setError("Failed to update task. Please try again.");
+            setError(err instanceof Error ? err.message : "Failed to update task. Please try again.");
             setIsSubmitting(false);
         }
     };

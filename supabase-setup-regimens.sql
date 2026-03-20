@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS regimen_phases (
     phase_order INTEGER NOT NULL,  -- 1, 2, 3...
     name TEXT,  -- "Week 1 - High dose", "Maintenance"
     duration_days INTEGER,  -- null = forever (last phase continues indefinitely)
+    end_date DATE,  -- Alternative to duration_days: specific end date for "Until date" flow
 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(regimen_id, phase_order)
@@ -140,7 +141,7 @@ CREATE POLICY "regimens_select" ON regimens
     FOR SELECT USING (created_by = auth.uid());
 
 CREATE POLICY "regimens_insert" ON regimens
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (auth.uid() = created_by);
 
 CREATE POLICY "regimens_update" ON regimens
     FOR UPDATE USING (created_by = auth.uid());
@@ -159,7 +160,13 @@ CREATE POLICY "regimen_phases_select" ON regimen_phases
     );
 
 CREATE POLICY "regimen_phases_insert" ON regimen_phases
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM regimens r
+            WHERE r.id = regimen_phases.regimen_id
+            AND r.created_by = auth.uid()
+        )
+    );
 
 CREATE POLICY "regimen_phases_update" ON regimen_phases
     FOR UPDATE USING (
@@ -191,7 +198,14 @@ CREATE POLICY "phase_tasks_select" ON phase_tasks
     );
 
 CREATE POLICY "phase_tasks_insert" ON phase_tasks
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM regimen_phases rp
+            JOIN regimens r ON r.id = rp.regimen_id
+            WHERE rp.id = phase_tasks.phase_id
+            AND r.created_by = auth.uid()
+        )
+    );
 
 CREATE POLICY "phase_tasks_update" ON phase_tasks
     FOR UPDATE USING (
@@ -226,7 +240,15 @@ CREATE POLICY "regimen_completions_select" ON regimen_completions
     );
 
 CREATE POLICY "regimen_completions_insert" ON regimen_completions
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM phase_tasks pt
+            JOIN regimen_phases rp ON rp.id = pt.phase_id
+            JOIN regimens r ON r.id = rp.regimen_id
+            WHERE pt.id = regimen_completions.phase_task_id
+            AND r.created_by = auth.uid()
+        )
+    );
 
 CREATE POLICY "regimen_completions_update" ON regimen_completions
     FOR UPDATE USING (
@@ -276,6 +298,7 @@ DECLARE
     v_start_date DATE;
     v_current_date DATE;
     v_phase RECORD;
+    v_phase_end DATE;
 BEGIN
     -- Get regimen start date
     SELECT start_date INTO v_start_date
@@ -290,24 +313,27 @@ BEGIN
 
     -- Iterate through phases in order
     FOR v_phase IN
-        SELECT rp.id, rp.name, rp.phase_order, rp.duration_days
+        SELECT rp.id, rp.name, rp.phase_order, rp.duration_days, rp.end_date
         FROM regimen_phases rp
         WHERE rp.regimen_id = p_regimen_id
         ORDER BY rp.phase_order
     LOOP
-        -- If duration is null, this phase lasts forever
-        IF v_phase.duration_days IS NULL THEN
-            IF p_date >= v_current_date THEN
+        -- Determine phase end: use end_date if set, else calculate from duration_days
+        IF v_phase.end_date IS NOT NULL THEN
+            v_phase_end := v_phase.end_date;
+            -- Check if p_date falls within this phase (end_date is inclusive)
+            IF p_date >= v_current_date AND p_date <= v_phase_end THEN
                 phase_id := v_phase.id;
                 phase_name := v_phase.name;
                 phase_order := v_phase.phase_order;
                 phase_start_date := v_current_date;
-                phase_end_date := NULL;
-                is_forever := TRUE;
+                phase_end_date := v_phase_end;
+                is_forever := FALSE;
                 RETURN NEXT;
                 RETURN;
             END IF;
-        ELSE
+            v_current_date := v_phase_end + 1;
+        ELSIF v_phase.duration_days IS NOT NULL THEN
             -- Check if p_date falls within this phase
             IF p_date >= v_current_date AND p_date < (v_current_date + v_phase.duration_days) THEN
                 phase_id := v_phase.id;
@@ -320,6 +346,18 @@ BEGIN
                 RETURN;
             END IF;
             v_current_date := v_current_date + v_phase.duration_days;
+        ELSE
+            -- If both duration_days and end_date are null, this phase lasts forever
+            IF p_date >= v_current_date THEN
+                phase_id := v_phase.id;
+                phase_name := v_phase.name;
+                phase_order := v_phase.phase_order;
+                phase_start_date := v_current_date;
+                phase_end_date := NULL;
+                is_forever := TRUE;
+                RETURN NEXT;
+                RETURN;
+            END IF;
         END IF;
     END LOOP;
 

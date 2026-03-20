@@ -316,6 +316,24 @@ interface DayHubContextType {
         tasks: Array<Omit<PhaseTask, "id" | "phaseId" | "createdAt">>;
     }>) => Promise<DayHubResult>;
     updateRegimen: (id: string, updates: Partial<Regimen>) => Promise<DayHubResult>;
+    updateRegimenFull: (id: string, updates: Partial<Omit<Regimen, "id" | "createdAt" | "updatedAt" | "createdBy" | "phases">>, phases: Array<{
+        id?: string;
+        name?: string;
+        durationDays?: number;
+        endDate?: string;
+        tasks: Array<{
+            id?: string;
+            name: string;
+            description?: string;
+            taskType: ScheduleType;
+            frequencyType: FrequencyType;
+            frequencyValue?: number;
+            scheduledTimes: string[];
+            daysOfWeek?: number[];
+            imageUrl?: string;
+            metadata?: Record<string, any>;
+        }>;
+    }>) => Promise<DayHubResult>;
     deleteRegimen: (id: string) => Promise<DayHubResult>;
     pauseRegimen: (id: string) => Promise<DayHubResult>;
     resumeRegimen: (id: string) => Promise<DayHubResult>;
@@ -1734,6 +1752,199 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
         }
     }, [user, fetchRegimens]);
 
+    // Update regimen with full phases and tasks (replaces all phases/tasks)
+    const updateRegimenFull = useCallback(async (
+        id: string,
+        updates: Partial<Omit<Regimen, "id" | "createdAt" | "updatedAt" | "createdBy" | "phases">>,
+        phases: Array<{
+            id?: string; // existing phase id, or undefined for new phase
+            name?: string;
+            durationDays?: number;
+            endDate?: string;
+            tasks: Array<{
+                id?: string; // existing task id, or undefined for new task
+                name: string;
+                description?: string;
+                taskType: ScheduleType;
+                frequencyType: FrequencyType;
+                frequencyValue?: number;
+                scheduledTimes: string[];
+                daysOfWeek?: number[];
+                imageUrl?: string;
+                metadata?: Record<string, any>;
+            }>;
+        }>
+    ): Promise<DayHubResult> => {
+        if (!user) return { success: false, error: "Not authenticated" };
+
+        try {
+            // 1. Update the regimen itself
+            const updateData: any = {};
+            if (updates.name !== undefined) updateData.name = updates.name;
+            if (updates.description !== undefined) updateData.description = updates.description;
+            if (updates.startDate !== undefined) updateData.start_date = updates.startDate;
+            if (updates.status !== undefined) updateData.status = updates.status;
+
+            const { error: regimenError } = await supabase
+                .from("regimens")
+                .update(updateData)
+                .eq("id", id);
+
+            if (regimenError) {
+                console.error("Error updating regimen:", regimenError);
+                return { success: false, error: regimenError.message };
+            }
+
+            // 2. Get existing phases for this regimen
+            const { data: existingPhases } = await supabase
+                .from("regimen_phases")
+                .select("id")
+                .eq("regimen_id", id);
+
+            const existingPhaseIds = new Set((existingPhases || []).map(p => p.id));
+            const newPhaseIds = new Set(phases.filter(p => p.id).map(p => p.id));
+
+            // 3. Delete phases that are no longer in the update
+            const phasesToDelete = Array.from(existingPhaseIds).filter(pid => !newPhaseIds.has(pid));
+            if (phasesToDelete.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from("regimen_phases")
+                    .delete()
+                    .in("id", phasesToDelete);
+
+                if (deleteError) {
+                    console.error("Error deleting old phases:", deleteError);
+                }
+            }
+
+            // 4. Update or create phases
+            for (let i = 0; i < phases.length; i++) {
+                const phase = phases[i];
+
+                if (phase.id && existingPhaseIds.has(phase.id)) {
+                    // Update existing phase
+                    const { error: phaseUpdateError } = await supabase
+                        .from("regimen_phases")
+                        .update({
+                            phase_order: i + 1,
+                            name: phase.name,
+                            duration_days: phase.durationDays,
+                            end_date: phase.endDate,
+                        })
+                        .eq("id", phase.id);
+
+                    if (phaseUpdateError) {
+                        console.error("Error updating phase:", phaseUpdateError);
+                        return { success: false, error: phaseUpdateError.message };
+                    }
+
+                    // Get existing tasks for this phase
+                    const { data: existingTasks } = await supabase
+                        .from("phase_tasks")
+                        .select("id")
+                        .eq("phase_id", phase.id);
+
+                    const existingTaskIds = new Set((existingTasks || []).map(t => t.id));
+                    const newTaskIds = new Set(phase.tasks.filter(t => t.id).map(t => t.id));
+
+                    // Delete tasks no longer in the phase
+                    const tasksToDelete = Array.from(existingTaskIds).filter(tid => !newTaskIds.has(tid));
+                    if (tasksToDelete.length > 0) {
+                        await supabase.from("phase_tasks").delete().in("id", tasksToDelete);
+                    }
+
+                    // Update or create tasks
+                    for (let j = 0; j < phase.tasks.length; j++) {
+                        const task = phase.tasks[j];
+                        if (task.id && existingTaskIds.has(task.id)) {
+                            // Update existing task
+                            await supabase
+                                .from("phase_tasks")
+                                .update({
+                                    name: task.name,
+                                    description: task.description,
+                                    task_type: task.taskType,
+                                    frequency_type: task.frequencyType,
+                                    frequency_value: task.frequencyValue,
+                                    scheduled_times: task.scheduledTimes,
+                                    days_of_week: task.daysOfWeek,
+                                    sort_order: j,
+                                    image_url: task.imageUrl,
+                                    metadata: task.metadata,
+                                })
+                                .eq("id", task.id);
+                        } else {
+                            // Create new task
+                            await supabase.from("phase_tasks").insert({
+                                phase_id: phase.id,
+                                name: task.name,
+                                description: task.description,
+                                task_type: task.taskType,
+                                frequency_type: task.frequencyType,
+                                frequency_value: task.frequencyValue,
+                                scheduled_times: task.scheduledTimes,
+                                days_of_week: task.daysOfWeek,
+                                sort_order: j,
+                                image_url: task.imageUrl,
+                                metadata: task.metadata,
+                            });
+                        }
+                    }
+                } else {
+                    // Create new phase
+                    const { data: newPhaseData, error: phaseInsertError } = await supabase
+                        .from("regimen_phases")
+                        .insert({
+                            regimen_id: id,
+                            phase_order: i + 1,
+                            name: phase.name,
+                            duration_days: phase.durationDays,
+                            end_date: phase.endDate,
+                        })
+                        .select()
+                        .single();
+
+                    if (phaseInsertError) {
+                        console.error("Error creating phase:", phaseInsertError);
+                        return { success: false, error: phaseInsertError.message };
+                    }
+
+                    // Create tasks for new phase
+                    if (phase.tasks.length > 0) {
+                        const tasksToInsert = phase.tasks.map((task, j) => ({
+                            phase_id: newPhaseData.id,
+                            name: task.name,
+                            description: task.description,
+                            task_type: task.taskType,
+                            frequency_type: task.frequencyType,
+                            frequency_value: task.frequencyValue,
+                            scheduled_times: task.scheduledTimes,
+                            days_of_week: task.daysOfWeek,
+                            sort_order: j,
+                            image_url: task.imageUrl,
+                            metadata: task.metadata,
+                        }));
+
+                        const { error: tasksError } = await supabase
+                            .from("phase_tasks")
+                            .insert(tasksToInsert);
+
+                        if (tasksError) {
+                            console.error("Error creating phase tasks:", tasksError);
+                            return { success: false, error: tasksError.message };
+                        }
+                    }
+                }
+            }
+
+            await fetchRegimens();
+            return { success: true };
+        } catch (err) {
+            console.error("Error in updateRegimenFull:", err);
+            return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+    }, [user, fetchRegimens]);
+
     // Delete regimen
     const deleteRegimen = useCallback(async (id: string): Promise<DayHubResult> => {
         if (!user) return { success: false, error: "Not authenticated" };
@@ -2046,6 +2257,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                 // Regimen CRUD
                 createRegimen,
                 updateRegimen,
+                updateRegimenFull,
                 deleteRegimen,
                 pauseRegimen,
                 resumeRegimen,
