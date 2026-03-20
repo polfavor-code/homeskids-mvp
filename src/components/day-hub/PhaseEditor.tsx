@@ -14,9 +14,9 @@ export interface PhaseTaskEntry {
     frequencyValue?: number;
     scheduledTimes: string[];
     daysOfWeek?: number[];
-    imageFile?: File;
-    imagePreview?: string;
-    imageUrl?: string; // For existing images from database
+    imageFiles?: File[];
+    imagePreviews?: string[];
+    imageUrls?: string[]; // For existing images from database
 }
 
 export interface PhaseEntry {
@@ -73,12 +73,26 @@ export default function PhaseEditor({
 
     const handleImageSelect = (file: File) => {
         const preview = URL.createObjectURL(file);
-        updateTask({ imageFile: file, imagePreview: preview });
+        const currentFiles = task.imageFiles || [];
+        const currentPreviews = task.imagePreviews || [];
+        updateTask({
+            imageFiles: [...currentFiles, file],
+            imagePreviews: [...currentPreviews, preview]
+        });
     };
 
-    const removeImage = () => {
-        if (task.imagePreview) URL.revokeObjectURL(task.imagePreview);
-        updateTask({ imageFile: undefined, imagePreview: undefined });
+    const removeImage = (index: number) => {
+        const currentFiles = task.imageFiles || [];
+        const currentPreviews = task.imagePreviews || [];
+        const currentUrls = task.imageUrls || [];
+
+        if (currentPreviews[index]) URL.revokeObjectURL(currentPreviews[index]);
+
+        updateTask({
+            imageFiles: currentFiles.filter((_, i) => i !== index),
+            imagePreviews: currentPreviews.filter((_, i) => i !== index),
+            imageUrls: currentUrls.filter((_, i) => i !== index),
+        });
     };
 
     return (
@@ -169,48 +183,70 @@ export default function PhaseEditor({
                     />
                 </div>
 
-                {/* Photo */}
+                {/* Photos */}
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium text-forest">Photo (optional)</label>
-                    {task.imagePreview ? (
-                        <div className="relative w-24 h-24">
-                            <img
-                                src={task.imagePreview}
-                                alt="Task"
-                                className="w-full h-full object-cover rounded-xl"
-                            />
-                            <button
-                                type="button"
-                                onClick={removeImage}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                </svg>
-                            </button>
-                        </div>
-                    ) : (
-                        <label className="block w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-forest transition-colors">
+                    <label className="block text-sm font-medium text-forest">Photos (optional)</label>
+                    <div className="flex flex-wrap gap-2">
+                        {/* Existing images from database */}
+                        {task.imageUrls?.map((url, index) => (
+                            <div key={`url-${index}`} className="relative w-20 h-20">
+                                <img
+                                    src={url}
+                                    alt={`Task ${index + 1}`}
+                                    className="w-full h-full object-cover rounded-xl"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeImage(index)}
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                                >
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                            </div>
+                        ))}
+                        {/* New images being uploaded */}
+                        {task.imagePreviews?.map((preview, index) => (
+                            <div key={`preview-${index}`} className="relative w-20 h-20">
+                                <img
+                                    src={preview}
+                                    alt={`Task ${index + 1}`}
+                                    className="w-full h-full object-cover rounded-xl"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeImage((task.imageUrls?.length || 0) + index)}
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                                >
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                            </div>
+                        ))}
+                        {/* Add button */}
+                        <label className="block w-20 h-20 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-forest transition-colors">
                             <input
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) handleImageSelect(file);
+                                    e.target.value = "";
                                 }}
                                 className="hidden"
                             />
                             <div className="w-full h-full flex flex-col items-center justify-center text-textSub">
-                                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
+                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
                                 </svg>
-                                <span className="text-xs mt-1">Add</span>
                             </div>
                         </label>
-                    )}
+                    </div>
                 </div>
 
                 {/* Frequency */}

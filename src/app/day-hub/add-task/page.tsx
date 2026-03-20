@@ -174,14 +174,25 @@ export default function AddTaskPage() {
 
     // Image handlers (for single-phase mode)
     const handleImageSelect = (file: File) => {
-        if (firstTask?.imagePreview) URL.revokeObjectURL(firstTask.imagePreview);
         const preview = URL.createObjectURL(file);
-        updateFirstTask({ imageFile: file, imagePreview: preview });
+        const currentFiles = firstTask?.imageFiles || [];
+        const currentPreviews = firstTask?.imagePreviews || [];
+        updateFirstTask({
+            imageFiles: [...currentFiles, file],
+            imagePreviews: [...currentPreviews, preview]
+        });
     };
 
-    const removeImage = () => {
-        if (firstTask?.imagePreview) URL.revokeObjectURL(firstTask.imagePreview);
-        updateFirstTask({ imageFile: undefined, imagePreview: undefined });
+    const removeImage = (index: number) => {
+        const currentFiles = firstTask?.imageFiles || [];
+        const currentPreviews = firstTask?.imagePreviews || [];
+
+        if (currentPreviews[index]) URL.revokeObjectURL(currentPreviews[index]);
+
+        updateFirstTask({
+            imageFiles: currentFiles.filter((_, i) => i !== index),
+            imagePreviews: currentPreviews.filter((_, i) => i !== index),
+        });
     };
 
     // Validation
@@ -191,11 +202,15 @@ export default function AddTaskPage() {
         }
         if (step === 2) {
             // All phases must have valid duration and at least one task with a name
+            // For medications, description (dose) is also required
             return phases.every((phase) =>
                 (phase.durationType === "forever" ||
                  (phase.durationType === "days" && phase.durationDays && phase.durationDays > 0) ||
                  (phase.durationType === "end_date" && phase.endDate)) &&
-                phase.tasks.length > 0 && phase.tasks.every((task) => task.name.trim().length > 0)
+                phase.tasks.length > 0 && phase.tasks.every((task) =>
+                    task.name.trim().length > 0 &&
+                    (scheduleType !== "medication" || (task.description && task.description.trim().length > 0))
+                )
             );
         }
         return true;
@@ -240,11 +255,14 @@ export default function AddTaskPage() {
                 phases.map(async (phase) => {
                     const tasksWithImages = await Promise.all(
                         phase.tasks.map(async (task, taskIndex) => {
-                            let imageUrl: string | undefined;
-                            if (task.imageFile) {
-                                const result = await uploadTaskImage(task.imageFile);
-                                if (result.success && result.url) {
-                                    imageUrl = result.url;
+                            // Upload all images
+                            const imageUrls: string[] = [];
+                            if (task.imageFiles && task.imageFiles.length > 0) {
+                                for (const file of task.imageFiles) {
+                                    const result = await uploadTaskImage(file);
+                                    if (result.success && result.url) {
+                                        imageUrls.push(result.url);
+                                    }
                                 }
                             }
                             return {
@@ -256,7 +274,7 @@ export default function AddTaskPage() {
                                 scheduledTimes: task.scheduledTimes,
                                 daysOfWeek: task.daysOfWeek,
                                 sortOrder: taskIndex,
-                                imageUrl,
+                                imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
                             };
                         })
                     );
@@ -444,9 +462,11 @@ export default function AddTaskPage() {
                                 {/* Description */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-forest">
-                                        {scheduleType === "medication" || scheduleType === "supplement"
-                                            ? "Dose / instructions"
-                                            : "Description"} (optional)
+                                        {scheduleType === "medication"
+                                            ? "Dose / instructions *"
+                                            : scheduleType === "supplement"
+                                                ? "Dose / instructions (optional)"
+                                                : "Description (optional)"}
                                     </label>
                                     <textarea
                                         value={firstTask.description || ""}
@@ -461,29 +481,32 @@ export default function AddTaskPage() {
                                     />
                                 </div>
 
-                                {/* Photo */}
+                                {/* Photos */}
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-forest">Photo (optional)</label>
-                                    {firstTask.imagePreview ? (
-                                        <div className="relative w-24 h-24">
-                                            <img
-                                                src={firstTask.imagePreview}
-                                                alt="Task"
-                                                className="w-full h-full object-cover rounded-xl"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={removeImage}
-                                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
-                                            >
-                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <label className="block w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-forest transition-colors">
+                                    <label className="block text-sm font-medium text-forest">Photos (optional)</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {/* Uploaded images */}
+                                        {firstTask.imagePreviews?.map((preview, index) => (
+                                            <div key={index} className="relative w-20 h-20">
+                                                <img
+                                                    src={preview}
+                                                    alt={`Task ${index + 1}`}
+                                                    className="w-full h-full object-cover rounded-xl"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(index)}
+                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                                                >
+                                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {/* Add button */}
+                                        <label className="block w-20 h-20 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-forest transition-colors">
                                             <input
                                                 ref={fileInputRef}
                                                 type="file"
@@ -491,19 +514,18 @@ export default function AddTaskPage() {
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0];
                                                     if (file) handleImageSelect(file);
+                                                    e.target.value = "";
                                                 }}
                                                 className="hidden"
                                             />
                                             <div className="w-full h-full flex flex-col items-center justify-center text-textSub">
-                                                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                                    <polyline points="21 15 16 10 5 21" />
+                                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
                                                 </svg>
-                                                <span className="text-xs mt-1">Add</span>
                                             </div>
                                         </label>
-                                    )}
+                                    </div>
                                 </div>
 
                                 {/* Frequency */}

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { useAuth } from "./AuthContext";
 import { supabase, FEATURES } from "@/lib/supabase";
 import { useAppState } from "@/lib/AppStateContext";
 
@@ -120,14 +121,30 @@ interface ContactsContextType {
 const ContactsContext = createContext<ContactsContextType | undefined>(undefined);
 
 export function ContactsProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [homeContacts, setHomeContacts] = useState<HomeContact[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [childId, setChildId] = useState<string | null>(null);
     const [childSpaceIds, setChildSpaceIds] = useState<string[]>([]);
-    
+
     // Get current child from AppState - contacts should sync with selected child
     const { currentChildId } = useAppState();
+
+    // Refs for realtime channels
+    const realtimeChannelRef = useRef<any>(null);
+    const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+    // Broadcast contacts update to other caregivers
+    const broadcastContactsUpdate = useCallback(() => {
+        if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.send({
+                type: "broadcast",
+                event: "contacts-updated",
+                payload: { timestamp: Date.now() },
+            });
+        }
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -335,6 +352,203 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
         };
     }, [currentChildId]); // Refetch when child changes
 
+    // Refresh data function for real-time updates
+    const refreshData = useCallback(async () => {
+        if (!user || !FEATURES.CONTACTS) return;
+
+        try {
+            // V2: Get children this user has access to
+            const { data: childAccess } = await supabase
+                .from("child_access")
+                .select("child_id")
+                .eq("user_id", user.id);
+
+            if (!childAccess || childAccess.length === 0) return;
+
+            const childIds = childAccess.map(ca => ca.child_id);
+            const activeChildId = currentChildId && childIds.includes(currentChildId)
+                ? currentChildId
+                : childIds[0];
+
+            // Get child_spaces for these children
+            const { data: childSpaces } = await supabase
+                .from("child_spaces")
+                .select("id")
+                .in("child_id", childIds);
+
+            if (childSpaces) {
+                const csIds = childSpaces.map(cs => cs.id);
+
+                // Fetch home contacts
+                const { data: homeContactsData, error: hcError } = await supabase
+                    .from("child_space_contacts")
+                    .select(`
+                        id, child_space_id, user_id, is_active, share_phone, share_email,
+                        share_whatsapp, share_note, note,
+                        profiles (id, name, phone, email, whatsapp, avatar_url, avatar_initials, avatar_color)
+                    `)
+                    .in("child_space_id", csIds);
+
+                if (!hcError && homeContactsData) {
+                    const mappedHC: HomeContact[] = homeContactsData.map((hc: any) => ({
+                        id: hc.id,
+                        childSpaceId: hc.child_space_id,
+                        userId: hc.user_id,
+                        name: hc.profiles?.name || "Unknown",
+                        phone: hc.profiles?.phone,
+                        email: hc.profiles?.email,
+                        whatsapp: hc.profiles?.whatsapp,
+                        avatarUrl: hc.profiles?.avatar_url,
+                        avatarInitials: hc.profiles?.avatar_initials,
+                        avatarColor: hc.profiles?.avatar_color,
+                        sharePhone: hc.share_phone || false,
+                        shareEmail: hc.share_email || false,
+                        shareWhatsapp: hc.share_whatsapp || false,
+                        shareNote: hc.share_note || false,
+                        note: hc.note,
+                        isActive: hc.is_active !== false,
+                    }));
+                    setHomeContacts(mappedHC);
+                }
+            }
+
+            // Fetch contacts
+            const { data: contactsData } = await supabase
+                .from("contacts")
+                .select("*")
+                .eq("child_id", activeChildId)
+                .order("is_favorite", { ascending: false })
+                .order("name", { ascending: true });
+
+            if (contactsData) {
+                // Fetch creator names
+                const creatorIds = Array.from(new Set(contactsData.filter(c => c.created_by_user_id).map(c => c.created_by_user_id)));
+                let creatorNames: Record<string, string> = {};
+                if (creatorIds.length > 0) {
+                    const { data: profiles } = await supabase
+                        .from("profiles")
+                        .select("id, name")
+                        .in("id", creatorIds);
+                    if (profiles) {
+                        creatorNames = Object.fromEntries(profiles.map(p => [p.id, p.name]));
+                    }
+                }
+
+                const mappedContacts: Contact[] = contactsData.map((c: any) => {
+                    let phoneNumbers: PhoneNumber[] = [];
+                    if (c.phone_numbers && Array.isArray(c.phone_numbers)) {
+                        phoneNumbers = c.phone_numbers;
+                    } else if (c.phone) {
+                        phoneNumbers = [{
+                            id: "legacy-1",
+                            number: c.phone,
+                            countryCode: c.phone_country_code || "+1",
+                            type: "mobile" as PhoneType,
+                        }];
+                    }
+
+                    return {
+                        id: c.id, childId: c.child_id, name: c.name, role: c.role || "",
+                        category: c.category || "other", phone: c.phone, phoneCountryCode: c.phone_country_code,
+                        phoneNumbers, email: c.email, telegram: c.telegram, instagram: c.instagram,
+                        contactPreferences: c.contact_preferences || [], address: c.address,
+                        addressStreet: c.address_street, addressCity: c.address_city,
+                        addressState: c.address_state, addressZip: c.address_zip,
+                        addressCountry: c.address_country, addressLat: c.address_lat,
+                        addressLng: c.address_lng, notes: c.notes, isFavorite: c.is_favorite || false,
+                        connectedWith: c.connected_with, avatarUrl: c.avatar_url, createdAt: c.created_at,
+                        createdByUserId: c.created_by_user_id,
+                        createdByName: c.created_by_user_id ? creatorNames[c.created_by_user_id] : undefined,
+                    };
+                });
+                setContacts(mappedContacts);
+            }
+        } catch (error) {
+            console.error("[Contacts] Error refreshing data:", error);
+        }
+    }, [user, currentChildId]);
+
+    // Setup realtime subscription for contacts and child_space_contacts
+    useEffect(() => {
+        if (!user) return;
+
+        if (realtimeChannelRef.current) {
+            supabase.removeChannel(realtimeChannelRef.current);
+        }
+
+        const channel = supabase
+            .channel(`contacts-realtime-${user.id}-${Date.now()}`)
+            .on("postgres_changes", { event: "*", schema: "public", table: "contacts" }, (payload) => {
+                console.log("[Contacts] Contact change:", payload.eventType);
+                refreshData();
+            })
+            .on("postgres_changes", { event: "*", schema: "public", table: "child_space_contacts" }, (payload) => {
+                console.log("[Contacts] Home contact change:", payload.eventType);
+                refreshData();
+            })
+            .subscribe((status) => {
+                console.log("[Contacts] Realtime subscription status:", status);
+            });
+
+        realtimeChannelRef.current = channel;
+
+        return () => {
+            if (realtimeChannelRef.current) {
+                supabase.removeChannel(realtimeChannelRef.current);
+            }
+        };
+    }, [user, refreshData]);
+
+    // Broadcast channel for instant sync between caregivers
+    useEffect(() => {
+        if (!user) return;
+
+        const broadcastChannelName = `contacts-broadcast-${user.id}`;
+        const broadcastChannel = supabase
+            .channel(broadcastChannelName)
+            .on("broadcast", { event: "contacts-updated" }, () => {
+                console.log("[Contacts] Received broadcast - refreshing");
+                refreshData();
+            })
+            .subscribe();
+
+        broadcastChannelRef.current = broadcastChannel;
+
+        return () => {
+            if (broadcastChannelRef.current) {
+                supabase.removeChannel(broadcastChannelRef.current);
+                broadcastChannelRef.current = null;
+            }
+        };
+    }, [user, refreshData]);
+
+    // Refresh data when user returns to the tab
+    useEffect(() => {
+        if (!user) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                refreshData();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", refreshData);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", refreshData);
+        };
+    }, [user, refreshData]);
+
+    // Polling fallback
+    useEffect(() => {
+        if (!user) return;
+
+        const pollInterval = setInterval(refreshData, 10000);
+        return () => clearInterval(pollInterval);
+    }, [user, refreshData]);
+
     // Legacy: Add contact (doctors, schools, etc.)
     const addContact = async (contact: Omit<Contact, "id" | "createdAt">, targetChildId?: string): Promise<{ success: boolean; error?: string }> => {
         try {
@@ -457,6 +671,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 createdByName: creatorName,
             };
             setContacts((prev) => [...prev, newContact]);
+            broadcastContactsUpdate();
 
             return { success: true };
         } catch (error) {
@@ -521,6 +736,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 return { success: false, error: error.message };
             }
 
+            broadcastContactsUpdate();
             return { success: true };
         } catch (error) {
             console.error("Failed to update contact:", error);
@@ -544,6 +760,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 return { success: false, error: error.message };
             }
 
+            broadcastContactsUpdate();
             return { success: true };
         } catch (error) {
             setContacts(previousContacts);
@@ -633,6 +850,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
             };
 
             setHomeContacts(prev => [...prev, newHC]);
+            broadcastContactsUpdate();
             return { success: true };
         } catch (error) {
             console.error("Failed to add home contact:", error);
@@ -670,6 +888,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 return { success: false, error: error.message };
             }
 
+            broadcastContactsUpdate();
             return { success: true };
         } catch (error) {
             console.error("Failed to update home contact:", error);
@@ -696,6 +915,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 return { success: false, error: error.message };
             }
 
+            broadcastContactsUpdate();
             return { success: true };
         } catch (error) {
             setHomeContacts(previousHC);

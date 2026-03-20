@@ -86,7 +86,6 @@ export default function DurationPicker({
                         })}
                         min="1"
                         max="365"
-                        placeholder="7"
                         className="w-20 px-3 py-2 border-2 border-gray-200 rounded-xl text-center focus:outline-none focus:border-forest"
                     />
                     <span className="text-sm text-textSub">days</span>

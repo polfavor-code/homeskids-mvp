@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAppState } from "@/lib/AppStateContext";
+import { useAuth } from "@/lib/AuthContext";
 
 // ==============================================
 // V2 HEALTH CONTEXT - Health data per child_v2
@@ -136,8 +137,24 @@ const defaultHealthFlags: HealthFlags = {
 };
 
 export function HealthProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const { currentChildId } = useAppState();
     const [healthStatus, setHealthStatus] = useState<HealthStatus>(defaultHealthStatus);
+
+    // Refs for realtime channels
+    const realtimeChannelRef = useRef<any>(null);
+    const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+    // Broadcast health update to other caregivers
+    const broadcastHealthUpdate = useCallback(() => {
+        if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.send({
+                type: "broadcast",
+                event: "health-updated",
+                payload: { timestamp: Date.now() },
+            });
+        }
+    }, []);
     const [allergies, setAllergies] = useState<Allergy[]>([]);
     const [medications, setMedications] = useState<Medication[]>([]);
     const [dietaryNeeds, setDietaryNeeds] = useState<DietaryNeeds>(defaultDietaryNeeds);
@@ -305,6 +322,95 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         };
     }, [fetchData]);
 
+    // Setup realtime subscription for health tables
+    useEffect(() => {
+        if (!user) return;
+
+        if (realtimeChannelRef.current) {
+            supabase.removeChannel(realtimeChannelRef.current);
+        }
+
+        const channel = supabase
+            .channel(`health-realtime-${user.id}-${Date.now()}`)
+            .on("postgres_changes", { event: "*", schema: "public", table: "allergies" }, (payload) => {
+                console.log("[Health] Allergy change:", payload.eventType);
+                fetchData();
+            })
+            .on("postgres_changes", { event: "*", schema: "public", table: "medications" }, (payload) => {
+                console.log("[Health] Medication change:", payload.eventType);
+                fetchData();
+            })
+            .on("postgres_changes", { event: "*", schema: "public", table: "dietary_needs" }, (payload) => {
+                console.log("[Health] Dietary change:", payload.eventType);
+                fetchData();
+            })
+            .on("postgres_changes", { event: "*", schema: "public", table: "child_health_status" }, (payload) => {
+                console.log("[Health] Health status change:", payload.eventType);
+                fetchData();
+            })
+            .subscribe((status) => {
+                console.log("[Health] Realtime subscription status:", status);
+            });
+
+        realtimeChannelRef.current = channel;
+
+        return () => {
+            if (realtimeChannelRef.current) {
+                supabase.removeChannel(realtimeChannelRef.current);
+            }
+        };
+    }, [user, fetchData]);
+
+    // Broadcast channel for instant sync between caregivers
+    useEffect(() => {
+        if (!user) return;
+
+        const broadcastChannelName = `health-broadcast-${user.id}`;
+        const broadcastChannel = supabase
+            .channel(broadcastChannelName)
+            .on("broadcast", { event: "health-updated" }, () => {
+                console.log("[Health] Received broadcast - refreshing");
+                fetchData();
+            })
+            .subscribe();
+
+        broadcastChannelRef.current = broadcastChannel;
+
+        return () => {
+            if (broadcastChannelRef.current) {
+                supabase.removeChannel(broadcastChannelRef.current);
+                broadcastChannelRef.current = null;
+            }
+        };
+    }, [user, fetchData]);
+
+    // Refresh data when user returns to the tab
+    useEffect(() => {
+        if (!user) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                fetchData();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", fetchData);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", fetchData);
+        };
+    }, [user, fetchData]);
+
+    // Polling fallback
+    useEffect(() => {
+        if (!user) return;
+
+        const pollInterval = setInterval(fetchData, 10000);
+        return () => clearInterval(pollInterval);
+    }, [user, fetchData]);
+
     // Update health status for a specific category
     const updateHealthStatus = async (
         category: "allergies" | "medication" | "dietary",
@@ -365,6 +471,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 setHealthFlags(prev => ({ ...prev, noDietaryRestrictions: status === "none" }));
             }
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update health status:", error);
@@ -425,6 +532,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
             setHealthFlags(defaultHealthFlags);
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to skip health:", error);
@@ -467,6 +575,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             setAllergies((prev) => [...prev, newAllergy]);
             await updateHealthStatus("allergies", "has", allergy.name);
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to add allergy:", error);
@@ -486,6 +595,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             setAllergies((prev) =>
                 prev.map((a) => (a.id === id ? { ...a, ...updates } : a))
             );
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update allergy:", error);
@@ -509,6 +619,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 await updateHealthStatus("allergies", "skipped");
             }
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to delete allergy:", error);
@@ -601,6 +712,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             setMedications((prev) => [...prev, newMedication]);
             await updateHealthStatus("medication", "has", medication.name);
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to add medication:", error);
@@ -631,6 +743,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             setMedications((prev) =>
                 prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
             );
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update medication:", error);
@@ -655,6 +768,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 await updateHealthStatus("medication", "skipped");
             }
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to delete medication:", error);
@@ -709,6 +823,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 await updateHealthStatus("dietary", "has", needs.dietType || needs.instructions || "Dietary preferences set");
             }
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update dietary needs:", error);
@@ -738,6 +853,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 await updateHealthStatus("dietary", flags.noDietaryRestrictions ? "none" : "skipped");
             }
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update health flags:", error);
@@ -800,6 +916,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 noRegularMedication: true,
             });
 
+            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to confirm no health needs:", error);
