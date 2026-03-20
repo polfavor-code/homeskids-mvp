@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -46,6 +46,21 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     const { currentChildId } = useAppState();
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+
+    // Refs for realtime channels
+    const realtimeChannelRef = useRef<any>(null);
+    const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+    // Broadcast documents update to other caregivers
+    const broadcastDocumentsUpdate = useCallback(() => {
+        if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.send({
+                type: "broadcast",
+                event: "documents-updated",
+                payload: { timestamp: Date.now() },
+            });
+        }
+    }, []);
 
     const fetchData = useCallback(async () => {
         try {
@@ -109,6 +124,83 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
             subscription.unsubscribe();
         };
     }, [fetchData]);
+
+    // Setup realtime subscription for documents
+    useEffect(() => {
+        if (!user) return;
+
+        if (realtimeChannelRef.current) {
+            supabase.removeChannel(realtimeChannelRef.current);
+        }
+
+        const channel = supabase
+            .channel(`documents-realtime-${user.id}-${Date.now()}`)
+            .on("postgres_changes", { event: "*", schema: "public", table: "documents" }, (payload) => {
+                console.log("[Documents] Document change:", payload.eventType);
+                fetchData();
+            })
+            .subscribe((status) => {
+                console.log("[Documents] Realtime subscription status:", status);
+            });
+
+        realtimeChannelRef.current = channel;
+
+        return () => {
+            if (realtimeChannelRef.current) {
+                supabase.removeChannel(realtimeChannelRef.current);
+            }
+        };
+    }, [user, fetchData]);
+
+    // Broadcast channel for instant sync between caregivers (scoped to current child)
+    useEffect(() => {
+        if (!user || !currentChildId) return;
+
+        const broadcastChannelName = `documents-broadcast-${currentChildId}`;
+        const broadcastChannel = supabase
+            .channel(broadcastChannelName)
+            .on("broadcast", { event: "documents-updated" }, () => {
+                console.log("[Documents] Received broadcast - refreshing");
+                fetchData();
+            })
+            .subscribe();
+
+        broadcastChannelRef.current = broadcastChannel;
+
+        return () => {
+            if (broadcastChannelRef.current) {
+                supabase.removeChannel(broadcastChannelRef.current);
+                broadcastChannelRef.current = null;
+            }
+        };
+    }, [user, currentChildId, fetchData]);
+
+    // Refresh data when user returns to the tab
+    useEffect(() => {
+        if (!user) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                fetchData();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", fetchData);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", fetchData);
+        };
+    }, [user, fetchData]);
+
+    // Polling fallback
+    useEffect(() => {
+        if (!user) return;
+
+        const pollInterval = setInterval(fetchData, 10000);
+        return () => clearInterval(pollInterval);
+    }, [user, fetchData]);
 
     const uploadFile = async (file: File): Promise<{ success: boolean; path?: string; error?: string }> => {
         if (!currentChildId) {
@@ -190,6 +282,7 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
             };
 
             setDocuments((prev) => [newDocument, ...prev]);
+            broadcastDocumentsUpdate();
             return { success: true, document: newDocument };
         } catch (error: any) {
             console.error("Failed to add document:", error);
@@ -220,6 +313,7 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
             setDocuments((prev) =>
                 prev.map((d) => (d.id === id ? { ...d, ...updates } : d))
             );
+            broadcastDocumentsUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update document:", error);
@@ -245,6 +339,7 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
             }
 
             setDocuments((prev) => prev.filter((d) => d.id !== id));
+            broadcastDocumentsUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to delete document:", error);

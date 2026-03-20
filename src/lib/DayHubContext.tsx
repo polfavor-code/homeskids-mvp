@@ -59,7 +59,7 @@ export interface ScheduleTask {
     timeSlot: TimeSlot;
     scheduledTime?: string;
     sortOrder: number;
-    imageUrl?: string;
+    imageUrls?: string[];
     metadata?: Record<string, any>;
     isActive: boolean;
     isRepeating: boolean; // true = daily, false = one-time on startDate
@@ -106,7 +106,7 @@ export interface DayTask {
     timeSlot: TimeSlot;
     scheduledTime?: string;
     sortOrder: number;
-    imageUrl?: string;
+    imageUrls?: string[];
     metadata?: Record<string, any>;
     // Completion info
     status: TaskStatus;
@@ -189,7 +189,7 @@ export interface PhaseTask {
     scheduledTimes: string[]; // ['08:00', '20:00']
     daysOfWeek?: number[]; // [1,3,5] for Mon/Wed/Fri
     sortOrder: number;
-    imageUrl?: string;
+    imageUrls?: string[];
     metadata?: Record<string, any>;
     createdAt: string;
 }
@@ -224,7 +224,7 @@ export interface RegimenDayTask {
     taskType: ScheduleType;
     timeSlot: TimeSlot;
     scheduledTime?: string;
-    imageUrl?: string;
+    imageUrls?: string[];
     // Completion info
     status: TaskStatus;
     completedBy?: string;
@@ -330,7 +330,7 @@ interface DayHubContextType {
             frequencyValue?: number;
             scheduledTimes: string[];
             daysOfWeek?: number[];
-            imageUrl?: string;
+            imageUrls?: string[];
             metadata?: Record<string, any>;
         }>;
     }>) => Promise<DayHubResult>;
@@ -387,6 +387,19 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
     // Ref for realtime channel
     const realtimeChannelRef = useRef<any>(null);
     const regimenRealtimeChannelRef = useRef<any>(null);
+    const contentRealtimeChannelRef = useRef<any>(null);
+    const contentBroadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+    // Broadcast content update to other caregivers
+    const broadcastContentUpdate = useCallback(() => {
+        if (contentBroadcastChannelRef.current) {
+            contentBroadcastChannelRef.current.send({
+                type: "broadcast",
+                event: "dayhub-content-updated",
+                payload: { timestamp: Date.now() },
+            });
+        }
+    }, []);
 
     // Computed: combined timeline tasks (simple + regimen)
     const timelineTasks: TimelineTask[] = [
@@ -839,7 +852,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                     timeSlot: task.time_slot,
                     scheduledTime: task.scheduled_time,
                     sortOrder: task.sort_order,
-                    imageUrl: task.image_url,
+                    imageUrls: task.image_url ? (task.image_url.startsWith('[') ? JSON.parse(task.image_url) : [task.image_url]) : undefined,
                     metadata: task.metadata,
                     // Completion info
                     status: completion?.status || "pending",
@@ -940,7 +953,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                         scheduledTimes: t.scheduled_times || [],
                         daysOfWeek: t.days_of_week,
                         sortOrder: t.sort_order,
-                        imageUrl: t.image_url,
+                        imageUrls: t.image_url ? (t.image_url.startsWith('[') ? JSON.parse(t.image_url) : [t.image_url]) : undefined,
                         metadata: t.metadata,
                         createdAt: t.created_at,
                     })),
@@ -1010,7 +1023,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                             taskType: task.taskType,
                             timeSlot: getTimeSlotFromTime(time),
                             scheduledTime: time,
-                            imageUrl: task.imageUrl,
+                            imageUrls: task.imageUrls,
                             // Completion info (will be filled in)
                             status: "pending",
                             // Family member info
@@ -1471,12 +1484,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchTemplates();
+            broadcastContentUpdate();
             return { success: true, data };
         } catch (err) {
             console.error("Error in createTemplate:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchTemplates]);
+    }, [user, fetchTemplates, broadcastContentUpdate]);
 
     // Update template
     const updateTemplate = useCallback(async (id: string, updates: Partial<ScheduleTemplate>): Promise<DayHubResult> => {
@@ -1502,12 +1516,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchTemplates();
+            broadcastContentUpdate();
             return { success: true, data };
         } catch (err) {
             console.error("Error in updateTemplate:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchTemplates]);
+    }, [user, fetchTemplates, broadcastContentUpdate]);
 
     // Delete template
     const deleteTemplate = useCallback(async (id: string): Promise<DayHubResult> => {
@@ -1525,12 +1540,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchTemplates();
+            broadcastContentUpdate();
             return { success: true };
         } catch (err) {
             console.error("Error in deleteTemplate:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchTemplates]);
+    }, [user, fetchTemplates, broadcastContentUpdate]);
 
     // Create task
     const createTask = useCallback(async (task: Omit<ScheduleTask, "id" | "createdAt" | "updatedAt">): Promise<DayHubResult> => {
@@ -1547,7 +1563,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                     time_slot: task.timeSlot,
                     scheduled_time: task.scheduledTime,
                     sort_order: task.sortOrder,
-                    image_url: task.imageUrl,
+                    image_url: task.imageUrls ? JSON.stringify(task.imageUrls) : null,
                     metadata: task.metadata,
                     is_active: task.isActive ?? true,
                     is_repeating: task.isRepeating ?? true,
@@ -1562,12 +1578,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchDayTasks();
+            broadcastContentUpdate();
             return { success: true, data };
         } catch (err) {
             console.error("Error in createTask:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchDayTasks]);
+    }, [user, fetchDayTasks, broadcastContentUpdate]);
 
     // Update task
     const updateTask = useCallback(async (id: string, updates: Partial<ScheduleTask>): Promise<DayHubResult> => {
@@ -1581,7 +1598,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             if (updates.timeSlot !== undefined) updateData.time_slot = updates.timeSlot;
             if (updates.scheduledTime !== undefined) updateData.scheduled_time = updates.scheduledTime;
             if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
-            if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl;
+            if (updates.imageUrls !== undefined) updateData.image_url = updates.imageUrls ? JSON.stringify(updates.imageUrls) : null;
             if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
             if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
 
@@ -1598,12 +1615,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchDayTasks();
+            broadcastContentUpdate();
             return { success: true, data };
         } catch (err) {
             console.error("Error in updateTask:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchDayTasks]);
+    }, [user, fetchDayTasks, broadcastContentUpdate]);
 
     // Delete task
     const deleteTask = useCallback(async (id: string): Promise<DayHubResult> => {
@@ -1621,12 +1639,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchDayTasks();
+            broadcastContentUpdate();
             return { success: true };
         } catch (err) {
             console.error("Error in deleteTask:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchDayTasks]);
+    }, [user, fetchDayTasks, broadcastContentUpdate]);
 
     // Create regimen with phases and tasks
     const createRegimen = useCallback(async (
@@ -1698,7 +1717,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                         scheduled_times: task.scheduledTimes,
                         days_of_week: task.daysOfWeek,
                         sort_order: j,
-                        image_url: task.imageUrl,
+                        image_url: task.imageUrls ? JSON.stringify(task.imageUrls) : null,
                         metadata: task.metadata,
                     }));
 
@@ -1715,12 +1734,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchRegimens();
+            broadcastContentUpdate();
             return { success: true, data: regimenData };
         } catch (err) {
             console.error("Error in createRegimen:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchRegimens]);
+    }, [user, fetchRegimens, broadcastContentUpdate]);
 
     // Update regimen
     const updateRegimen = useCallback(async (id: string, updates: Partial<Regimen>): Promise<DayHubResult> => {
@@ -1745,12 +1765,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchRegimens();
+            broadcastContentUpdate();
             return { success: true, data };
         } catch (err) {
             console.error("Error in updateRegimen:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchRegimens]);
+    }, [user, fetchRegimens, broadcastContentUpdate]);
 
     // Update regimen with full phases and tasks (replaces all phases/tasks)
     const updateRegimenFull = useCallback(async (
@@ -1770,7 +1791,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                 frequencyValue?: number;
                 scheduledTimes: string[];
                 daysOfWeek?: number[];
-                imageUrl?: string;
+                imageUrls?: string[];
                 metadata?: Record<string, any>;
             }>;
         }>
@@ -1869,7 +1890,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                                     scheduled_times: task.scheduledTimes,
                                     days_of_week: task.daysOfWeek,
                                     sort_order: j,
-                                    image_url: task.imageUrl,
+                                    image_url: task.imageUrls ? JSON.stringify(task.imageUrls) : null,
                                     metadata: task.metadata,
                                 })
                                 .eq("id", task.id);
@@ -1885,7 +1906,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                                 scheduled_times: task.scheduledTimes,
                                 days_of_week: task.daysOfWeek,
                                 sort_order: j,
-                                image_url: task.imageUrl,
+                                image_url: task.imageUrls ? JSON.stringify(task.imageUrls) : null,
                                 metadata: task.metadata,
                             });
                         }
@@ -1921,7 +1942,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                             scheduled_times: task.scheduledTimes,
                             days_of_week: task.daysOfWeek,
                             sort_order: j,
-                            image_url: task.imageUrl,
+                            image_url: task.imageUrls ? JSON.stringify(task.imageUrls) : null,
                             metadata: task.metadata,
                         }));
 
@@ -1938,12 +1959,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchRegimens();
+            broadcastContentUpdate();
             return { success: true };
         } catch (err) {
             console.error("Error in updateRegimenFull:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchRegimens]);
+    }, [user, fetchRegimens, broadcastContentUpdate]);
 
     // Delete regimen
     const deleteRegimen = useCallback(async (id: string): Promise<DayHubResult> => {
@@ -1961,12 +1983,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchRegimens();
+            broadcastContentUpdate();
             return { success: true };
         } catch (err) {
             console.error("Error in deleteRegimen:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, fetchRegimens]);
+    }, [user, fetchRegimens, broadcastContentUpdate]);
 
     // Pause regimen
     const pauseRegimen = useCallback(async (id: string): Promise<DayHubResult> => {
@@ -2042,6 +2065,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                 }
 
                 await fetchRegimens();
+                broadcastContentUpdate();
                 return { success: true };
             }
 
@@ -2070,12 +2094,13 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchRegimens();
+            broadcastContentUpdate();
             return { success: true };
         } catch (err) {
             console.error("Error in endRegimenOnDate:", err);
             return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
         }
-    }, [user, regimens, getActivePhase, fetchRegimens]);
+    }, [user, regimens, getActivePhase, fetchRegimens, broadcastContentUpdate]);
 
     // Upload task image
     const uploadTaskImage = useCallback(async (file: File): Promise<{ success: boolean; url?: string; error?: string }> => {
@@ -2215,6 +2240,161 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             }
         };
     }, [user, fetchRegimenDayTasks]);
+
+    // Setup realtime subscription for content tables (templates, tasks, regimens, phases, phase_tasks)
+    useEffect(() => {
+        if (!user) return;
+
+        // Clean up previous channel
+        if (contentRealtimeChannelRef.current) {
+            supabase.removeChannel(contentRealtimeChannelRef.current);
+        }
+
+        const channel = supabase
+            .channel(`day-hub-content-${user.id}-${Date.now()}`)
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "schedule_templates" },
+                (payload) => {
+                    console.log("[DayHub] Template change:", payload.eventType);
+                    fetchTemplates();
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "schedule_tasks" },
+                (payload) => {
+                    console.log("[DayHub] Task change:", payload.eventType);
+                    fetchDayTasks();
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "regimens" },
+                (payload) => {
+                    console.log("[DayHub] Regimen change:", payload.eventType);
+                    fetchRegimens();
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "regimen_phases" },
+                (payload) => {
+                    console.log("[DayHub] Phase change:", payload.eventType);
+                    fetchRegimens();
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "phase_tasks" },
+                (payload) => {
+                    console.log("[DayHub] Phase task change:", payload.eventType);
+                    fetchRegimens();
+                    fetchRegimenDayTasks();
+                }
+            )
+            .subscribe((status) => {
+                console.log("[DayHub] Content realtime subscription status:", status);
+            });
+
+        contentRealtimeChannelRef.current = channel;
+
+        return () => {
+            if (contentRealtimeChannelRef.current) {
+                supabase.removeChannel(contentRealtimeChannelRef.current);
+            }
+        };
+    }, [user, fetchTemplates, fetchDayTasks, fetchRegimens, fetchRegimenDayTasks]);
+
+    // Broadcast channel for instant sync between caregivers (scoped to current child)
+    useEffect(() => {
+        if (!user || !currentChildId) return;
+
+        const broadcastChannelName = `dayhub-broadcast-${currentChildId}`;
+        console.log("[DayHub] Setting up broadcast channel:", broadcastChannelName);
+
+        const broadcastChannel = supabase
+            .channel(broadcastChannelName)
+            .on("broadcast", { event: "dayhub-content-updated" }, () => {
+                console.log("[DayHub] Received broadcast - refreshing content");
+                refreshData();
+            })
+            .subscribe((status) => {
+                console.log("[DayHub] Broadcast channel status:", status);
+            });
+
+        contentBroadcastChannelRef.current = broadcastChannel;
+
+        return () => {
+            if (contentBroadcastChannelRef.current) {
+                supabase.removeChannel(contentBroadcastChannelRef.current);
+                contentBroadcastChannelRef.current = null;
+            }
+        };
+    }, [user, currentChildId, refreshData]);
+
+    // Refresh data when user returns to the tab/app (fallback for realtime)
+    useEffect(() => {
+        if (!user) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                console.log("[DayHub] Tab became visible, refreshing data");
+                refreshData();
+            }
+        };
+
+        const handleFocus = () => {
+            console.log("[DayHub] Window focused, refreshing data");
+            refreshData();
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [user, refreshData]);
+
+    // Polling fallback for reliable sync (every 10 seconds, only when visible)
+    useEffect(() => {
+        if (!user || typeof document === "undefined") return;
+
+        let pollInterval: NodeJS.Timeout | null = null;
+
+        const startPolling = () => {
+            if (!pollInterval && document.visibilityState === "visible") {
+                pollInterval = setInterval(() => {
+                    refreshData();
+                }, 10000);
+            }
+        };
+
+        const stopPolling = () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        startPolling();
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            stopPolling();
+        };
+    }, [user, refreshData]);
 
     return (
         <DayHubContext.Provider

@@ -10,17 +10,16 @@ interface TimesPickerProps {
     onChange: (times: string[]) => void;
 }
 
-// Preset times for quick selection
+// Preset times for quick selection (3-6-9 pattern, starting at 6 AM)
 const PRESET_TIMES = [
-    { value: "06:00", label: "6:00 AM" },
-    { value: "08:00", label: "8:00 AM" },
-    { value: "10:00", label: "10:00 AM" },
-    { value: "12:00", label: "12:00 PM" },
-    { value: "14:00", label: "2:00 PM" },
-    { value: "16:00", label: "4:00 PM" },
-    { value: "18:00", label: "6:00 PM" },
-    { value: "20:00", label: "8:00 PM" },
-    { value: "22:00", label: "10:00 PM" },
+    { value: "06:00", label: "6 AM" },
+    { value: "09:00", label: "9 AM" },
+    { value: "12:00", label: "Noon" },
+    { value: "15:00", label: "3 PM" },
+    { value: "18:00", label: "6 PM" },
+    { value: "21:00", label: "9 PM" },
+    { value: "00:00", label: "Midnight" },
+    { value: "03:00", label: "3 AM" },
 ];
 
 // Format time for display (24h to 12h)
@@ -56,13 +55,13 @@ export default function TimesPicker({
     const requiredTimes = getRequiredTimesCount();
     const currentTimes = times.slice(0, requiredTimes);
 
-    // Ensure we have enough time slots
+    // Ensure we have enough time slots (in chronological order)
     while (currentTimes.length < requiredTimes) {
-        // Add default times based on position
-        if (currentTimes.length === 0) currentTimes.push("08:00");
-        else if (currentTimes.length === 1) currentTimes.push("20:00");
-        else if (currentTimes.length === 2) currentTimes.push("14:00");
-        else currentTimes.push("12:00");
+        // Add default times based on position in chronological order
+        if (currentTimes.length === 0) currentTimes.push("09:00");
+        else if (currentTimes.length === 1) currentTimes.push("12:00");
+        else if (currentTimes.length === 2) currentTimes.push("15:00");
+        else currentTimes.push("18:00");
     }
 
     const handleTimeChange = (index: number, newTime: string) => {
@@ -110,7 +109,7 @@ export default function TimesPicker({
 
                     {/* Quick select presets */}
                     <div className="flex flex-wrap gap-1.5">
-                        {PRESET_TIMES.filter((_, i) => i % 2 === 0).map((preset) => (
+                        {PRESET_TIMES.map((preset) => (
                             <button
                                 key={preset.value}
                                 type="button"

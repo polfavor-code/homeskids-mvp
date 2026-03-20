@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase, FEATURES } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -57,6 +57,21 @@ export function TravelBagProvider({ children }: { children: ReactNode }) {
     const [isPacker, setIsPacker] = useState(false);
     const [familyId, setFamilyId] = useState<string | null>(null);
     const [currentCaregiverId, setCurrentCaregiverId] = useState<string | null>(null);
+
+    // Refs for realtime channels
+    const realtimeChannelRef = useRef<any>(null);
+    const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+    // Broadcast bag update to other caregivers
+    const broadcastBagUpdate = useCallback(() => {
+        if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.send({
+                type: "broadcast",
+                event: "travelbag-updated",
+                payload: { timestamp: Date.now() },
+            });
+        }
+    }, []);
 
     // Get family ID and caregiver ID on mount
     useEffect(() => {
@@ -183,6 +198,7 @@ export function TravelBagProvider({ children }: { children: ReactNode }) {
 
                 if (data && !error) {
                     setUntrackedExtras(mapUntrackedExtras(data));
+                    broadcastBagUpdate();
                 }
             } else {
                 // Create new row
@@ -198,19 +214,20 @@ export function TravelBagProvider({ children }: { children: ReactNode }) {
 
                 if (data && !error) {
                     setUntrackedExtras(mapUntrackedExtras(data));
+                    broadcastBagUpdate();
                 }
             }
         } catch (error) {
             console.error("Error updating untracked extras:", error);
         }
-    }, [currentBag, untrackedExtras, currentCaregiverId]);
+    }, [currentBag, untrackedExtras, currentCaregiverId, broadcastBagUpdate]);
 
     // Complete the current bag
     const completeBag = useCallback(async () => {
         if (!currentBag || !FEATURES.TRAVEL_BAGS) return;
 
         try {
-            await supabase
+            const { error } = await supabase
                 .from("travel_bags")
                 .update({
                     status: "completed",
@@ -218,12 +235,158 @@ export function TravelBagProvider({ children }: { children: ReactNode }) {
                 })
                 .eq("id", currentBag.id);
 
+            if (error) {
+                console.error("Error completing bag:", error);
+                return;
+            }
+
             setCurrentBag(null);
             setUntrackedExtras(null);
+            broadcastBagUpdate();
         } catch (error) {
             console.error("Error completing bag:", error);
         }
+    }, [currentBag, broadcastBagUpdate]);
+
+    // Refresh current bag data
+    const refreshBagData = useCallback(async () => {
+        if (!currentBag) return;
+
+        try {
+            // Refresh the current bag
+            const { data: bagData } = await supabase
+                .from("travel_bags")
+                .select("*")
+                .eq("id", currentBag.id)
+                .single();
+
+            if (bagData) {
+                // Check if the bag is no longer being packed (status changed)
+                if (bagData.status !== "packing") {
+                    // Bag is no longer being packed, clear the session
+                    setCurrentBag(null);
+                    setUntrackedExtras(null);
+                    return;
+                }
+
+                setCurrentBag(mapTravelBag(bagData));
+                await loadExtrasForBag(bagData.id);
+            } else {
+                // Bag was deleted
+                setCurrentBag(null);
+                setUntrackedExtras(null);
+            }
+        } catch (error) {
+            console.error("Error refreshing bag data:", error);
+        }
     }, [currentBag]);
+
+    // Setup realtime subscription for travel_bags and travel_bag_untracked_extras
+    useEffect(() => {
+        if (!user || !familyId) return;
+
+        // Clean up previous channel
+        if (realtimeChannelRef.current) {
+            supabase.removeChannel(realtimeChannelRef.current);
+        }
+
+        const channel = supabase
+            .channel(`travel-bag-realtime-${familyId}-${Date.now()}`)
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "travel_bags" },
+                (payload) => {
+                    console.log("[TravelBag] Bag change:", payload.eventType);
+                    refreshBagData();
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "travel_bag_untracked_extras" },
+                (payload) => {
+                    console.log("[TravelBag] Extras change:", payload.eventType);
+                    if (currentBag) {
+                        loadExtrasForBag(currentBag.id);
+                    }
+                }
+            )
+            .subscribe((status) => {
+                console.log("[TravelBag] Realtime subscription status:", status);
+            });
+
+        realtimeChannelRef.current = channel;
+
+        return () => {
+            if (realtimeChannelRef.current) {
+                supabase.removeChannel(realtimeChannelRef.current);
+            }
+        };
+    }, [user, familyId, refreshBagData, currentBag]);
+
+    // Broadcast channel for instant sync between caregivers
+    useEffect(() => {
+        if (!user || !familyId) return;
+
+        const broadcastChannelName = `travelbag-broadcast-${familyId}`;
+        console.log("[TravelBag] Setting up broadcast channel:", broadcastChannelName);
+
+        const broadcastChannel = supabase
+            .channel(broadcastChannelName)
+            .on("broadcast", { event: "travelbag-updated" }, () => {
+                console.log("[TravelBag] Received broadcast - refreshing data");
+                refreshBagData();
+            })
+            .subscribe((status) => {
+                console.log("[TravelBag] Broadcast channel status:", status);
+            });
+
+        broadcastChannelRef.current = broadcastChannel;
+
+        return () => {
+            if (broadcastChannelRef.current) {
+                supabase.removeChannel(broadcastChannelRef.current);
+                broadcastChannelRef.current = null;
+            }
+        };
+    }, [user, familyId, refreshBagData]);
+
+    // Refresh data when user returns to the tab/app (fallback for realtime)
+    useEffect(() => {
+        if (!user) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                console.log("[TravelBag] Tab became visible, refreshing data");
+                refreshBagData();
+            }
+        };
+
+        const handleFocus = () => {
+            console.log("[TravelBag] Window focused, refreshing data");
+            refreshBagData();
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [user, refreshBagData]);
+
+    // Polling fallback for reliable sync (every 10 seconds)
+    useEffect(() => {
+        if (!user || !currentBag) return;
+
+        const pollInterval = setInterval(() => {
+            refreshBagData();
+        }, 10000);
+
+        return () => {
+            clearInterval(pollInterval);
+        };
+    }, [user, currentBag, refreshBagData]);
 
     return (
         <TravelBagContext.Provider

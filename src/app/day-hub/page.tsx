@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState } from "@/lib/AppStateContext";
-import { useDayHub, TimeSlot, DayTask, PostponeOption, TimelineTask, RegimenDayTask } from "@/lib/DayHubContext";
+import { useAppState, ChildProfile, PetProfile } from "@/lib/AppStateContext";
+import { useDayHub, TimeSlot, DayTask, PostponeOption, TimelineTask, RegimenDayTask, FamilyMemberType } from "@/lib/DayHubContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -97,6 +97,7 @@ function TaskCard({
 }) {
     const [showPostponeSheet, setShowPostponeSheet] = useState(false);
     const [showImageModal, setShowImageModal] = useState(false);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [showMenuSheet, setShowMenuSheet] = useState(false);
     const [showDeleteSheet, setShowDeleteSheet] = useState(false);
 
@@ -188,18 +189,31 @@ function TaskCard({
                         </div>
                     </div>
 
-                    {/* Image thumbnail */}
-                    {task.imageUrl && (
-                        <button
-                            onClick={() => setShowImageModal(true)}
-                            className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border border-black/5"
-                        >
-                            <img
-                                src={task.imageUrl}
-                                alt={task.name}
-                                className="w-full h-full object-cover"
-                            />
-                        </button>
+                    {/* Image thumbnails - stacked */}
+                    {task.imageUrls && task.imageUrls.length > 0 && (
+                        <div className="relative flex-shrink-0" style={{ width: task.imageUrls.length > 1 ? 44 + (task.imageUrls.length - 1) * 6 : 44 }}>
+                            {task.imageUrls.slice(0, 3).map((url, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => {
+                                        setSelectedImageIndex(index);
+                                        setShowImageModal(true);
+                                    }}
+                                    className="w-11 h-11 rounded-xl overflow-hidden border border-black/5 bg-white absolute"
+                                    style={{
+                                        left: index * 6,
+                                        zIndex: 10 - index,
+                                        boxShadow: index > 0 ? "-2px 0 4px rgba(0,0,0,0.1)" : undefined,
+                                    }}
+                                >
+                                    <img
+                                        src={url}
+                                        alt={`${task.name} ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </button>
+                            ))}
+                        </div>
                     )}
 
                     {/* Three-dot menu button */}
@@ -329,9 +343,9 @@ function TaskCard({
             )}
 
             {/* Image Modal */}
-            {showImageModal && task.imageUrl && (
+            {showImageModal && task.imageUrls && task.imageUrls.length > 0 && (
                 <div
-                    className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-5"
+                    className="fixed inset-0 bg-black/85 z-50 flex flex-col items-center justify-center p-5"
                     onClick={() => setShowImageModal(false)}
                 >
                     <button
@@ -341,10 +355,31 @@ function TaskCard({
                         ×
                     </button>
                     <img
-                        src={task.imageUrl}
+                        src={task.imageUrls[selectedImageIndex]}
                         alt={task.name}
-                        className="max-w-full max-h-[80vh] rounded-xl object-contain"
+                        className="max-w-full max-h-[70vh] rounded-xl object-contain"
+                        onClick={(e) => e.stopPropagation()}
                     />
+                    {/* Thumbnail navigation for multiple images */}
+                    {task.imageUrls.length > 1 && (
+                        <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                            {task.imageUrls.map((url, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setSelectedImageIndex(index)}
+                                    className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                                        selectedImageIndex === index ? "border-white" : "border-transparent opacity-60"
+                                    }`}
+                                >
+                                    <img
+                                        src={url}
+                                        alt={`${task.name} ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -506,10 +541,21 @@ function TaskCard({
     );
 }
 
+// Family member for filter display
+interface FilterableMember {
+    id: string;
+    name: string;
+    type: FamilyMemberType;
+    avatarUrl?: string;
+    avatarEmoji?: string;
+    badgeColor: string;
+    hasTasksToday: boolean;
+}
+
 export default function DayHubPage() {
     useEnsureOnboarding();
     const { user } = useAuth();
-    const { managesChildren, managesPets, caregivers } = useAppState();
+    const { managesChildren, managesPets, caregivers, children: childrenList, pets } = useAppState();
     const {
         currentDate,
         setCurrentDate,
@@ -532,6 +578,120 @@ export default function DayHubPage() {
     } = useDayHub();
 
     const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
+
+    // Track which family members are selected for filtering
+    const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+
+    // Build list of all family members (children + pets) with info about whether they have tasks today
+    const allFamilyMembers = useMemo((): FilterableMember[] => {
+        // Get unique members from tasks to know who has tasks today
+        const membersWithTasks = new Set<string>();
+        timelineTasks.forEach(task => {
+            // Create a unique key for family member
+            const key = `${task.familyMemberType}-${task.familyMemberName}`;
+            membersWithTasks.add(key);
+        });
+
+        const members: FilterableMember[] = [];
+
+        // Add all children
+        childrenList.forEach(child => {
+            const key = `child-${child.name}`;
+            members.push({
+                id: `child-${child.id}`,
+                name: child.name,
+                type: "child",
+                avatarUrl: child.avatarUrl,
+                avatarEmoji: undefined,
+                badgeColor: "#E0F2F1",
+                hasTasksToday: membersWithTasks.has(key),
+            });
+        });
+
+        // Add all pets
+        pets.forEach(pet => {
+            const petType: FamilyMemberType = ["cat", "dog", "bird"].includes(pet.species || "")
+                ? (pet.species as FamilyMemberType)
+                : "other";
+            const key = `${petType}-${pet.name}`;
+            const emoji = petType === "cat" ? "🐱" : petType === "dog" ? "🐕" : petType === "bird" ? "🐦" : "🐾";
+            members.push({
+                id: `pet-${pet.id}`,
+                name: pet.name,
+                type: petType,
+                avatarUrl: pet.avatarUrl,
+                avatarEmoji: emoji,
+                badgeColor: "#D4EDDA",
+                hasTasksToday: membersWithTasks.has(key),
+            });
+        });
+
+        return members;
+    }, [childrenList, pets, timelineTasks]);
+
+    // Create a stable key for detecting changes to family members with tasks
+    const membersWithTasksKey = useMemo(() =>
+        allFamilyMembers.map(m => `${m.id}-${m.hasTasksToday}`).join(','),
+    [allFamilyMembers]);
+
+    // Initialize selected members to those with tasks (on mount and when tasks change)
+    React.useEffect(() => {
+        const membersWithTasks = allFamilyMembers.filter(m => m.hasTasksToday).map(m => m.id);
+        setSelectedMemberIds(new Set(membersWithTasks));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [membersWithTasksKey]);
+
+    // Toggle member selection
+    const toggleMemberSelection = (memberId: string) => {
+        setSelectedMemberIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(memberId)) {
+                newSet.delete(memberId);
+            } else {
+                newSet.add(memberId);
+            }
+            return newSet;
+        });
+    };
+
+    // Select all members with tasks (for "Show all" button)
+    const selectAllMembersWithTasks = () => {
+        const membersWithTasks = allFamilyMembers.filter(m => m.hasTasksToday).map(m => m.id);
+        setSelectedMemberIds(new Set(membersWithTasks));
+    };
+
+    // Filter timeline tasks based on selected members
+    const filteredTimelineTasks = useMemo(() => {
+        if (selectedMemberIds.size === 0) return [];  // Show nothing when none selected
+
+        return timelineTasks.filter(task => {
+            // Find the matching family member
+            const matchingMember = allFamilyMembers.find(m =>
+                m.name === task.familyMemberName && m.type === task.familyMemberType
+            );
+            return matchingMember && selectedMemberIds.has(matchingMember.id);
+        });
+    }, [timelineTasks, selectedMemberIds, allFamilyMembers]);
+
+    // Filtered tasks by time slot
+    const filteredTasksByTimeSlot: Record<TimeSlot, TimelineTask[]> = useMemo(() => ({
+        morning: filteredTimelineTasks.filter(t => t.timeSlot === "morning"),
+        afternoon: filteredTimelineTasks.filter(t => t.timeSlot === "afternoon"),
+        evening: filteredTimelineTasks.filter(t => t.timeSlot === "evening"),
+        night: filteredTimelineTasks.filter(t => t.timeSlot === "night"),
+    }), [filteredTimelineTasks]);
+
+    // Filtered progress
+    const filteredProgress = useMemo(() => ({
+        total: filteredTimelineTasks.length,
+        completed: filteredTimelineTasks.filter(t => t.status === "completed").length,
+        pending: filteredTimelineTasks.filter(t => t.status === "pending").length,
+        postponed: filteredTimelineTasks.filter(t => t.status === "postponed").length,
+        skipped: filteredTimelineTasks.filter(t => t.status === "skipped").length,
+        percentage: filteredTimelineTasks.length > 0
+            ? Math.round((filteredTimelineTasks.filter(t => t.status === "completed").length / filteredTimelineTasks.length) * 100)
+            : 0,
+    }), [filteredTimelineTasks]);
 
     // Get completer name from user ID
     const getCompleterName = (userId: string): string => {
@@ -665,9 +825,12 @@ export default function DayHubPage() {
 
     // Get progress title
     const getProgressTitle = () => {
-        if (progress.completed === 0) return "Let's get started";
-        if (progress.completed < progress.total / 2) return "Nice progress!";
-        if (progress.completed < progress.total) return "Almost there!";
+        // Check if tasks are hidden by filter
+        if (filteredProgress.total === 0 && timelineTasks.length > 0) return "Tasks hidden";
+        if (filteredProgress.total === 0) return "No tasks today";
+        if (filteredProgress.completed === 0) return "Let's get started";
+        if (filteredProgress.completed < filteredProgress.total / 2) return "Nice progress!";
+        if (filteredProgress.completed < filteredProgress.total) return "Almost there!";
         return "All done today!";
     };
 
@@ -723,6 +886,72 @@ export default function DayHubPage() {
                     <p className="text-[14px] text-[#8BA18D] mt-1">{formatDateDisplay(currentDate)}</p>
                 </header>
 
+                {/* Family Member Filter Row */}
+                {allFamilyMembers.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                        {allFamilyMembers.map((member) => {
+                            const isSelected = selectedMemberIds.has(member.id);
+                            const hasTasksToday = member.hasTasksToday;
+                            const isClickable = hasTasksToday;
+
+                            return (
+                                <button
+                                    key={member.id}
+                                    onClick={() => isClickable && toggleMemberSelection(member.id)}
+                                    disabled={!isClickable}
+                                    className={`flex flex-col items-center gap-1.5 transition-all ${
+                                        !isClickable ? 'cursor-not-allowed' : 'cursor-pointer'
+                                    }`}
+                                >
+                                    {/* Avatar with selection ring */}
+                                    <div
+                                        className={`relative transition-all ${
+                                            isSelected && hasTasksToday
+                                                ? 'ring-2 ring-forest ring-offset-2 ring-offset-cream rounded-full'
+                                                : ''
+                                        } ${
+                                            !hasTasksToday
+                                                ? 'opacity-30 grayscale'
+                                                : isSelected
+                                                    ? ''
+                                                    : 'opacity-100'
+                                        }`}
+                                    >
+                                        <div
+                                            className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden"
+                                            style={{
+                                                backgroundColor: member.avatarUrl ? "#f3f4f6" : member.badgeColor,
+                                            }}
+                                        >
+                                            {member.avatarUrl ? (
+                                                <img
+                                                    src={member.avatarUrl}
+                                                    alt={member.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : member.avatarEmoji ? (
+                                                <span className="text-xl">{member.avatarEmoji}</span>
+                                            ) : (
+                                                <span className="text-lg font-semibold text-forest">{member.name[0]}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Name label */}
+                                    <span className={`text-[11px] font-medium max-w-[60px] truncate ${
+                                        !hasTasksToday
+                                            ? 'text-textSub/50'
+                                            : isSelected
+                                                ? 'text-forest'
+                                                : 'text-textSub'
+                                    }`}>
+                                        {member.name}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
                 {/* Progress Card - matching Travel Bag style */}
                 <div
                     className="text-center text-white"
@@ -734,84 +963,16 @@ export default function DayHubPage() {
                     }}
                 >
                     {/* Title */}
-                    <h3 className="font-dmSerif text-[22px] text-white mb-0">
+                    <h3 className="font-dmSerif text-[22px] text-white mb-3">
                         {getProgressTitle()}
                     </h3>
 
-                    {/* Stacked family member avatars */}
-                    {(() => {
-                        // Get unique family members with tasks today (use name + type as unique key)
-                        const uniqueMembers = timelineTasks.reduce((acc, task) => {
-                            const key = `${task.familyMemberType}-${task.familyMemberName}`;
-                            if (!acc.find(m => `${m.type}-${m.name}` === key)) {
-                                acc.push({
-                                    type: task.familyMemberType,
-                                    name: task.familyMemberName,
-                                    avatarUrl: task.familyMemberAvatarUrl,
-                                    emoji: task.familyMemberAvatarEmoji,
-                                    badgeColor: task.familyMemberBadgeColor,
-                                });
-                            }
-                            return acc;
-                        }, [] as Array<{ type: string; name: string; avatarUrl?: string; emoji?: string; badgeColor: string }>);
-
-                        if (uniqueMembers.length === 0) return null;
-
-                        // Count children and pets (pets are cat, dog, bird, other - anything not 'child')
-                        const childrenCount = uniqueMembers.filter(m => m.type === 'child').length;
-                        const petsCount = uniqueMembers.filter(m => m.type !== 'child').length;
-
-                        // Build description text
-                        let membersText = '';
-                        if (childrenCount > 0 && petsCount > 0) {
-                            membersText = `${childrenCount} child${childrenCount > 1 ? 'ren' : ''} and ${petsCount} pet${petsCount > 1 ? 's' : ''}`;
-                        } else if (childrenCount > 0) {
-                            membersText = `${childrenCount} child${childrenCount > 1 ? 'ren' : ''}`;
-                        } else if (petsCount > 0) {
-                            membersText = `${petsCount} pet${petsCount > 1 ? 's' : ''}`;
-                        }
-
-                        return (
-                            <div className="flex flex-col items-center mt-5 mb-4">
-                                <div className="flex items-center justify-center">
-                                    {uniqueMembers.map((member, index) => (
-                                        <div
-                                            key={`${member.type}-${member.name}`}
-                                            className="relative rounded-full flex items-center justify-center overflow-hidden"
-                                            style={{
-                                                width: 52,
-                                                height: 52,
-                                                marginLeft: index === 0 ? 0 : -18,
-                                                zIndex: 10 - index,
-                                                border: "3px solid white",
-                                                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                                                backgroundColor: member.avatarUrl ? "#f3f4f6" : member.badgeColor,
-                                            }}
-                                        >
-                                            {member.avatarUrl ? (
-                                                <img
-                                                    src={member.avatarUrl}
-                                                    alt={member.name}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : member.emoji ? (
-                                                <span className="text-xl">{member.emoji}</span>
-                                            ) : (
-                                                <span className="text-lg font-semibold text-white">{member.name[0]}</span>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <span className="text-[13px] text-white/60 mt-2">
-                                    Taking care of {membersText}
-                                </span>
-                            </div>
-                        );
-                    })()}
-
                     {/* Progress text */}
                     <p className="text-[15px] text-white/80 mb-5">
-                        {progress.completed} of {progress.total} tasks done
+                        {filteredProgress.total === 0 && timelineTasks.length > 0
+                            ? "Select someone above to see their tasks"
+                            : `${filteredProgress.completed} of ${filteredProgress.total} tasks done`
+                        }
                     </p>
 
                     {/* Date navigation button */}
@@ -852,7 +1013,7 @@ export default function DayHubPage() {
                     />
 
                     {(Object.keys(TIME_SLOT_INFO) as TimeSlot[]).map((slot) => {
-                        const tasks = tasksByTimeSlot[slot];
+                        const tasks = filteredTasksByTimeSlot[slot];
                         const slotInfo = TIME_SLOT_INFO[slot];
                         if (tasks.length === 0) return null;
 
@@ -897,15 +1058,37 @@ export default function DayHubPage() {
                 </div>
 
                 {/* Empty state for day with no tasks */}
-                {timelineTasks.length === 0 && (
+                {filteredTimelineTasks.length === 0 && (
                     <div className="card-organic p-8 text-center">
-                        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl mx-auto mb-4">
-                            📭
-                        </div>
-                        <h3 className="font-bold text-forest text-lg mb-2">No tasks for this day</h3>
-                        <p className="text-sm text-textSub">
-                            Add tasks to your schedules to see them here.
-                        </p>
+                        {timelineTasks.length > 0 ? (
+                            // Tasks exist but are hidden by filter
+                            <>
+                                <div className="w-16 h-16 rounded-full bg-softGreen flex items-center justify-center text-3xl mx-auto mb-4">
+                                    🙈
+                                </div>
+                                <h3 className="font-bold text-forest text-lg mb-2">Tasks are hidden</h3>
+                                <p className="text-sm text-textSub mb-5">
+                                    {timelineTasks.length} task{timelineTasks.length > 1 ? 's' : ''} available. Select someone above or show all.
+                                </p>
+                                <button
+                                    onClick={selectAllMembersWithTasks}
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-forest text-white rounded-xl font-medium hover:bg-forest/90 transition-colors"
+                                >
+                                    Show all tasks
+                                </button>
+                            </>
+                        ) : (
+                            // Truly no tasks for this day
+                            <>
+                                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl mx-auto mb-4">
+                                    📭
+                                </div>
+                                <h3 className="font-bold text-forest text-lg mb-2">No tasks for this day</h3>
+                                <p className="text-sm text-textSub">
+                                    Add tasks to your schedules to see them here.
+                                </p>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
