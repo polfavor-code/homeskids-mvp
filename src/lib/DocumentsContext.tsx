@@ -152,11 +152,11 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
         };
     }, [user, fetchData]);
 
-    // Broadcast channel for instant sync between caregivers
+    // Broadcast channel for instant sync between caregivers (scoped to current child)
     useEffect(() => {
-        if (!user) return;
+        if (!user || !currentChildId) return;
 
-        const broadcastChannelName = `documents-broadcast-${user.id}`;
+        const broadcastChannelName = `documents-broadcast-${currentChildId}`;
         const broadcastChannel = supabase
             .channel(broadcastChannelName)
             .on("broadcast", { event: "documents-updated" }, () => {
@@ -173,7 +173,7 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
                 broadcastChannelRef.current = null;
             }
         };
-    }, [user, fetchData]);
+    }, [user, currentChildId, fetchData]);
 
     // Refresh data when user returns to the tab
     useEffect(() => {

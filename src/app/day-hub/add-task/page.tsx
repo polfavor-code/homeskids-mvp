@@ -201,17 +201,23 @@ export default function AddTaskPage() {
             return !!selectedMember && !!scheduleType;
         }
         if (step === 2) {
-            // All phases must have valid duration and at least one task with a name
+            // All phases must have valid duration (unless one-time task) and at least one task with a name
             // For medications, description (dose) is also required
-            return phases.every((phase) =>
-                (phase.durationType === "forever" ||
-                 (phase.durationType === "days" && phase.durationDays && phase.durationDays > 0) ||
-                 (phase.durationType === "end_date" && phase.endDate)) &&
-                phase.tasks.length > 0 && phase.tasks.every((task) =>
+            return phases.every((phase) => {
+                // One-time tasks don't need duration validation
+                const isOneTime = phase.tasks.some(t => t.frequencyType === "one_time");
+                const durationValid = isOneTime ||
+                    phase.durationType === "forever" ||
+                    (phase.durationType === "days" && phase.durationDays && phase.durationDays > 0) ||
+                    (phase.durationType === "end_date" && phase.endDate);
+
+                const tasksValid = phase.tasks.length > 0 && phase.tasks.every((task) =>
                     task.name.trim().length > 0 &&
                     (scheduleType !== "medication" || (task.description && task.description.trim().length > 0))
-                )
-            );
+                );
+
+                return durationValid && tasksValid;
+            });
         }
         return true;
     };
@@ -260,9 +266,10 @@ export default function AddTaskPage() {
                             if (task.imageFiles && task.imageFiles.length > 0) {
                                 for (const file of task.imageFiles) {
                                     const result = await uploadTaskImage(file);
-                                    if (result.success && result.url) {
-                                        imageUrls.push(result.url);
+                                    if (!result.success || !result.url) {
+                                        throw new Error(`Failed to upload image: ${result.error || 'Unknown error'}`);
                                     }
+                                    imageUrls.push(result.url);
                                 }
                             }
                             return {

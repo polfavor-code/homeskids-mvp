@@ -499,11 +499,11 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
         };
     }, [user, refreshData]);
 
-    // Broadcast channel for instant sync between caregivers
+    // Broadcast channel for instant sync between caregivers (scoped to current child)
     useEffect(() => {
-        if (!user) return;
+        if (!user || !currentChildId) return;
 
-        const broadcastChannelName = `contacts-broadcast-${user.id}`;
+        const broadcastChannelName = `contacts-broadcast-${currentChildId}`;
         const broadcastChannel = supabase
             .channel(broadcastChannelName)
             .on("broadcast", { event: "contacts-updated" }, () => {
@@ -520,7 +520,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
                 broadcastChannelRef.current = null;
             }
         };
-    }, [user, refreshData]);
+    }, [user, currentChildId, refreshData]);
 
     // Refresh data when user returns to the tab
     useEffect(() => {

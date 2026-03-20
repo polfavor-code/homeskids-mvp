@@ -227,13 +227,18 @@ export function TravelBagProvider({ children }: { children: ReactNode }) {
         if (!currentBag || !FEATURES.TRAVEL_BAGS) return;
 
         try {
-            await supabase
+            const { error } = await supabase
                 .from("travel_bags")
                 .update({
                     status: "completed",
                     completed_at: new Date().toISOString(),
                 })
                 .eq("id", currentBag.id);
+
+            if (error) {
+                console.error("Error completing bag:", error);
+                return;
+            }
 
             setCurrentBag(null);
             setUntrackedExtras(null);
@@ -256,6 +261,14 @@ export function TravelBagProvider({ children }: { children: ReactNode }) {
                 .single();
 
             if (bagData) {
+                // Check if the bag is no longer being packed (status changed)
+                if (bagData.status !== "packing") {
+                    // Bag is no longer being packed, clear the session
+                    setCurrentBag(null);
+                    setUntrackedExtras(null);
+                    return;
+                }
+
                 setCurrentBag(mapTravelBag(bagData));
                 await loadExtrasForBag(bagData.id);
             } else {

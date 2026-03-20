@@ -361,11 +361,11 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         };
     }, [user, fetchData]);
 
-    // Broadcast channel for instant sync between caregivers
+    // Broadcast channel for instant sync between caregivers (scoped to current child)
     useEffect(() => {
-        if (!user) return;
+        if (!user || !currentChildId) return;
 
-        const broadcastChannelName = `health-broadcast-${user.id}`;
+        const broadcastChannelName = `health-broadcast-${currentChildId}`;
         const broadcastChannel = supabase
             .channel(broadcastChannelName)
             .on("broadcast", { event: "health-updated" }, () => {
@@ -382,7 +382,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 broadcastChannelRef.current = null;
             }
         };
-    }, [user, fetchData]);
+    }, [user, currentChildId, fetchData]);
 
     // Refresh data when user returns to the tab
     useEffect(() => {
@@ -573,9 +573,9 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             };
 
             setAllergies((prev) => [...prev, newAllergy]);
+            // updateHealthStatus already calls broadcastHealthUpdate()
             await updateHealthStatus("allergies", "has", allergy.name);
 
-            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to add allergy:", error);
@@ -616,10 +616,12 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             setAllergies(newAllergies);
 
             if (newAllergies.length === 0) {
+                // updateHealthStatus already calls broadcastHealthUpdate()
                 await updateHealthStatus("allergies", "skipped");
+            } else {
+                broadcastHealthUpdate();
             }
 
-            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to delete allergy:", error);
@@ -710,9 +712,9 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             };
 
             setMedications((prev) => [...prev, newMedication]);
+            // updateHealthStatus already calls broadcastHealthUpdate()
             await updateHealthStatus("medication", "has", medication.name);
 
-            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to add medication:", error);
@@ -765,10 +767,12 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
             const activeMeds = newMedications.filter(m => m.isActive);
             if (activeMeds.length === 0) {
+                // updateHealthStatus already calls broadcastHealthUpdate()
                 await updateHealthStatus("medication", "skipped");
+            } else {
+                broadcastHealthUpdate();
             }
 
-            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to delete medication:", error);
@@ -820,10 +824,12 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
             const hasDietaryData = Boolean(needs.dietType || needs.instructions || needs.likes || needs.dislikes);
             if (hasDietaryData) {
+                // updateHealthStatus already calls broadcastHealthUpdate()
                 await updateHealthStatus("dietary", "has", needs.dietType || needs.instructions || "Dietary preferences set");
+            } else {
+                broadcastHealthUpdate();
             }
 
-            broadcastHealthUpdate();
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update dietary needs:", error);
@@ -843,6 +849,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             setHealthFlags((prev) => ({ ...prev, ...flags }));
 
             // Also update new health status model
+            // Note: updateHealthStatus calls broadcastHealthUpdate() internally
             if (flags.noKnownAllergies !== undefined) {
                 await updateHealthStatus("allergies", flags.noKnownAllergies ? "none" : "skipped");
             }
@@ -853,7 +860,10 @@ export function HealthProvider({ children }: { children: ReactNode }) {
                 await updateHealthStatus("dietary", flags.noDietaryRestrictions ? "none" : "skipped");
             }
 
-            broadcastHealthUpdate();
+            // Only broadcast if no updateHealthStatus was called
+            if (flags.noKnownAllergies === undefined && flags.noRegularMedication === undefined && flags.noDietaryRestrictions === undefined) {
+                broadcastHealthUpdate();
+            }
             return { success: true };
         } catch (error: any) {
             console.error("Failed to update health flags:", error);

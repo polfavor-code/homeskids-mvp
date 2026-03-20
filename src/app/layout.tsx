@@ -7,6 +7,7 @@ import { HealthProvider } from "@/lib/HealthContext";
 import { DocumentsProvider } from "@/lib/DocumentsContext";
 import { DayHubProvider } from "@/lib/DayHubContext";
 import { TravelBagProvider } from "@/lib/TravelBagContext";
+import { BagPackedAlertProvider } from "@/lib/BagPackedAlertContext";
 import { ItemsAddedAlertProvider } from "@/lib/ItemsAddedAlertContext";
 import { ItemsAddedToastContainer } from "@/components/ItemsAddedToast";
 import { HomeSwitchAlertProvider } from "@/lib/HomeSwitchAlertContext";
@@ -69,23 +70,25 @@ export default function RootLayout({
                             <ItemsAddedAlertProvider>
                                 <HomeSwitchAlertProvider>
                                     <TravelBagProvider>
-                                        <ContactsProvider>
-                                            <HealthProvider>
-                                                <DayHubProvider>
-                                                    <DocumentsProvider>
-                                                        <DocumentAddedAlertProvider>
-                                                            <AwaitingLocationAlertProvider>
-                                                                {children}
-                                                                <ItemsAddedToastContainer />
-                                                                <HomeSwitchToastContainer />
-                                                                <DocumentAddedToastContainer />
-                                                                <AwaitingLocationToastContainer />
-                                                            </AwaitingLocationAlertProvider>
-                                                        </DocumentAddedAlertProvider>
-                                                    </DocumentsProvider>
-                                                </DayHubProvider>
-                                            </HealthProvider>
-                                        </ContactsProvider>
+                                        <BagPackedAlertProvider>
+                                            <ContactsProvider>
+                                                <HealthProvider>
+                                                    <DayHubProvider>
+                                                        <DocumentsProvider>
+                                                            <DocumentAddedAlertProvider>
+                                                                <AwaitingLocationAlertProvider>
+                                                                    {children}
+                                                                    <ItemsAddedToastContainer />
+                                                                    <HomeSwitchToastContainer />
+                                                                    <DocumentAddedToastContainer />
+                                                                    <AwaitingLocationToastContainer />
+                                                                </AwaitingLocationAlertProvider>
+                                                            </DocumentAddedAlertProvider>
+                                                        </DocumentsProvider>
+                                                    </DayHubProvider>
+                                                </HealthProvider>
+                                            </ContactsProvider>
+                                        </BagPackedAlertProvider>
                                     </TravelBagProvider>
                                 </HomeSwitchAlertProvider>
                             </ItemsAddedAlertProvider>

@@ -85,14 +85,24 @@ export default function PhaseEditor({
         const currentFiles = task.imageFiles || [];
         const currentPreviews = task.imagePreviews || [];
         const currentUrls = task.imageUrls || [];
+        const urlsLength = currentUrls.length;
 
-        if (currentPreviews[index]) URL.revokeObjectURL(currentPreviews[index]);
-
-        updateTask({
-            imageFiles: currentFiles.filter((_, i) => i !== index),
-            imagePreviews: currentPreviews.filter((_, i) => i !== index),
-            imageUrls: currentUrls.filter((_, i) => i !== index),
-        });
+        if (index < urlsLength) {
+            // Removing a persisted image from imageUrls
+            updateTask({
+                imageUrls: currentUrls.filter((_, i) => i !== index),
+            });
+        } else {
+            // Removing a pending image from imageFiles/imagePreviews
+            const pendingIndex = index - urlsLength;
+            if (currentPreviews[pendingIndex]) {
+                URL.revokeObjectURL(currentPreviews[pendingIndex]);
+            }
+            updateTask({
+                imageFiles: currentFiles.filter((_, i) => i !== pendingIndex),
+                imagePreviews: currentPreviews.filter((_, i) => i !== pendingIndex),
+            });
+        }
     };
 
     return (

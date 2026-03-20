@@ -2306,11 +2306,11 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
         };
     }, [user, fetchTemplates, fetchDayTasks, fetchRegimens, fetchRegimenDayTasks]);
 
-    // Broadcast channel for instant sync between caregivers
+    // Broadcast channel for instant sync between caregivers (scoped to current child)
     useEffect(() => {
-        if (!user) return;
+        if (!user || !currentChildId) return;
 
-        const broadcastChannelName = `dayhub-broadcast-${user.id}`;
+        const broadcastChannelName = `dayhub-broadcast-${currentChildId}`;
         console.log("[DayHub] Setting up broadcast channel:", broadcastChannelName);
 
         const broadcastChannel = supabase
@@ -2331,7 +2331,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                 contentBroadcastChannelRef.current = null;
             }
         };
-    }, [user, refreshData]);
+    }, [user, currentChildId, refreshData]);
 
     // Refresh data when user returns to the tab/app (fallback for realtime)
     useEffect(() => {
@@ -2358,16 +2358,41 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
         };
     }, [user, refreshData]);
 
-    // Polling fallback for reliable sync (every 10 seconds)
+    // Polling fallback for reliable sync (every 10 seconds, only when visible)
     useEffect(() => {
-        if (!user) return;
+        if (!user || typeof document === "undefined") return;
 
-        const pollInterval = setInterval(() => {
-            refreshData();
-        }, 10000);
+        let pollInterval: NodeJS.Timeout | null = null;
+
+        const startPolling = () => {
+            if (!pollInterval && document.visibilityState === "visible") {
+                pollInterval = setInterval(() => {
+                    refreshData();
+                }, 10000);
+            }
+        };
+
+        const stopPolling = () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        startPolling();
 
         return () => {
-            clearInterval(pollInterval);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            stopPolling();
         };
     }, [user, refreshData]);
 

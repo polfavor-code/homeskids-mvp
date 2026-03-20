@@ -223,14 +223,24 @@ export default function EditTaskPage() {
         const currentFiles = firstTask?.imageFiles || [];
         const currentPreviews = firstTask?.imagePreviews || [];
         const currentUrls = firstTask?.imageUrls || [];
+        const urlsLength = currentUrls.length;
 
-        if (currentPreviews[index]) URL.revokeObjectURL(currentPreviews[index]);
-
-        updateFirstTask({
-            imageFiles: currentFiles.filter((_, i) => i !== index),
-            imagePreviews: currentPreviews.filter((_, i) => i !== index),
-            imageUrls: currentUrls.filter((_, i) => i !== index),
-        });
+        if (index < urlsLength) {
+            // Removing a persisted image from imageUrls
+            updateFirstTask({
+                imageUrls: currentUrls.filter((_, i) => i !== index),
+            });
+        } else {
+            // Removing a pending image from imageFiles/imagePreviews
+            const pendingIndex = index - urlsLength;
+            if (currentPreviews[pendingIndex]) {
+                URL.revokeObjectURL(currentPreviews[pendingIndex]);
+            }
+            updateFirstTask({
+                imageFiles: currentFiles.filter((_, i) => i !== pendingIndex),
+                imagePreviews: currentPreviews.filter((_, i) => i !== pendingIndex),
+            });
+        }
     };
 
     // Calculate phase start dates

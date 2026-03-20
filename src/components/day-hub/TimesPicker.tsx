@@ -55,13 +55,13 @@ export default function TimesPicker({
     const requiredTimes = getRequiredTimesCount();
     const currentTimes = times.slice(0, requiredTimes);
 
-    // Ensure we have enough time slots
+    // Ensure we have enough time slots (in chronological order)
     while (currentTimes.length < requiredTimes) {
-        // Add default times based on position
+        // Add default times based on position in chronological order
         if (currentTimes.length === 0) currentTimes.push("09:00");
-        else if (currentTimes.length === 1) currentTimes.push("18:00");
+        else if (currentTimes.length === 1) currentTimes.push("12:00");
         else if (currentTimes.length === 2) currentTimes.push("15:00");
-        else currentTimes.push("12:00");
+        else currentTimes.push("18:00");
     }
 
     const handleTimeChange = (index: number, newTime: string) => {
