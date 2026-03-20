@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meds Schedule - Med Cabinet</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #2C3E2D;
+            --forest-light: #8BA18D;
+            --blush: #E89F95;
+            --soft-green: #E8F0E9;
+            --white: #FFFFFF;
+            --text-dark: #1A1A1A;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Outfit', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 24px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            margin: 0;
+        }
+
+        header span {
+            font-size: 13px;
+            color: var(--forest-light);
+            font-weight: 600;
+        }
+
+        /* Search Bar */
+        .search-bar {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            border: 1px solid rgba(44, 62, 45, 0.05);
+        }
+
+        .search-bar span { opacity: 0.3; }
+        .search-bar input {
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: 15px;
+            width: 100%;
+        }
+
+        /* Med Grid */
+        .med-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .cabinet-card {
+            background: var(--white);
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(44, 62, 45, 0.04);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(44, 62, 45, 0.05);
+        }
+
+        .card-img {
+            width: 100%;
+            height: 140px;
+            background: #f0f0f0;
+            position: relative;
+        }
+
+        .card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .member-indicator {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: 2px solid var(--white);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-content {
+            padding: 16px;
+        }
+
+        .med-name {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+
+        .med-who {
+            font-size: 12px;
+            color: var(--forest-light);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .med-dosage {
+            font-size: 11px;
+            padding: 4px 8px;
+            background: var(--soft-green);
+            color: var(--forest);
+            border-radius: 8px;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        /* Filter Pills */
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+        }
+        .filters::-webkit-scrollbar { display: none; }
+
+        .filter-pill {
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: var(--white);
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            border: 1px solid rgba(44, 62, 45, 0.1);
+            color: var(--forest-light);
+        }
+
+        .filter-pill.active {
+            background: var(--forest);
+            color: var(--white);
+            border-color: var(--forest);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Cabinet</h1>
+            <span>8 Active</span>
+        </header>
+
+        <div class="search-bar">
+            <span>🔍</span>
+            <input type="text" placeholder="Search medicines...">
+        </div>
+
+        <div class="filters">
+            <div class="filter-pill active">All Members</div>
+            <div class="filter-pill">Galaxy</div>
+            <div class="filter-pill">Monkey</div>
+            <div class="filter-pill">Boolie</div>
+        </div>
+
+        <div class="med-grid">
+            <!-- Card 1 -->
+            <div class="cabinet-card">
+                <div class="card-img">
+                    <img src="../assets/image-c3197ecf-faa2-4b15-ad6b-64ceee008abd.png" alt="Urbason">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" class="member-indicator" alt="Monkey">
+                </div>
+                <div class="card-content">
+                    <div class="med-name">Urbason 16mg</div>
+                    <div class="med-who">for Monkey</div>
+                    <div class="med-dosage">1/2 pill • 2x Day</div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="cabinet-card">
+                <div class="card-img">
+                    <img src="../assets/image-4f590646-5941-45bd-be39-09447e0f68f3.png" alt="Cortavance">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Galaxy&backgroundColor=E0F2F1" class="member-indicator" alt="Galaxy">
+                </div>
+                <div class="card-content">
+                    <div class="med-name">Cortavance Spray</div>
+                    <div class="med-who">for Galaxy</div>
+                    <div class="med-dosage">1x Daily • Neck</div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="cabinet-card">
+                <div class="card-img">
+                    <img src="../assets/image-7b633e9b-4553-4e68-94f9-2d11470cd655.png" alt="Prednisone">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Boolie&backgroundColor=F3E5F5" class="member-indicator" alt="Boolie">
+                </div>
+                <div class="card-content">
+                    <div class="med-name">Prednisone 5mg</div>
+                    <div class="med-who">for Boolie</div>
+                    <div class="med-dosage">1 pill • w/ Food</div>
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="cabinet-card">
+                <div class="card-img">
+                    <img src="../assets/image-4ab2f2a4-1ad4-428d-83b4-3c24c60e5140.png" alt="RedCell">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" class="member-indicator" alt="Monkey">
+                </div>
+                <div class="card-content">
+                    <div class="med-name">RedCell Care</div>
+                    <div class="med-who">for Monkey</div>
+                    <div class="med-dosage">3ml • Daily</div>
+                </div>
+            </div>
+
+            <!-- Card 5 (No image example) -->
+            <div class="cabinet-card">
+                <div class="card-img" style="background: var(--soft-green); display: flex; align-items: center; justify-content: center; font-size: 40px;">
+                    🧴
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Boolie&backgroundColor=F3E5F5" class="member-indicator" alt="Boolie">
+                </div>
+                <div class="card-content">
+                    <div class="med-name">Diprogenta</div>
+                    <div class="med-who">for Boolie</div>
+                    <div class="med-dosage">Cream • As needed</div>
+                </div>
+            </div>
+            
+            <!-- Card 6 -->
+            <div class="cabinet-card">
+                <div class="card-img" style="background: #E0F2F1; display: flex; align-items: center; justify-content: center; font-size: 40px;">
+                    💊
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Galaxy&backgroundColor=E0F2F1" class="member-indicator" alt="Galaxy">
+                </div>
+                <div class="card-content">
+                    <div class="med-name">Prednicortone</div>
+                    <div class="med-who">for Galaxy</div>
+                    <div class="med-dosage">1/2 pill • 2 Days</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

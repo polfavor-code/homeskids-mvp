@@ -7,39 +7,38 @@ import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import ImageCropper from "@/components/ImageCropper";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppState, HomeProfile } from "@/lib/AppStateContext";
+import { useAppState, HomeProfile, PetSpecies } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { processImageForUpload } from "@/lib/imageUtils";
 import { ToastContainer, ToastData } from "@/components/Toast";
-import MobileMultiSelect from "@/components/MobileMultiSelect";
 
-// Calculate age from birthdate
-function calculateAge(birthdate: string): string {
-    const birth = new Date(birthdate);
-    const today = new Date();
-    const years = today.getFullYear() - birth.getFullYear();
-    const months = today.getMonth() - birth.getMonth();
-    
-    // Adjust if birthday hasn't occurred this year
-    const adjustedYears = months < 0 || (months === 0 && today.getDate() < birth.getDate()) 
-        ? years - 1 
-        : years;
-    
-    if (adjustedYears === 0) {
-        const adjustedMonths = months < 0 ? months + 12 : months;
-        return `${adjustedMonths} month${adjustedMonths !== 1 ? "s" : ""} old`;
-    }
-    
-    return `${adjustedYears} year${adjustedYears !== 1 ? "s" : ""} old`;
+const PET_SPECIES_OPTIONS: { value: PetSpecies; label: string; emoji: string }[] = [
+    { value: "dog", label: "Dog", emoji: "🐕" },
+    { value: "cat", label: "Cat", emoji: "🐱" },
+    { value: "bird", label: "Bird", emoji: "🐦" },
+    { value: "fish", label: "Fish", emoji: "🐟" },
+    { value: "reptile", label: "Reptile", emoji: "🦎" },
+    { value: "small_mammal", label: "Small mammal", emoji: "🐹" },
+    { value: "other", label: "Other", emoji: "🐾" },
+];
+
+function getSpeciesEmoji(species: PetSpecies): string {
+    const found = PET_SPECIES_OPTIONS.find(s => s.value === species);
+    return found?.emoji || "🐾";
 }
 
-export default function ChildrenPage() {
+function getSpeciesLabel(species: PetSpecies): string {
+    const found = PET_SPECIES_OPTIONS.find(s => s.value === species);
+    return found?.label || "Pet";
+}
+
+export default function PetsPage() {
     useEnsureOnboarding();
 
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
-    const { children, setCurrentChildId, refreshData, isLoaded, homes, childSpaces, currentHomeId } = useAppState();
+    const { pets, refreshData, isLoaded, homes, currentHomeId } = useAppState();
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [toasts, setToasts] = useState<ToastData[]>([]);
@@ -53,10 +52,10 @@ export default function ChildrenPage() {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     };
 
-    const handleChildAdded = async (childName: string) => {
+    const handlePetAdded = async (petName: string) => {
         setShowAddModal(false);
         await refreshData();
-        addToast("Child added", `${childName} has been added to your family.`, "success");
+        addToast("Pet added", `${petName} has been added to your family.`, "success");
     };
 
     // Loading state
@@ -86,8 +85,8 @@ export default function ChildrenPage() {
                 {/* Page Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-dmSerif text-forest">Children</h1>
-                        <p className="text-sm text-textSub">Manage children profiles</p>
+                        <h1 className="text-2xl font-dmSerif text-forest">Pets</h1>
+                        <p className="text-sm text-textSub">Manage your pets and their care</p>
                     </div>
                     <button
                         onClick={() => setShowAddModal(true)}
@@ -97,60 +96,61 @@ export default function ChildrenPage() {
                             <line x1="12" y1="5" x2="12" y2="19" />
                             <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        Add child
+                        Add pet
                     </button>
                 </div>
 
-                {/* Children List */}
+                {/* Pets List */}
                 <div className="space-y-3">
-                    {children.length === 0 ? (
+                    {pets.length === 0 ? (
                         <div className="card-organic p-8 text-center">
-                            <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
-                                <span className="text-3xl">👶</span>
+                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                                <span className="text-3xl">🐾</span>
                             </div>
-                            <h3 className="font-bold text-forest text-lg mb-2">No children yet</h3>
+                            <h3 className="font-bold text-forest text-lg mb-2">No pets yet</h3>
                             <p className="text-sm text-textSub mb-4">
-                                Add a child to start tracking their items and information.
+                                Add a pet to start tracking their care routines and information.
                             </p>
                             <button
                                 onClick={() => setShowAddModal(true)}
                                 className="btn-primary"
                             >
-                                Add your first child
+                                Add your first pet
                             </button>
                         </div>
                     ) : (
-                        children.map((child) => (
+                        pets.map((pet) => (
                             <Link
-                                key={child.id}
-                                href={`/settings/child/${child.id}`}
+                                key={pet.id}
+                                href={`/settings/pets/${pet.id}`}
                                 className="card-organic p-4 flex items-center gap-4 hover:shadow-md transition-shadow group"
                             >
                                 <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
-                                    {child.avatarUrl ? (
+                                    {pet.avatarUrl ? (
                                         <Avatar
-                                            src={child.avatarUrl}
-                                            initial={child.avatarInitials || child.name?.charAt(0)}
+                                            src={pet.avatarUrl}
+                                            initial={pet.avatarInitials || pet.name?.charAt(0)}
                                             size={56}
-                                            bgColor="#E07B39"
+                                            bgColor={pet.avatarColor || "#22C55E"}
                                         />
                                     ) : (
-                                        <div className="w-full h-full bg-orange-100 flex items-center justify-center text-xl font-bold text-orange-600">
-                                            {child.avatarInitials || child.name?.charAt(0) || "?"}
+                                        <div className="w-full h-full bg-green-100 flex items-center justify-center text-xl">
+                                            {getSpeciesEmoji(pet.species)}
                                         </div>
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-forest text-lg">{child.name}</h3>
-                                    {child.dob && (
-                                        <p className="text-sm text-textSub mt-0.5">{calculateAge(child.dob)}</p>
-                                    )}
+                                    <h3 className="font-semibold text-forest text-lg">{pet.name}</h3>
+                                    <p className="text-sm text-textSub mt-0.5">
+                                        {getSpeciesEmoji(pet.species)} {getSpeciesLabel(pet.species)}
+                                        {pet.breed && ` • ${pet.breed}`}
+                                    </p>
                                 </div>
-                                <svg 
-                                    className="w-5 h-5 text-textSub/50 group-hover:text-forest transition-colors flex-shrink-0" 
-                                    viewBox="0 0 24 24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
+                                <svg
+                                    className="w-5 h-5 text-textSub/50 group-hover:text-forest transition-colors flex-shrink-0"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
                                     strokeWidth="2"
                                 >
                                     <polyline points="9 18 15 12 9 6" />
@@ -160,8 +160,8 @@ export default function ChildrenPage() {
                     )}
                 </div>
 
-                {/* Add another child button (when children exist) */}
-                {children.length > 0 && (
+                {/* Add another pet button (when pets exist) */}
+                {pets.length > 0 && (
                     <button
                         onClick={() => setShowAddModal(true)}
                         className="w-full py-4 border-2 border-dashed border-border rounded-xl text-sm font-medium text-textSub hover:border-forest hover:text-forest transition-colors flex items-center justify-center gap-2"
@@ -170,7 +170,7 @@ export default function ChildrenPage() {
                             <line x1="12" y1="5" x2="12" y2="19" />
                             <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
-                        Add another child
+                        Add another pet
                     </button>
                 )}
 
@@ -181,23 +181,22 @@ export default function ChildrenPage() {
                             <span className="text-forest text-xs font-bold">i</span>
                         </div>
                         <div>
-                            <p className="text-sm text-forest font-medium mb-1">About Children</p>
+                            <p className="text-sm text-forest font-medium mb-1">About Pets</p>
                             <p className="text-xs text-textSub leading-relaxed">
-                                Each child has their own profile, items, and can be associated with different homes.
-                                You can switch between children using the child selector in the navigation.
+                                Each pet has their own profile and can be associated with different homes.
+                                You can track medications, feeding schedules, and care routines in the Day Hub.
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Add Child Modal */}
+            {/* Add Pet Modal */}
             {showAddModal && (
-                <AddChildModal
+                <AddPetModal
                     onClose={() => setShowAddModal(false)}
-                    onChildAdded={handleChildAdded}
+                    onPetAdded={handlePetAdded}
                     homes={homes}
-                    childSpaces={childSpaces}
                     currentHomeId={currentHomeId}
                 />
             )}
@@ -208,22 +207,23 @@ export default function ChildrenPage() {
     );
 }
 
-// Add Child Modal Component
-interface AddChildModalProps {
+// Add Pet Modal Component
+interface AddPetModalProps {
     onClose: () => void;
-    onChildAdded: (childName: string) => void;
+    onPetAdded: (petName: string) => void;
     homes: HomeProfile[];
-    childSpaces: { id: string; childId: string; homeId: string }[];
     currentHomeId?: string;
 }
 
-function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChildModalProps) {
+function AddPetModal({ onClose, onPetAdded, homes, currentHomeId }: AddPetModalProps) {
     const { user } = useAuth();
-    const { setCurrentChildId, refreshData } = useAppState();
-    
+    const { refreshData } = useAppState();
+
     const [name, setName] = useState("");
+    const [species, setSpecies] = useState<PetSpecies | "">("");
+    const [breed, setBreed] = useState("");
     const [birthdate, setBirthdate] = useState("");
-    const [gender, setGender] = useState<"boy" | "girl" | "">("");
+    const [notes, setNotes] = useState("");
     const [avatarUrl, setAvatarUrl] = useState<string>("");
     const [avatarPath, setAvatarPath] = useState<string>("");
     const [uploading, setUploading] = useState(false);
@@ -231,7 +231,7 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
     const [error, setError] = useState("");
     const [cropperImage, setCropperImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     // Connected homes - preselect current home if available, otherwise select all if only one
     const [selectedHomeIds, setSelectedHomeIds] = useState<string[]>(() => {
         if (currentHomeId && homes.some(h => h.id === currentHomeId)) {
@@ -287,11 +287,11 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
             const croppedFile = new File([croppedBlob], "cropped.jpg", { type: "image/jpeg" });
             const processed = await processImageForUpload(croppedFile);
 
-            const tempPath = `temp-${user.id}-${timestamp}-${random}_display.jpg`;
+            const tempPath = `temp-pet-${user.id}-${timestamp}-${random}_display.jpg`;
 
-            console.log("[AddChild] Uploading avatar to:", tempPath);
+            console.log("[AddPet] Uploading avatar to:", tempPath);
 
-            // Upload to temp location (will be updated with child ID after creation)
+            // Upload to temp location (will be updated with pet ID after creation)
             const { error: uploadError } = await supabase.storage
                 .from("avatars")
                 .upload(tempPath, processed.display, {
@@ -300,11 +300,11 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                 });
 
             if (uploadError) {
-                console.error("[AddChild] Avatar upload error:", uploadError);
+                console.error("[AddPet] Avatar upload error:", uploadError);
                 throw uploadError;
             }
 
-            console.log("[AddChild] Avatar uploaded successfully");
+            console.log("[AddPet] Avatar uploaded successfully");
 
             // Store the path for later
             setAvatarPath(tempPath);
@@ -318,7 +318,7 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                 setAvatarUrl(urlData.signedUrl);
             }
         } catch (err: any) {
-            console.error("[AddChild] Error uploading avatar:", err);
+            console.error("[AddPet] Error uploading avatar:", err);
             setError(err.message || "Failed to upload photo. Please try again.");
         } finally {
             setUploading(false);
@@ -337,8 +337,12 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
             setError("Please enter a name");
             return;
         }
+        if (!species) {
+            setError("Please select a pet type");
+            return;
+        }
         if (selectedHomeIds.length === 0) {
-            setError("Please select at least one home for the child");
+            setError("Please select at least one home for the pet");
             return;
         }
         if (!user) {
@@ -356,73 +360,74 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                 throw new Error("Session expired. Please refresh the page and try again.");
             }
 
-            console.log("[AddChild] Creating child for user:", user.id);
+            console.log("[AddPet] Creating pet for user:", user.id);
 
-            // Create child - include avatar path directly
-            const { data: newChild, error: childError } = await supabase
-                .from("children")
+            // Create pet
+            const { data: newPet, error: petError } = await supabase
+                .from("pets")
                 .insert({
                     name: name.trim(),
+                    species: species,
+                    breed: breed.trim() || null,
                     dob: birthdate || null,
-                    gender: gender || null,
+                    notes: notes.trim() || null,
                     avatar_url: avatarPath || null,
+                    avatar_initials: name.trim().charAt(0).toUpperCase(),
                     created_by: user.id,
                 })
                 .select()
                 .single();
 
-            if (childError) {
-                console.error("[AddChild] Error creating child:", childError);
-                throw childError;
+            if (petError) {
+                console.error("[AddPet] Error creating pet:", petError);
+                throw petError;
             }
 
-            console.log("[AddChild] Child created:", newChild.id);
+            console.log("[AddPet] Pet created:", newPet.id);
 
-            // CRITICAL: Add current user as guardian with child_access FIRST
-            // This must succeed for the user to see the child
+            // CRITICAL: Add current user as owner with pet_access FIRST
+            // This must succeed before we can create pet_spaces (RLS requirement)
             const { error: accessError } = await supabase
-                .from("child_access")
-                .upsert({
-                    child_id: newChild.id,
+                .from("pet_access")
+                .insert({
+                    pet_id: newPet.id,
                     user_id: user.id,
-                    role_type: "guardian",
+                    role_type: "owner",
                     access_level: "manage",
-                }, {
-                    onConflict: "child_id,user_id",
                 });
 
             if (accessError) {
-                console.error("[AddChild] CRITICAL: Error creating child_access:", accessError);
-                // Don't throw - child was created, we should continue
+                console.error("[AddPet] CRITICAL: Error creating pet_access:", accessError);
+                // Don't throw - pet was created, try to continue but log warning
+                console.warn("[AddPet] pet_access failed, pet_spaces may also fail");
             } else {
-                console.log("[AddChild] child_access created successfully");
+                console.log("[AddPet] pet_access created successfully");
             }
 
-            // If we uploaded an avatar to temp path, rename it to include child ID
-            if (avatarPath && newChild) {
-                const newAvatarPath = avatarPath.replace(`temp-${user.id}`, `child-${newChild.id}`);
-                
-                console.log("[AddChild] Renaming avatar from", avatarPath, "to", newAvatarPath);
-                
+            // If we uploaded an avatar to temp path, rename it to include pet ID
+            if (avatarPath && newPet) {
+                const newAvatarPath = avatarPath.replace(`temp-pet-${user.id}`, `pet-${newPet.id}`);
+
+                console.log("[AddPet] Renaming avatar from", avatarPath, "to", newAvatarPath);
+
                 // Copy to new path
                 const { error: copyError } = await supabase.storage
                     .from("avatars")
                     .copy(avatarPath, newAvatarPath);
 
                 if (copyError) {
-                    console.error("[AddChild] Error copying avatar:", copyError);
-                    // Avatar stays at temp path, which is still valid
+                    console.error("[AddPet] Error copying avatar:", copyError);
                 } else {
-                    // Update child with new path
+                    // Update pet with new path
                     const { error: updateError } = await supabase
-                        .from("children")
+                        .from("pets")
                         .update({ avatar_url: newAvatarPath })
-                        .eq("id", newChild.id);
+                        .eq("id", newPet.id);
 
                     if (updateError) {
-                        console.error("[AddChild] Error updating avatar path:", updateError);
+                        console.error("[AddPet] Error updating avatar path:", updateError);
                     } else {
-                        console.log("[AddChild] Avatar path updated successfully");
+                        console.log("[AddPet] Avatar path updated successfully");
                         // Delete temp file (best effort)
                         await supabase.storage
                             .from("avatars")
@@ -431,41 +436,45 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                 }
             }
 
-            // Link child to SELECTED homes only (not all homes)
+            // Link pet to selected homes
             const selectedHomes = homes.filter(h => selectedHomeIds.includes(h.id));
+            let linkedHomesCount = 0;
             for (const home of selectedHomes) {
-                // Create child_space for each selected home with status='active'
-                const { data: newChildSpace, error: csError } = await supabase
-                    .from("child_spaces")
+                console.log("[AddPet] Creating pet_space for pet", newPet.id, "and home", home.id);
+                const { data: psData, error: psError } = await supabase
+                    .from("pet_spaces")
                     .insert({
                         home_id: home.id,
-                        child_id: newChild.id,
-                        status: "active", // Explicitly set active status
+                        pet_id: newPet.id,
+                        status: "active",
                     })
                     .select()
                     .single();
 
-                if (csError) {
-                    console.error("[AddChild] Error creating child_space:", csError);
-                    continue;
-                }
-
-                // Grant current user child_space_access
-                const { error: csaError } = await supabase.from("child_space_access").insert({
-                    child_space_id: newChildSpace.id,
-                    user_id: user.id,
-                    can_view_address: true,
-                });
-
-                if (csaError) {
-                    console.error("[AddChild] Error creating child_space_access:", csaError);
+                if (psError) {
+                    console.error("[AddPet] Error creating pet_space for home", home.id, ":", psError.message, psError);
+                } else {
+                    console.log("[AddPet] pet_space created:", psData);
+                    linkedHomesCount++;
                 }
             }
-            
-            console.log("[AddChild] Linked child to", selectedHomes.length, "homes");
 
-            // Set the newly created child as active
-            setCurrentChildId(newChild.id);
+            console.log("[AddPet] Linked pet to", linkedHomesCount, "of", selectedHomes.length, "homes");
+
+            // Warn if home linking failed
+            if (linkedHomesCount < selectedHomes.length) {
+                console.warn("[AddPet] Some homes failed to link. This may be a permissions issue.");
+            }
+
+            // Update user's profile to indicate they manage pets
+            const { error: profileError } = await supabase
+                .from("profiles")
+                .update({ manages_pets: true })
+                .eq("id", user.id);
+
+            if (profileError) {
+                console.error("[AddPet] Error updating profile:", profileError);
+            }
 
             // Wait a moment for database to propagate, then refresh
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -473,26 +482,27 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
             // Refresh app data
             await refreshData();
 
-            console.log("[AddChild] Child creation complete:", newChild.id);
+            console.log("[AddPet] Pet creation complete:", newPet.id);
 
             // Notify parent
-            onChildAdded(name.trim());
+            onPetAdded(name.trim());
         } catch (err: any) {
-            console.error("[AddChild] Error creating child:", err);
-            setError(err.message || "Failed to create child. Please try again.");
+            console.error("[AddPet] Error creating pet:", err);
+            setError(err.message || "Failed to create pet. Please try again.");
         } finally {
             setSaving(false);
         }
     };
 
     const initials = name ? name[0].toUpperCase() : "?";
+    const selectedSpeciesEmoji = species ? getSpeciesEmoji(species) : "🐾";
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
                 {/* Header */}
                 <div className="sticky top-0 bg-white border-b border-border/30 px-6 py-4 flex items-center justify-between">
-                    <h2 className="text-xl font-dmSerif text-forest">Add Child</h2>
+                    <h2 className="text-xl font-dmSerif text-forest">Add Pet</h2>
                     <button
                         onClick={onClose}
                         className="p-2 text-textSub hover:text-forest rounded-lg hover:bg-cream transition-colors"
@@ -543,12 +553,12 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                             {avatarUrl ? (
                                 <img
                                     src={avatarUrl}
-                                    alt="Child photo"
+                                    alt="Pet photo"
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-orange-100 flex items-center justify-center text-3xl font-bold text-orange-600">
-                                    {initials}
+                                <div className="w-full h-full bg-green-100 flex items-center justify-center text-3xl">
+                                    {selectedSpeciesEmoji}
                                 </div>
                             )}
                             <div className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 border-2 border-forest shadow-md">
@@ -565,75 +575,89 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
 
                     {/* Name */}
                     <div>
-                        <label htmlFor="child-name" className="block text-sm font-semibold text-forest mb-1.5">
+                        <label htmlFor="pet-name" className="block text-sm font-semibold text-forest mb-1.5">
                             Name <span className="text-red-500">*</span>
                         </label>
                         <input
-                            id="child-name"
+                            id="pet-name"
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                            placeholder="Child's name"
+                            placeholder="Pet's name"
                             autoFocus
+                        />
+                    </div>
+
+                    {/* Pet Type / Species */}
+                    <div>
+                        <label className="block text-sm font-semibold text-forest mb-1.5">
+                            Pet type <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {PET_SPECIES_OPTIONS.map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => setSpecies(option.value)}
+                                    className={`px-4 py-3 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+                                        species === option.value
+                                            ? "bg-green-50 border-green-300 text-green-700"
+                                            : "border-border bg-white text-textSub hover:border-forest/30"
+                                    }`}
+                                >
+                                    <span>{option.emoji}</span>
+                                    <span>{option.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Breed */}
+                    <div>
+                        <label htmlFor="pet-breed" className="block text-sm font-semibold text-forest mb-1.5">
+                            Breed <span className="text-textSub font-normal">(optional)</span>
+                        </label>
+                        <input
+                            id="pet-breed"
+                            type="text"
+                            value={breed}
+                            onChange={(e) => setBreed(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+                            placeholder="e.g., Golden Retriever, Siamese"
                         />
                     </div>
 
                     {/* Birthdate */}
                     <div>
-                        <label htmlFor="child-birthdate" className="block text-sm font-semibold text-forest mb-1.5">
+                        <label htmlFor="pet-birthdate" className="block text-sm font-semibold text-forest mb-1.5">
                             Birthdate <span className="text-textSub font-normal">(optional)</span>
                         </label>
                         <input
-                            id="child-birthdate"
+                            id="pet-birthdate"
                             type="date"
                             value={birthdate}
                             onChange={(e) => setBirthdate(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
                         />
                         <p className="text-xs text-textSub mt-1.5">
-                            Used to show age and track milestones
+                            Used to track your pet's age
                         </p>
                     </div>
 
-                    {/* Gender */}
+                    {/* Notes */}
                     <div>
-                        <label className="block text-sm font-semibold text-forest mb-1.5">
-                            Gender <span className="text-textSub font-normal">(optional)</span>
+                        <label htmlFor="pet-notes" className="block text-sm font-semibold text-forest mb-1.5">
+                            Notes <span className="text-textSub font-normal">(optional)</span>
                         </label>
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setGender("boy")}
-                                className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-colors ${
-                                    gender === "boy"
-                                        ? "bg-blue-50 border-blue-300 text-blue-700"
-                                        : "border-border bg-white text-textSub hover:border-forest/30"
-                                }`}
-                            >
-                                Boy
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setGender("girl")}
-                                className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-colors ${
-                                    gender === "girl"
-                                        ? "bg-pink-50 border-pink-300 text-pink-700"
-                                        : "border-border bg-white text-textSub hover:border-forest/30"
-                                }`}
-                            >
-                                Girl
-                            </button>
-                        </div>
-                        {gender && (
-                            <button
-                                type="button"
-                                onClick={() => setGender("")}
-                                className="text-xs text-textSub hover:text-forest mt-2"
-                            >
-                                Clear selection
-                            </button>
-                        )}
+                        <textarea
+                            id="pet-notes"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            rows={3}
+                            className="w-full px-4 py-3 rounded-xl border border-border bg-white text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest resize-none"
+                            placeholder="Any special needs, preferences, or important information"
+                        />
                     </div>
 
                     {/* Connected Homes - Required */}
@@ -642,12 +666,12 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                             Connected Homes <span className="text-red-500">*</span>
                         </label>
                         <p className="text-xs text-textSub mb-3">
-                            Select which homes this child stays in.
+                            Select which homes this pet stays in.
                         </p>
                         {homes.length === 0 ? (
                             <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
                                 <p className="text-sm text-amber-700">
-                                    You need to create at least one home before adding a child.
+                                    You need to create at least one home before adding a pet.
                                 </p>
                             </div>
                         ) : homes.length === 1 ? (
@@ -661,7 +685,7 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-sm font-medium text-forest">{homes[0].name}</p>
-                                        <p className="text-xs text-textSub">This child will be added to your home.</p>
+                                        <p className="text-xs text-textSub">This pet will be added to your home.</p>
                                     </div>
                                 </div>
                             </div>
@@ -675,8 +699,8 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                                             key={home.id}
                                             type="button"
                                             onClick={() => {
-                                                setSelectedHomeIds(prev => 
-                                                    prev.includes(home.id) 
+                                                setSelectedHomeIds(prev =>
+                                                    prev.includes(home.id)
                                                         ? prev.filter(id => id !== home.id)
                                                         : [...prev, home.id]
                                                 );
@@ -731,10 +755,10 @@ function AddChildModal({ onClose, onChildAdded, homes, currentHomeId }: AddChild
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={saving || !name.trim()}
+                        disabled={saving || !name.trim() || !species}
                         className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {saving ? "Adding..." : "Add child"}
+                        {saving ? "Adding..." : "Add pet"}
                     </button>
                 </div>
             </div>

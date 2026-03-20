@@ -1767,10 +1767,10 @@ export default function HomeSetupPage() {
         <AppShell>
             {/* Back Link */}
             <Link
-                href="/settings"
+                href="/manage"
                 className="inline-flex items-center text-sm text-forest/70 hover:text-forest mb-4"
             >
-                ← Settings
+                ← Manage household
             </Link>
 
             <div className="space-y-6">

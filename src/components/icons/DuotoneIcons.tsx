@@ -45,12 +45,47 @@ export function HomeIcon(props: IconProps) {
     );
 }
 
+// Day Hub Icon (Clipboard with checkmark - for daily task tracking)
+export function DayHubIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" fill="currentColor" fillOpacity="0.2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" fill="currentColor" fillOpacity="0.3" />
+            <path d="M9 14l2 2 4-4" stroke="currentColor" fill="none" />
+        </DuotoneIcon>
+    );
+}
+
 // Homes Icon (Location pin with house - for Homes menu item)
 export function HomesIcon(props: IconProps) {
     return (
         <DuotoneIcon {...props}>
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="currentColor" fillOpacity="0.2" />
             <path d="M12 6.5l4 3v4.5h-8v-4.5L12 6.5z" stroke="currentColor" fill="none" />
+        </DuotoneIcon>
+    );
+}
+
+// Manage Icon (Grid/folder - for Manage menu item)
+export function ManageIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <rect x="3" y="3" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2" stroke="currentColor" />
+            <rect x="14" y="3" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2" stroke="currentColor" />
+            <rect x="3" y="14" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2" stroke="currentColor" />
+            <rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2" stroke="currentColor" />
+        </DuotoneIcon>
+    );
+}
+
+// Children Icon (Small person/child - for Children menu item)
+export function ChildrenIcon(props: IconProps) {
+    return (
+        <DuotoneIcon {...props}>
+            <circle cx="12" cy="7" r="4" fill="currentColor" fillOpacity="0.2" />
+            <path d="M12 14c-4 0-7 2-7 5v2h14v-2c0-3-3-5-7-5z" fill="currentColor" fillOpacity="0.2" />
+            <circle cx="12" cy="7" r="4" stroke="currentColor" fill="none" />
+            <path d="M5 21v-2a7 7 0 0 1 14 0v2" stroke="currentColor" fill="none" />
         </DuotoneIcon>
     );
 }

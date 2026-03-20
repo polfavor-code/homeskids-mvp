@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meds Schedule - Member View</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #2C3E2D;
+            --forest-light: #8BA18D;
+            --blush: #E89F95;
+            --soft-green: #E8F0E9;
+            --white: #FFFFFF;
+            --text-dark: #1A1A1A;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Outfit', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 40px 24px 24px;
+        }
+
+        header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 32px;
+            margin: 0;
+            color: var(--forest);
+        }
+
+        /* Member Selector */
+        .member-selector {
+            display: flex;
+            gap: 16px;
+            padding: 0 24px 32px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .member-selector::-webkit-scrollbar { display: none; }
+
+        .member-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .member-item.active {
+            opacity: 1;
+        }
+
+        .avatar-wrap {
+            width: 72px;
+            height: 72px;
+            border-radius: 28px;
+            padding: 4px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .member-item.active .avatar-wrap {
+            border-color: var(--forest);
+            transform: scale(1.05);
+        }
+
+        .avatar-wrap img {
+            width: 100%;
+            height: 100%;
+            border-radius: 24px;
+            object-fit: cover;
+        }
+
+        .member-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* Content Area */
+        .content-area {
+            background: var(--white);
+            border-radius: 40px 40px 0 0;
+            flex-grow: 1;
+            padding: 32px 24px;
+            box-shadow: 0 -10px 40px rgba(44, 62, 45, 0.05);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--forest-light);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .med-list-item {
+            background: var(--bg-cream);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .med-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--white);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        .med-details {
+            flex-grow: 1;
+        }
+
+        .med-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .med-schedule {
+            font-size: 13px;
+            color: var(--forest-light);
+        }
+
+        .image-indicator {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: var(--forest);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Preview Overlay */
+        .preview-stack {
+            display: flex;
+            margin-top: 12px;
+            gap: 8px;
+        }
+
+        .mini-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            border: 2px solid var(--white);
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--forest-light);
+        }
+
+        .empty-state span {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>My Family</h1>
+        </header>
+
+        <div class="member-selector">
+            <div class="member-item active" onclick="switchMember('monkey')">
+                <div class="avatar-wrap">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" alt="Monkey">
+                </div>
+                <span class="member-name">Monkey</span>
+            </div>
+            <div class="member-item" onclick="switchMember('galaxy')">
+                <div class="avatar-wrap">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Galaxy&backgroundColor=E0F2F1" alt="Galaxy">
+                </div>
+                <span class="member-name">Galaxy</span>
+            </div>
+            <div class="member-item" onclick="switchMember('boolie')">
+                <div class="avatar-wrap">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Boolie&backgroundColor=F3E5F5" alt="Boolie">
+                </div>
+                <span class="member-name">Boolie</span>
+            </div>
+            <div class="member-item" onclick="switchMember('belle')">
+                <div class="avatar-wrap">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Belle&backgroundColor=E1F5FE" alt="Belle">
+                </div>
+                <span class="member-name">Belle</span>
+            </div>
+        </div>
+
+        <div class="content-area" id="medContent">
+            <!-- Content will be injected by JS for simulation -->
+            <div class="section-title">
+                Current Meds
+                <span style="font-size: 12px; color: var(--forest)">3 items</span>
+            </div>
+
+            <div class="med-list-item">
+                <div class="med-icon">💊</div>
+                <div class="med-details">
+                    <div class="med-title">Urbason 16mg</div>
+                    <div class="med-schedule">1/2 pill • Twice a day</div>
+                </div>
+                <div class="image-indicator">📸</div>
+            </div>
+            <div class="preview-stack">
+                <img src="../assets/image-c3197ecf-faa2-4b15-ad6b-64ceee008abd.png" class="mini-preview" alt="Urbason">
+            </div>
+
+            <div class="med-list-item" style="margin-top: 24px;">
+                <div class="med-icon">🧪</div>
+                <div class="med-details">
+                    <div class="med-title">CDS Dióxido de Cloro</div>
+                    <div class="med-schedule">2 drops • 2h around food</div>
+                </div>
+            </div>
+
+            <div class="med-list-item">
+                <div class="med-icon">🩸</div>
+                <div class="med-details">
+                    <div class="med-title">RedCell + Mushrooms</div>
+                    <div class="med-schedule">3ml + 4r + 2c • Daily</div>
+                </div>
+                <div class="image-indicator">📸</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const medData = {
+            monkey: `
+                <div class="section-title">Monkey's Meds <span style="font-size: 12px; color: var(--forest)">3 items</span></div>
+                <div class="med-list-item">
+                    <div class="med-icon">💊</div>
+                    <div class="med-details">
+                        <div class="med-title">Urbason 16mg</div>
+                        <div class="med-schedule">1/2 pill • Twice a day</div>
+                    </div>
+                </div>
+                <div class="preview-stack">
+                    <img src="../assets/image-c3197ecf-faa2-4b15-ad6b-64ceee008abd.png" class="mini-preview" alt="Urbason">
+                </div>
+                <div class="med-list-item" style="margin-top: 24px;">
+                    <div class="med-icon">🧪</div>
+                    <div class="med-details">
+                        <div class="med-title">CDS Dióxido de Cloro</div>
+                        <div class="med-schedule">2 drops • 2h around food</div>
+                    </div>
+                </div>
+                <div class="med-list-item">
+                    <div class="med-icon">🩸</div>
+                    <div class="med-details">
+                        <div class="med-title">RedCell + Mushrooms</div>
+                        <div class="med-schedule">3ml + 4r + 2c • Daily</div>
+                    </div>
+                    <div class="image-indicator">📸</div>
+                </div>
+                <div class="preview-stack">
+                    <img src="../assets/image-4ab2f2a4-1ad4-428d-83b4-3c24c60e5140.png" class="mini-preview" alt="RedCell">
+                </div>
+            `,
+            galaxy: `
+                <div class="section-title">Galaxy's Meds <span style="font-size: 12px; color: var(--forest)">2 items</span></div>
+                <div class="med-list-item">
+                    <div class="med-icon">💊</div>
+                    <div class="med-details">
+                        <div class="med-title">Prednicortone 5mg</div>
+                        <div class="med-schedule">1/2 pill • Every 2 days</div>
+                    </div>
+                </div>
+                <div class="med-list-item">
+                    <div class="med-icon">💨</div>
+                    <div class="med-details">
+                        <div class="med-title">Cortavance Spray</div>
+                        <div class="med-schedule">1x Daily • On neck</div>
+                    </div>
+                </div>
+                <div class="preview-stack">
+                    <img src="../assets/image-4f590646-5941-45bd-be39-09447e0f68f3.png" class="mini-preview" alt="Cortavance">
+                </div>
+            `,
+            boolie: `
+                <div class="section-title">Boolie's Meds <span style="font-size: 12px; color: var(--forest)">2 items</span></div>
+                <div class="med-list-item">
+                    <div class="med-icon">💊</div>
+                    <div class="med-details">
+                        <div class="med-title">Prednisone 5mg</div>
+                        <div class="med-schedule">1 pill (W1) • With food</div>
+                    </div>
+                </div>
+                <div class="preview-stack">
+                    <img src="../assets/image-7b633e9b-4553-4e68-94f9-2d11470cd655.png" class="mini-preview" alt="Prednisone">
+                </div>
+                <div class="med-list-item" style="margin-top: 24px;">
+                    <div class="med-icon">🧴</div>
+                    <div class="med-details">
+                        <div class="med-title">Diprogenta Cream</div>
+                        <div class="med-schedule">As needed • On butt</div>
+                    </div>
+                </div>
+            `,
+            belle: `
+                <div class="empty-state">
+                    <span>🐾</span>
+                    <p>No active meds for Belle.<br>Stay healthy!</p>
+                </div>
+            `
+        };
+
+        function switchMember(id) {
+            // Update UI
+            document.querySelectorAll('.member-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Update Content
+            document.getElementById('medContent').innerHTML = medData[id];
+        }
+    </script>
+</body>
+</html>

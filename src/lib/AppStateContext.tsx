@@ -31,6 +31,21 @@ export type ChildProfile = {
     gender?: "boy" | "girl" | null; // V1 compatibility
 };
 
+// Pet types
+export type PetSpecies = "dog" | "cat" | "bird" | "fish" | "reptile" | "small_mammal" | "other";
+
+export type PetProfile = {
+    id: string;
+    name: string;
+    species: PetSpecies;
+    breed?: string;
+    dob?: string;
+    avatarUrl?: string;
+    avatarInitials: string;
+    avatarColor?: string;
+    notes?: string;
+};
+
 // Role types for guardians and helpers
 export type GuardianRole = "parent" | "stepparent";
 export type HelperType = "family_member" | "friend" | "nanny";
@@ -181,6 +196,13 @@ interface AppStateContextType {
     currentChildId: string;
     setCurrentChildId: (childId: string) => void;
 
+    // Pets
+    pets: PetProfile[];
+
+    // Profile preferences (from onboarding)
+    managesChildren: boolean;
+    managesPets: boolean;
+
     // V1 compatibility: single child alias
     child: ChildProfile | null;
     setChild: (child: ChildProfile) => void;
@@ -299,6 +321,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const [contacts, setContacts] = useState<ChildSpaceContact[]>([]);
     const [onboardingCompleted, setOnboardingCompleted] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
+
+    // Pet state
+    const [petsList, setPetsList] = useState<PetProfile[]>([]);
+    const [managesChildren, setManagesChildren] = useState(false);
+    const [managesPets, setManagesPets] = useState(false);
     // Contextual bag visibility: upcoming stays within N days
     const [upcomingStays, setUpcomingStays] = useState<{ homeId: string; homeName: string; startAt: Date; endAt: Date }[]>([]);
     const BAG_VISIBILITY_DAYS = 7; // Show bag for homes with stays within next 7 days
@@ -330,6 +357,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setAllChildSpaces([]);
             setUpcomingStays([]);
             setInviteInfo(null);
+            setPetsList([]);
+            setManagesChildren(false);
+            setManagesPets(false);
         }
         
         prevUserIdRef.current = currentUserId;
@@ -1104,13 +1134,59 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 setContacts(loadedContacts);
             }
 
-            // 5. Check onboarding status
+            // 5. Check onboarding status and management preferences
             const { data: profileData } = await supabase
                 .from("profiles")
-                .select("onboarding_completed")
+                .select("onboarding_completed, manages_children, manages_pets")
                 .eq("id", user.id)
                 .single();
             setOnboardingCompleted(profileData?.onboarding_completed || false);
+            setManagesChildren(profileData?.manages_children || false);
+            setManagesPets(profileData?.manages_pets || false);
+
+            // 5a. Load pets if user manages pets
+            if (profileData?.manages_pets) {
+                const { data: petAccessData } = await supabase
+                    .from("pet_access")
+                    .select(`
+                        pet_id,
+                        pets (
+                            id,
+                            name,
+                            species,
+                            breed,
+                            dob,
+                            avatar_url,
+                            avatar_initials,
+                            avatar_color,
+                            notes
+                        )
+                    `)
+                    .eq("user_id", user.id);
+
+                const loadedPets: PetProfile[] = [];
+                if (petAccessData) {
+                    for (const pa of petAccessData as any[]) {
+                        if (pa.pets) {
+                            const avatarUrl = await getAvatarUrl(pa.pets.avatar_url);
+                            loadedPets.push({
+                                id: pa.pets.id,
+                                name: pa.pets.name,
+                                species: pa.pets.species,
+                                breed: pa.pets.breed,
+                                dob: pa.pets.dob,
+                                avatarUrl,
+                                avatarInitials: pa.pets.avatar_initials || pa.pets.name?.[0]?.toUpperCase() || "?",
+                                avatarColor: pa.pets.avatar_color,
+                                notes: pa.pets.notes,
+                            });
+                        }
+                    }
+                }
+                setPetsList(loadedPets);
+            } else {
+                setPetsList([]);
+            }
 
             // 5b. Load invite info if user was invited (for no-home-access empty state)
             const { data: acceptedInvite } = await supabase
@@ -1882,6 +1958,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 currentChild,
                 currentChildId,
                 setCurrentChildId,
+                // Pets
+                pets: petsList,
+                // Profile preferences
+                managesChildren,
+                managesPets,
                 caregivers,
                 setCaregivers,
                 homes,

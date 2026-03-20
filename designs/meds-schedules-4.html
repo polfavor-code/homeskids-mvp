@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Hub - Interactive Schedule</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #2C3E2D;
+            --forest-light: #8BA18D;
+            --blush: #E89F95;
+            --soft-green: #E8F0E9;
+            --white: #FFFFFF;
+            --text-dark: #1A1A1A;
+            --accent-orange: #F4A261;
+            --success: #4A7C59;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Outfit', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 100px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: left;
+            margin-bottom: 24px;
+            padding: 10px 0;
+        }
+
+        header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 32px;
+            margin: 0;
+            color: var(--forest);
+        }
+
+        header p {
+            font-size: 14px;
+            color: var(--forest-light);
+            margin: 4px 0 0;
+        }
+
+        /* Progress Card */
+        .progress-card {
+            background: var(--forest);
+            color: white;
+            padding: 20px 24px;
+            border-radius: 24px;
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(44, 62, 45, 0.15);
+        }
+
+        .progress-info h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .progress-info p {
+            margin: 4px 0 0;
+            opacity: 0.7;
+            font-size: 13px;
+        }
+
+        .progress-ring {
+            width: 56px;
+            height: 56px;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+            width: 56px;
+            height: 56px;
+        }
+
+        .progress-ring .bg { stroke: rgba(255,255,255,0.15); }
+        .progress-ring .fg {
+            stroke: white;
+            transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-ring .label {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 17px;
+            top: 10px;
+            bottom: 0;
+            width: 2px;
+            background: rgba(44, 62, 45, 0.1);
+        }
+
+        .time-slot {
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .time-marker {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .marker-dot {
+            width: 36px;
+            height: 36px;
+            background: var(--white);
+            border: 2px solid var(--forest);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            z-index: 2;
+            flex-shrink: 0;
+        }
+
+        .marker-dot.active {
+            background: var(--forest);
+            color: var(--white);
+        }
+
+        .marker-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--forest-light);
+        }
+
+        /* Task Card */
+        .task-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 20px;
+            margin-left: 52px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(44, 62, 45, 0.04);
+            border: 1px solid rgba(44, 62, 45, 0.05);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .task-top {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .task-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--soft-green);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .task-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .task-body {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .task-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 2px;
+            color: var(--forest);
+            transition: all 0.3s;
+        }
+
+        .task-desc {
+            color: var(--forest-light);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .task-tags {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .tag-meds { background: #fee2e2; color: #991b1b; }
+        .tag-activity { background: #dcfce7; color: #166534; }
+        .tag-pickup { background: #e0f2fe; color: #075985; }
+        .tag-routine { background: #fef9c3; color: #854d0e; }
+
+        .badge-galaxy { background: #E0F2F1; color: #00796B; }
+        .badge-monkey { background: #FFF3E0; color: #E65100; }
+        .badge-boolie { background: #F3E5F5; color: #7B1FA2; }
+        .badge-belle { background: #E1F5FE; color: #0288D1; }
+
+        .image-thumb {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: #eee;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .image-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Action Tray */
+        .task-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(44, 62, 45, 0.06);
+        }
+
+        .btn {
+            padding: 11px 16px;
+            border-radius: 14px;
+            border: none;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active { transform: scale(0.96); }
+
+        .btn-done {
+            background: var(--forest);
+            color: white;
+            flex: 2;
+        }
+
+        .btn-postpone {
+            background: #F3F4F6;
+            color: #6B7280;
+            flex: 1;
+        }
+
+        /* Completed State */
+        .task-card.completed {
+            background: #F5F5F3;
+            border-color: transparent;
+            opacity: 0.65;
+        }
+
+        .task-card.completed .task-name {
+            text-decoration: line-through;
+            color: var(--forest-light);
+        }
+
+        .task-card.completed .task-actions { display: none; }
+
+        .done-stamp {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(44, 62, 45, 0.06);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .done-stamp .check {
+            width: 20px;
+            height: 20px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .task-card.completed .done-stamp { display: flex; }
+
+        /* Postponed State */
+        .task-card.postponed {
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        .postpone-label {
+            display: none;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-orange);
+            margin-top: 6px;
+        }
+
+        .task-card.postponed .postpone-label { display: block; }
+        .task-card.postponed .task-actions { display: none; }
+
+        .postponed-actions {
+            display: none;
+            gap: 10px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(44, 62, 45, 0.06);
+        }
+
+        .task-card.postponed .postponed-actions { display: flex; }
+
+        .btn-small {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: none;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            background: #F3F4F6;
+            color: #6B7280;
+            flex: 1;
+            transition: transform 0.1s;
+        }
+
+        .btn-small:active { transform: scale(0.96); }
+
+        .btn-do-now {
+            background: var(--forest);
+            color: white;
+        }
+
+        /* Postpone Bottom Sheet */
+        .sheet-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 900;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .sheet-overlay.open { display: flex; }
+
+        .sheet {
+            background: var(--white);
+            border-radius: 28px 28px 0 0;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .sheet h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            margin: 0 0 6px;
+        }
+
+        .sheet p {
+            color: var(--forest-light);
+            font-size: 14px;
+            margin: 0 0 20px;
+        }
+
+        .sheet-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sheet-option {
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(44, 62, 45, 0.1);
+            background: var(--bg-cream);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--forest);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.15s;
+        }
+
+        .sheet-option:active { background: var(--soft-green); }
+
+        .sheet-option .icon {
+            width: 36px;
+            height: 36px;
+            background: var(--white);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .sheet-cancel {
+            margin-top: 10px;
+            padding: 14px;
+            border-radius: 16px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--forest-light);
+            width: 100%;
+            cursor: pointer;
+        }
+
+        /* Image Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: var(--forest);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            box-shadow: 0 10px 25px rgba(44, 62, 45, 0.25);
+            font-size: 28px;
+            text-decoration: none;
+            z-index: 100;
+            transition: transform 0.15s;
+        }
+
+        .fab:active { transform: scale(0.92); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Day Hub</h1>
+        <p>Thursday, Mar 19</p>
+    </header>
+
+    <!-- Progress Card -->
+    <div class="progress-card" id="progressCard">
+        <div class="progress-info">
+            <h3 id="progressTitle">Let's get started</h3>
+            <p id="progressSub">0 of 8 tasks done</p>
+        </div>
+        <div class="progress-ring">
+            <svg viewBox="0 0 56 56">
+                <circle class="bg" cx="28" cy="28" r="22" fill="none" stroke-width="4"/>
+                <circle class="fg" id="progressArc" cx="28" cy="28" r="22" fill="none" stroke-width="4"
+                    stroke-linecap="round"
+                    stroke-dasharray="138.23"
+                    stroke-dashoffset="138.23"/>
+            </svg>
+            <span class="label" id="progressLabel">0/8</span>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline">
+
+        <!-- Morning -->
+        <div class="time-slot">
+            <div class="time-marker">
+                <div class="marker-dot active">AM</div>
+                <div class="marker-label">Morning (08:00)</div>
+            </div>
+
+            <!-- Task 1: Galaxy - Cortavance -->
+            <div class="task-card" id="task-1">
+                <div class="task-top">
+                    <div class="task-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Galaxy&backgroundColor=E0F2F1" alt="Galaxy">
+                    </div>
+                    <div class="task-body">
+                        <div class="task-name">Cortavance Spray</div>
+                        <div class="task-desc">1 spray on her neck</div>
+                        <div class="task-tags">
+                            <span class="tag badge-galaxy">Galaxy</span>
+                            <span class="tag tag-meds">Medication</span>
+                        </div>
+                    </div>
+                    <div class="image-thumb" onclick="openModal('../assets/image-4f590646-5941-45bd-be39-09447e0f68f3.png')">
+                        <img src="../assets/image-4f590646-5941-45bd-be39-09447e0f68f3.png" alt="Cortavance">
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-1')">Done</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-1')">Later</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-1')">Do it now</button>
+                </div>
+            </div>
+
+            <!-- Task 2: Monkey - Urbason -->
+            <div class="task-card" id="task-2">
+                <div class="task-top">
+                    <div class="task-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" alt="Monkey">
+                    </div>
+                    <div class="task-body">
+                        <div class="task-name">Urbason 16mg</div>
+                        <div class="task-desc">1/2 pill with breakfast</div>
+                        <div class="task-tags">
+                            <span class="tag badge-monkey">Monkey</span>
+                            <span class="tag tag-meds">Medication</span>
+                        </div>
+                    </div>
+                    <div class="image-thumb" onclick="openModal('../assets/image-c3197ecf-faa2-4b15-ad6b-64ceee008abd.png')">
+                        <img src="../assets/image-c3197ecf-faa2-4b15-ad6b-64ceee008abd.png" alt="Urbason">
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-2')">Done</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-2')">Later</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-2')">Do it now</button>
+                </div>
+            </div>
+
+            <!-- Task 3: Boolie - Prednisone -->
+            <div class="task-card" id="task-3">
+                <div class="task-top">
+                    <div class="task-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Boolie&backgroundColor=F3E5F5" alt="Boolie">
+                    </div>
+                    <div class="task-body">
+                        <div class="task-name">Prednisone 5mg</div>
+                        <div class="task-desc">1 pill with food</div>
+                        <div class="task-tags">
+                            <span class="tag badge-boolie">Boolie</span>
+                            <span class="tag tag-meds">Medication</span>
+                        </div>
+                    </div>
+                    <div class="image-thumb" onclick="openModal('../assets/image-7b633e9b-4553-4e68-94f9-2d11470cd655.png')">
+                        <img src="../assets/image-7b633e9b-4553-4e68-94f9-2d11470cd655.png" alt="Prednisone">
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-3')">Done</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-3')">Later</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-3')">Do it now</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Afternoon -->
+        <div class="time-slot">
+            <div class="time-marker">
+                <div class="marker-dot">PM</div>
+                <div class="marker-label">Afternoon (14:00)</div>
+            </div>
+
+            <!-- Task 4: Monkey - RedCell -->
+            <div class="task-card" id="task-4">
+                <div class="task-top">
+                    <div class="task-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" alt="Monkey">
+                    </div>
+                    <div class="task-body">
+                        <div class="task-name">RedCell + Mushroom Drops</div>
+                        <div class="task-desc">3ml syringe + 4 reishi + 2 cordyceps</div>
+                        <div class="task-tags">
+                            <span class="tag badge-monkey">Monkey</span>
+                            <span class="tag tag-meds">Supplement</span>
+                        </div>
+                    </div>
+                    <div class="image-thumb" onclick="openModal('../assets/image-4ab2f2a4-1ad4-428d-83b4-3c24c60e5140.png')">
+                        <img src="../assets/image-4ab2f2a4-1ad4-428d-83b4-3c24c60e5140.png" alt="RedCell">
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-4')">Done</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-4')">Later</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-4')">Do it now</button>
+                </div>
+            </div>
+
+            <!-- Task 5: Monkey - CDS Drops -->
+            <div class="task-card" id="task-5">
+                <div class="task-top">
+                    <div class="task-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" alt="Monkey">
+                    </div>
+                    <div class="task-body">
+                        <div class="task-name">CDS Drops</div>
+                        <div class="task-desc">2 drops in water syringe (2h from food)</div>
+                        <div class="task-tags">
+                            <span class="tag badge-monkey">Monkey</span>
+                            <span class="tag tag-meds">Medication</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-5')">Done</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-5')">Later</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-5')">Do it now</button>
+                </div>
+            </div>
+
+            <!-- Task 6: Activity - Soccer Pickup -->
+            <div class="task-card" id="task-6">
+                <div class="task-top">
+                    <div class="task-avatar" style="background: #dcfce7;">&#9917;</div>
+                    <div class="task-body">
+                        <div class="task-name">Soccer Practice</div>
+                        <div class="task-desc">Pick up Belle at school, drive to field</div>
+                        <div class="task-tags">
+                            <span class="tag badge-belle">Belle</span>
+                            <span class="tag tag-pickup">Pickup</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-6')">Arrived</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-6')">Running late</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-6')">On my way</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evening -->
+        <div class="time-slot">
+            <div class="time-marker">
+                <div class="marker-dot" style="border-color: var(--blush);">EV</div>
+                <div class="marker-label">Evening (20:00)</div>
+            </div>
+
+            <!-- Task 7: Boolie - Diprogenta -->
+            <div class="task-card" id="task-7">
+                <div class="task-top">
+                    <div class="task-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Boolie&backgroundColor=F3E5F5" alt="Boolie">
+                    </div>
+                    <div class="task-body">
+                        <div class="task-name">Diprogenta Cream</div>
+                        <div class="task-desc">Apply cream to affected area</div>
+                        <div class="task-tags">
+                            <span class="tag badge-boolie">Boolie</span>
+                            <span class="tag tag-meds">Medication</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-7')">Done</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-7')">Later</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-7')">Do it now</button>
+                </div>
+            </div>
+
+            <!-- Task 8: Galaxy - Prednicortone -->
+            <div class="task-card" id="task-8">
+                <div class="task-top">
+                    <div class="task-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Galaxy&backgroundColor=E0F2F1" alt="Galaxy">
+                    </div>
+                    <div class="task-body">
+                        <div class="task-name">Prednicortone 5mg</div>
+                        <div class="task-desc">1/2 pill (every 2 days)</div>
+                        <div class="task-tags">
+                            <span class="tag badge-galaxy">Galaxy</span>
+                            <span class="tag tag-meds">Medication</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-done" onclick="markDone('task-8')">Done</button>
+                    <button class="btn btn-postpone" onclick="showPostpone('task-8')">Later</button>
+                </div>
+                <div class="done-stamp"><span class="check">&#10003;</span> Completed</div>
+                <div class="postpone-label"></div>
+                <div class="postponed-actions">
+                    <button class="btn-small btn-do-now" onclick="markDone('task-8')">Do it now</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- FAB -->
+<a href="#" class="fab">+</a>
+
+<!-- Postpone Bottom Sheet -->
+<div class="sheet-overlay" id="postponeSheet">
+    <div class="sheet">
+        <h3>Postpone task</h3>
+        <p id="sheetTaskName">How long do you want to delay this?</p>
+        <div class="sheet-options">
+            <button class="sheet-option" onclick="doPostpone(1)">
+                <span class="icon">&#128336;</span> 1 hour
+            </button>
+            <button class="sheet-option" onclick="doPostpone(2)">
+                <span class="icon">&#128337;</span> 2 hours
+            </button>
+            <button class="sheet-option" onclick="doPostpone(0, 'evening')">
+                <span class="icon">&#127769;</span> Move to evening
+            </button>
+            <button class="sheet-option" onclick="doPostpone(0, 'skip')">
+                <span class="icon">&#10060;</span> Skip for today
+            </button>
+        </div>
+        <button class="sheet-cancel" onclick="closeSheet()">Cancel</button>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="close-modal" onclick="closeModal()">&#215;</div>
+    <div class="modal-content">
+        <img id="modalImage" src="" alt="Full size">
+    </div>
+</div>
+
+<script>
+    const TOTAL_TASKS = 8;
+    let completedCount = 0;
+    let activePostponeId = null;
+
+    function updateProgress() {
+        const pct = completedCount / TOTAL_TASKS;
+        const circumference = 138.23;
+        const offset = circumference - (pct * circumference);
+
+        document.getElementById('progressArc').setAttribute('stroke-dashoffset', offset);
+        document.getElementById('progressLabel').textContent = completedCount + '/' + TOTAL_TASKS;
+        document.getElementById('progressSub').textContent = completedCount + ' of ' + TOTAL_TASKS + ' tasks done';
+
+        if (completedCount === 0) {
+            document.getElementById('progressTitle').textContent = "Let's get started";
+        } else if (completedCount < TOTAL_TASKS / 2) {
+            document.getElementById('progressTitle').textContent = 'Nice progress!';
+        } else if (completedCount < TOTAL_TASKS) {
+            document.getElementById('progressTitle').textContent = 'Almost there!';
+        } else {
+            document.getElementById('progressTitle').textContent = 'All done today!';
+        }
+    }
+
+    function markDone(id) {
+        const el = document.getElementById(id);
+        if (el.classList.contains('completed')) return;
+
+        const wasPostponed = el.classList.contains('postponed');
+        el.classList.remove('postponed');
+        el.classList.add('completed');
+
+        if (!wasPostponed) {
+            completedCount++;
+        }
+        // If it was postponed, it was already NOT counted, so count it now
+        if (wasPostponed) {
+            completedCount++;
+        }
+
+        updateProgress();
+    }
+
+    function showPostpone(id) {
+        activePostponeId = id;
+        const card = document.getElementById(id);
+        const name = card.querySelector('.task-name').textContent;
+        document.getElementById('sheetTaskName').textContent = 'Delay "' + name + '"?';
+        document.getElementById('postponeSheet').classList.add('open');
+    }
+
+    function closeSheet() {
+        document.getElementById('postponeSheet').classList.remove('open');
+        activePostponeId = null;
+    }
+
+    function doPostpone(hours, special) {
+        if (!activePostponeId) return;
+        const el = document.getElementById(activePostponeId);
+        el.classList.add('postponed');
+
+        var label = el.querySelector('.postpone-label');
+        if (special === 'evening') {
+            label.textContent = 'Moved to evening';
+        } else if (special === 'skip') {
+            label.textContent = 'Skipped for today';
+            el.style.opacity = '0.45';
+        } else {
+            label.textContent = 'Postponed ' + hours + 'h';
+        }
+
+        closeSheet();
+    }
+
+    // Image modal
+    function openModal(src) {
+        document.getElementById('modalImage').src = src;
+        document.getElementById('modalOverlay').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
+    }
+
+    document.getElementById('modalOverlay').onclick = function(e) {
+        if (e.target === this) closeModal();
+    };
+
+    // Close sheet on overlay tap
+    document.getElementById('postponeSheet').onclick = function(e) {
+        if (e.target === this) closeSheet();
+    };
+</script>
+</body>
+</html>
