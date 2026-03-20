@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/AuthContext";
 import { ContactsProvider } from "@/lib/ContactsContext";
 import { HealthProvider } from "@/lib/HealthContext";
 import { DocumentsProvider } from "@/lib/DocumentsContext";
+import { DayHubProvider } from "@/lib/DayHubContext";
 import { TravelBagProvider } from "@/lib/TravelBagContext";
 import { ItemsAddedAlertProvider } from "@/lib/ItemsAddedAlertContext";
 import { ItemsAddedToastContainer } from "@/components/ItemsAddedToast";
@@ -70,17 +71,19 @@ export default function RootLayout({
                                     <TravelBagProvider>
                                         <ContactsProvider>
                                             <HealthProvider>
-                                                <DocumentsProvider>
-                                                    <DocumentAddedAlertProvider>
-                                                        <AwaitingLocationAlertProvider>
-                                                            {children}
-                                                            <ItemsAddedToastContainer />
-                                                            <HomeSwitchToastContainer />
-                                                            <DocumentAddedToastContainer />
-                                                            <AwaitingLocationToastContainer />
-                                                        </AwaitingLocationAlertProvider>
-                                                    </DocumentAddedAlertProvider>
-                                                </DocumentsProvider>
+                                                <DayHubProvider>
+                                                    <DocumentsProvider>
+                                                        <DocumentAddedAlertProvider>
+                                                            <AwaitingLocationAlertProvider>
+                                                                {children}
+                                                                <ItemsAddedToastContainer />
+                                                                <HomeSwitchToastContainer />
+                                                                <DocumentAddedToastContainer />
+                                                                <AwaitingLocationToastContainer />
+                                                            </AwaitingLocationAlertProvider>
+                                                        </DocumentAddedAlertProvider>
+                                                    </DocumentsProvider>
+                                                </DayHubProvider>
                                             </HealthProvider>
                                         </ContactsProvider>
                                     </TravelBagProvider>

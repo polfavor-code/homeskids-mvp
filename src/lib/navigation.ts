@@ -19,6 +19,11 @@ export const navItems: NavItem[] = [
         route: '/',
     },
     {
+        label: 'Day Hub',
+        icon: 'DayHubIcon',
+        route: '/day-hub',
+    },
+    {
         label: "{childName}'s Items",
         icon: 'ItemsIcon',
         route: '/items',
@@ -44,14 +49,9 @@ export const navItems: NavItem[] = [
         route: '/health',
     },
     {
-        label: 'Homes',
-        icon: 'HomesIcon',
-        route: '/settings/homes',
-    },
-    {
-        label: 'Caregivers',
-        icon: 'CaregiversIcon',
-        route: '/settings/caregivers',
+        label: 'Manage household',
+        icon: 'ManageIcon',
+        route: '/manage',
     },
     {
         label: 'Settings',
@@ -75,13 +75,25 @@ export function isRouteActive(pathname: string, route: string): boolean {
         return pathname === '/';
     }
     
-    // Special case for /settings - don't match if on /settings/homes or /settings/caregivers
-    // since those have their own nav items
+    // Special case for /settings - don't match on subpages that are part of Manage
     if (route === '/settings') {
         if (pathname === '/settings') return true;
+        // These are now under Manage, not Settings
         if (pathname.startsWith('/settings/homes')) return false;
+        if (pathname.startsWith('/settings/children')) return false;
         if (pathname.startsWith('/settings/caregivers')) return false;
+        if (pathname.startsWith('/settings/pets')) return false;
         return pathname.startsWith('/settings/');
+    }
+
+    // Special case for /manage - also match settings subpages that are entity management
+    if (route === '/manage') {
+        if (pathname === '/manage') return true;
+        if (pathname.startsWith('/settings/homes')) return true;
+        if (pathname.startsWith('/settings/children')) return true;
+        if (pathname.startsWith('/settings/caregivers')) return true;
+        if (pathname.startsWith('/settings/pets')) return true;
+        return false;
     }
     
     return pathname === route || pathname.startsWith(route + '/');

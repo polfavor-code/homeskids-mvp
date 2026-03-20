@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meds Schedule - Timeline View</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-cream: #F9F7F2;
+            --forest: #2C3E2D;
+            --forest-light: #8BA18D;
+            --blush: #E89F95;
+            --soft-green: #E8F0E9;
+            --white: #FFFFFF;
+            --text-dark: #1A1A1A;
+            --accent-orange: #F4A261;
+        }
+
+        body {
+            background-color: var(--bg-cream);
+            font-family: 'Outfit', sans-serif;
+            color: var(--forest);
+            margin: 0;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: left;
+            margin-bottom: 32px;
+            padding: 10px 0;
+        }
+
+        header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            margin: 0;
+            color: var(--forest);
+        }
+
+        header p {
+            font-size: 14px;
+            color: var(--forest-light);
+            margin: 4px 0 0;
+        }
+
+        /* Timeline Section */
+        .timeline-section {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .timeline-section::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 10px;
+            bottom: -30px;
+            width: 2px;
+            background: rgba(44, 62, 45, 0.1);
+            z-index: 0;
+        }
+
+        .time-group {
+            margin-bottom: 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .time-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .time-dot {
+            width: 32px;
+            height: 32px;
+            background: var(--forest);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid var(--bg-cream);
+        }
+
+        .time-dot span {
+            color: var(--white);
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .time-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--forest-light);
+        }
+
+        /* Med Card */
+        .med-card {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 16px;
+            margin-left: 44px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(44, 62, 45, 0.04);
+            display: flex;
+            gap: 16px;
+            border: 1px solid rgba(44, 62, 45, 0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .med-card:active {
+            transform: scale(0.98);
+        }
+
+        .animal-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            object-fit: cover;
+            background: var(--soft-green);
+            flex-shrink: 0;
+        }
+
+        .med-info {
+            flex-grow: 1;
+        }
+
+        .med-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: var(--forest);
+        }
+
+        .med-dose {
+            font-size: 13px;
+            color: var(--forest-light);
+            margin-bottom: 8px;
+        }
+
+        .med-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+
+        .badge-galaxy { background: #E0F2F1; color: #00796B; }
+        .badge-monkey { background: #FFF3E0; color: #E65100; }
+        .badge-boolie { background: #F3E5F5; color: #7B1FA2; }
+        .badge-belle { background: #E1F5FE; color: #0288D1; }
+
+        .image-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: #eee;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Floating Add Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: var(--forest);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            box-shadow: 0 10px 25px rgba(44, 62, 45, 0.2);
+            font-size: 24px;
+            text-decoration: none;
+            z-index: 100;
+        }
+
+        /* Modal Preview (Simple Simulation) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            max-width: 100%;
+            max-height: 80%;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Meds Schedule</h1>
+            <p>Today, Thursday Mar 19</p>
+        </header>
+
+        <div class="timeline-section">
+            <!-- Morning Slot -->
+            <div class="time-group">
+                <div class="time-header">
+                    <div class="time-dot"><span>AM</span></div>
+                    <div class="time-label">Morning (08:00)</div>
+                </div>
+
+                <div class="med-card">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Galaxy&backgroundColor=E0F2F1" class="animal-avatar" alt="Galaxy">
+                    <div class="med-info">
+                        <div class="med-name">Cortavance Spray</div>
+                        <div class="med-dose">1 spray on her neck</div>
+                        <div class="med-meta">
+                            <span class="badge badge-galaxy">Galaxy</span>
+                            <span style="font-size: 11px; color: var(--forest-light)">Daily</span>
+                        </div>
+                    </div>
+                    <div class="image-preview" onclick="openModal('../assets/image-4f590646-5941-45bd-be39-09447e0f68f3.png')">
+                        <img src="../assets/image-4f590646-5941-45bd-be39-09447e0f68f3.png" alt="Cortavance">
+                    </div>
+                </div>
+
+                <div class="med-card">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" class="animal-avatar" alt="Monkey">
+                    <div class="med-info">
+                        <div class="med-name">Urbason 16mg</div>
+                        <div class="med-dose">1/2 pill</div>
+                        <div class="med-meta">
+                            <span class="badge badge-monkey">Monkey</span>
+                            <span style="font-size: 11px; color: var(--forest-light)">Daily</span>
+                        </div>
+                    </div>
+                    <div class="image-preview" onclick="openModal('../assets/image-c3197ecf-faa2-4b15-ad6b-64ceee008abd.png')">
+                        <img src="../assets/image-c3197ecf-faa2-4b15-ad6b-64ceee008abd.png" alt="Urbason">
+                    </div>
+                </div>
+
+                <div class="med-card">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Boolie&backgroundColor=F3E5F5" class="animal-avatar" alt="Boolie">
+                    <div class="med-info">
+                        <div class="med-name">Prednisone 5mg</div>
+                        <div class="med-dose">1 pill (with food)</div>
+                        <div class="med-meta">
+                            <span class="badge badge-boolie">Boolie</span>
+                            <span style="font-size: 11px; color: var(--forest-light)">Week 1</span>
+                        </div>
+                    </div>
+                    <div class="image-preview" onclick="openModal('../assets/image-7b633e9b-4553-4e68-94f9-2d11470cd655.png')">
+                        <img src="../assets/image-7b633e9b-4553-4e68-94f9-2d11470cd655.png" alt="Prednisone">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Afternoon Slot -->
+            <div class="time-group">
+                <div class="time-header">
+                    <div class="time-dot"><span>PM</span></div>
+                    <div class="time-label">Afternoon (14:00)</div>
+                </div>
+
+                <div class="med-card">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Monkey&backgroundColor=FFF3E0" class="animal-avatar" alt="Monkey">
+                    <div class="med-info">
+                        <div class="med-name">RedCell + Mushroom Drops</div>
+                        <div class="med-dose">3ml syr + 4r + 2c</div>
+                        <div class="med-meta">
+                            <span class="badge badge-monkey">Monkey</span>
+                            <span style="font-size: 11px; color: var(--forest-light)">Supplement</span>
+                        </div>
+                    </div>
+                    <div class="image-preview" onclick="openModal('../assets/image-4ab2f2a4-1ad4-428d-83b4-3c24c60e5140.png')">
+                        <img src="../assets/image-4ab2f2a4-1ad4-428d-83b4-3c24c60e5140.png" alt="RedCell">
+                    </div>
+                </div>
+            </div>
+
+            <!-- evening Slot -->
+            <div class="time-group">
+                <div class="time-header">
+                    <div class="time-dot" style="background: var(--blush);"><span>EV</span></div>
+                    <div class="time-label">Evening (20:00)</div>
+                </div>
+
+                <div class="med-card">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Boolie&backgroundColor=F3E5F5" class="animal-avatar" alt="Boolie">
+                    <div class="med-info">
+                        <div class="med-name">Diprogenta Cream</div>
+                        <div class="med-dose">Apply to area</div>
+                        <div class="med-meta">
+                            <span class="badge badge-boolie">Boolie</span>
+                            <span style="font-size: 11px; color: var(--forest-light)">As needed</span>
+                        </div>
+                    </div>
+                    <div class="image-preview" onclick="openModal('../assets/image-7b633e9b-4553-4e68-94f9-2d11470cd655.png')">
+                        <img src="https://via.placeholder.com/40x40?text=Tube" alt="Cream">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="#" class="fab">+</a>
+
+    <!-- Modal for Image Preview -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="close-modal" onclick="closeModal()">&times;</div>
+        <div class="modal-content">
+            <img id="modalImage" src="" alt="Full size">
+        </div>
+    </div>
+
+    <script>
+        function openModal(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('modalOverlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        // Close on click outside
+        document.getElementById('modalOverlay').onclick = function(e) {
+            if (e.target === this) closeModal();
+        };
+    </script>
+</body>
+</html>

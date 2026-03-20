@@ -14,8 +14,8 @@ import {
     DocumentsIcon,
     HealthIcon,
     SettingsIcon,
-    HomesIcon,
-    CaregiversIcon,
+    ManageIcon,
+    DayHubIcon,
 } from '@/components/icons/DuotoneIcons';
 
 // Logo icon for center home button - matches Logo.tsx exactly
@@ -92,10 +92,10 @@ export default function MobileNav() {
     const userAvatarUrl = currentUser?.avatarUrl;
 
     // Check if any "more" item is active
-    const isMoreActive = isRouteActive(pathname, '/documents') ||
+    const isMoreActive = isRouteActive(pathname, '/day-hub') ||
+        isRouteActive(pathname, '/documents') ||
         isRouteActive(pathname, '/health') ||
-        isRouteActive(pathname, '/settings/homes') ||
-        isRouteActive(pathname, '/settings/caregivers') ||
+        isRouteActive(pathname, '/manage') ||
         isRouteActive(pathname, '/settings');
 
     return (
@@ -189,6 +189,20 @@ export default function MobileNav() {
                         <div className="mx-3 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                             {/* Menu Items */}
                             <div className="p-2">
+                                {/* Day Hub */}
+                                <Link
+                                    href="/day-hub"
+                                    onClick={() => setShowMoreMenu(false)}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                        isRouteActive(pathname, '/day-hub')
+                                            ? 'bg-softGreen text-forest font-semibold'
+                                            : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <DayHubIcon size={22} />
+                                    <span className="text-[15px]">Day Hub</span>
+                                </Link>
+
                                 {/* Documents */}
                                 <Link
                                     href="/documents"
@@ -217,32 +231,18 @@ export default function MobileNav() {
                                     <span className="text-[15px]">Health</span>
                                 </Link>
 
-                                {/* Homes */}
+                                {/* Manage household */}
                                 <Link
-                                    href="/settings/homes"
+                                    href="/manage"
                                     onClick={() => setShowMoreMenu(false)}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                                        isRouteActive(pathname, '/settings/homes')
+                                        isRouteActive(pathname, '/manage')
                                             ? 'bg-softGreen text-forest font-semibold'
                                             : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                                 >
-                                    <HomesIcon size={22} />
-                                    <span className="text-[15px]">Homes</span>
-                                </Link>
-
-                                {/* Caregivers */}
-                                <Link
-                                    href="/settings/caregivers"
-                                    onClick={() => setShowMoreMenu(false)}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                                        isRouteActive(pathname, '/settings/caregivers')
-                                            ? 'bg-softGreen text-forest font-semibold'
-                                            : 'text-gray-700 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <CaregiversIcon size={22} />
-                                    <span className="text-[15px]">Caregivers</span>
+                                    <ManageIcon size={22} />
+                                    <span className="text-[15px]">Manage household</span>
                                 </Link>
 
                                 {/* Settings */}

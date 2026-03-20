@@ -10,21 +10,42 @@ import MobileSelect from "@/components/MobileSelect";
 import { QRCodeSVG } from "qrcode.react";
 
 // ==============================================
-// V3 ONBOARDING - Clean 5-Step Flow
+// V4 ONBOARDING - Pet-Aware Flow
 // ==============================================
-// Step 1: About You
-// Step 2: Your Child(ren)
-// Step 3: Your Home(s)
-// Step 4: Caregivers (optional)
-// Step 5: Finished (with conditional invites)
+// Step 1: What would you like to organize? (Children/Pets multi-select)
+// Step 2: What is your role? (ONLY if Children selected)
+// Step 3: About You (name, childCallsYou if children)
+// Step 4: Add Child(ren) / Pet(s)
+// Step 5: Your Home(s)
+// Step 6: Caregivers (optional)
+// Step 7: Finished (with conditional invites)
 // ==============================================
 
+// Role options for STEP 2 (conditional - only for children)
+const CHILD_ROLE_OPTIONS = [
+    { value: "parent_coparent", label: "Parent or co-parent" },
+    { value: "guardian_family", label: "Guardian or family member" },
+    { value: "caregiver_babysitter", label: "Caregiver / babysitter" },
+];
+
+// Legacy role options (kept for backward compatibility with invite flow)
 const USER_ROLE_OPTIONS = [
     { value: "parent", label: "Parent" },
     { value: "step_parent", label: "Step-parent" },
     { value: "family_member", label: "Family member" },
     { value: "babysitter", label: "Babysitter" },
     { value: "nanny", label: "Nanny" },
+    { value: "other", label: "Other" },
+];
+
+// Pet species options
+const PET_SPECIES_OPTIONS = [
+    { value: "dog", label: "Dog" },
+    { value: "cat", label: "Cat" },
+    { value: "bird", label: "Bird" },
+    { value: "fish", label: "Fish" },
+    { value: "reptile", label: "Reptile" },
+    { value: "small_mammal", label: "Small mammal" },
     { value: "other", label: "Other" },
 ];
 
@@ -40,7 +61,14 @@ const CAREGIVER_ROLE_OPTIONS = [
 type UserRole = "parent" | "step_parent" | "family_member" | "babysitter" | "nanny" | "other";
 type CaregiverRole = "parent" | "step_parent" | "babysitter" | "nanny" | "family_member" | "family_friend";
 
-type OnboardingStep = 1 | 2 | 3 | 4 | 5;
+// New child role type (for Step 2 - NOT for permissions)
+type OnboardingChildRole = "parent_coparent" | "guardian_family" | "caregiver_babysitter";
+
+// Pet species type
+type PetSpecies = "dog" | "cat" | "bird" | "fish" | "reptile" | "small_mammal" | "other";
+
+// Updated step count: 1-7 for new flow
+type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 interface ChildEntry {
     id: string;
@@ -67,23 +95,44 @@ interface CaregiverEntry {
     inviteToken?: string;
 }
 
+interface PetEntry {
+    id: string;
+    name: string;
+    species: PetSpecies;
+}
+
 export default function OnboardingPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const { setOnboardingCompleted, refreshData } = useAppState();
+    const { onboardingCompleted, isLoaded, setOnboardingCompleted, refreshData } = useAppState();
 
     const [step, setStep] = useState<OnboardingStep>(1);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
-    // Step 1: About You
+    // NEW Step 1: What would you like to organize?
+    const [managesChildren, setManagesChildren] = useState(false);
+    const [managesPets, setManagesPets] = useState(false);
+
+    // NEW Step 2: Child role (conditional - only if children selected)
+    const [onboardingChildRole, setOnboardingChildRole] = useState<OnboardingChildRole | null>(null);
+
+    // Step 3: About You (modified)
     const [fullName, setFullName] = useState("");
-    const [userRole, setUserRole] = useState<UserRole>("parent");
+    const [userRole, setUserRole] = useState<UserRole>("parent"); // Legacy, kept for compatibility
     const [childCallsYou, setChildCallsYou] = useState("");
 
-    // Step 2: Your Child(ren)
+    // NEW: Entity type choice when both children and pets are selected
+    const [addingEntityType, setAddingEntityType] = useState<"child" | "pet" | null>(null);
+
+    // Step 4: Your Child(ren)
     const [children, setChildren] = useState<ChildEntry[]>([
         { id: crypto.randomUUID(), name: "" }
+    ]);
+
+    // Step 4: Your Pet(s) - NEW
+    const [pets, setPets] = useState<PetEntry[]>([
+        { id: crypto.randomUUID(), name: "", species: "dog" }
     ]);
 
     // Step 3: Your Home(s)
@@ -97,6 +146,7 @@ export default function OnboardingPage() {
 
     // Created IDs (for database references)
     const [createdChildIds, setCreatedChildIds] = useState<string[]>([]);
+    const [createdPetIds, setCreatedPetIds] = useState<string[]>([]);
     const [createdHomeIds, setCreatedHomeIds] = useState<string[]>([]);
 
     // Clipboard state for invite links
@@ -107,23 +157,13 @@ export default function OnboardingPage() {
         console.log("[Onboarding] User:", user?.id, user?.email);
     }, [user]);
 
-    // Check if already onboarded
+    // Redirect to dashboard if already onboarded (use AppStateContext to avoid race conditions)
     useEffect(() => {
-        const checkStatus = async () => {
-            if (!user) return;
-
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("onboarding_completed")
-                .eq("id", user.id)
-                .single();
-
-            if (profile?.onboarding_completed) {
-                router.push("/");
-            }
-        };
-        checkStatus();
-    }, [user, router]);
+        if (!isLoaded) return; // Wait for AppStateContext to load
+        if (onboardingCompleted) {
+            router.push("/");
+        }
+    }, [isLoaded, onboardingCompleted, router]);
 
     // Helper to generate home name with proper grammar and capitalization
     const generateHomeName = (label: string) => {
@@ -157,15 +197,50 @@ export default function OnboardingPage() {
     };
 
     // ==========================================
-    // STEP 1: About You
+    // NEW STEP 1: What would you like to organize?
     // ==========================================
-    const handleStep1Submit = async () => {
-        if (!fullName.trim()) {
-            setError("Please enter your full name.");
+    const handleOrganizeSubmit = async () => {
+        if (!managesChildren && !managesPets) {
+            setError("Please select at least one option.");
             return;
         }
-        if (!childCallsYou.trim()) {
-            setError("Please enter what your child calls you.");
+        if (!user) {
+            setError("Authentication error. Please log in again.");
+            return;
+        }
+
+        setError("");
+        setSaving(true);
+
+        try {
+            // Save management preferences to profile
+            const { error: profileError } = await supabase
+                .from("profiles")
+                .upsert({
+                    id: user.id,
+                    manages_children: managesChildren,
+                    manages_pets: managesPets,
+                });
+
+            if (profileError) throw profileError;
+
+            // Navigate based on selection
+            // If children selected, go to role step (2)
+            // If pets only, skip role step and go to About You (3)
+            setStep(managesChildren ? 2 : 3);
+        } catch (err: any) {
+            setError(err.message || "Failed to save. Please try again.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ==========================================
+    // NEW STEP 2: What is your role? (Conditional - only for children)
+    // ==========================================
+    const handleRoleSubmit = async () => {
+        if (!onboardingChildRole) {
+            setError("Please select your role.");
             return;
         }
         if (!user) {
@@ -179,17 +254,14 @@ export default function OnboardingPage() {
         try {
             const { error: profileError } = await supabase
                 .from("profiles")
-                .upsert({
-                    id: user.id,
-                    name: fullName.trim(),
-                    label: childCallsYou.trim(),
-                    relationship: userRole,
-                    avatar_initials: fullName.trim().charAt(0).toUpperCase(),
-                });
+                .update({
+                    onboarding_child_role: onboardingChildRole,
+                })
+                .eq("id", user.id);
 
             if (profileError) throw profileError;
 
-            setStep(2);
+            setStep(3);
         } catch (err: any) {
             setError(err.message || "Failed to save. Please try again.");
         } finally {
@@ -198,7 +270,55 @@ export default function OnboardingPage() {
     };
 
     // ==========================================
-    // STEP 2: Your Child(ren)
+    // STEP 3: About You (Modified)
+    // ==========================================
+    const handleAboutYouSubmit = async () => {
+        if (!fullName.trim()) {
+            setError("Please enter your full name.");
+            return;
+        }
+        // Only require childCallsYou if managing children
+        if (managesChildren && !childCallsYou.trim()) {
+            setError("Please enter what your child calls you.");
+            return;
+        }
+        if (!user) {
+            setError("Authentication error. Please log in again.");
+            return;
+        }
+
+        setError("");
+        setSaving(true);
+
+        try {
+            // Map onboardingChildRole to legacy userRole for compatibility
+            let legacyRole: UserRole = "parent";
+            if (onboardingChildRole === "parent_coparent") legacyRole = "parent";
+            else if (onboardingChildRole === "guardian_family") legacyRole = "family_member";
+            else if (onboardingChildRole === "caregiver_babysitter") legacyRole = "babysitter";
+
+            const { error: profileError } = await supabase
+                .from("profiles")
+                .upsert({
+                    id: user.id,
+                    name: fullName.trim(),
+                    label: managesChildren ? childCallsYou.trim() : fullName.trim(),
+                    relationship: managesChildren ? legacyRole : null,
+                    avatar_initials: fullName.trim().charAt(0).toUpperCase(),
+                });
+
+            if (profileError) throw profileError;
+
+            setStep(4);
+        } catch (err: any) {
+            setError(err.message || "Failed to save. Please try again.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ==========================================
+    // STEP 4: Your Child(ren) / Pet(s) - Entity Creation
     // ==========================================
     const addChild = () => {
         setChildren([...children, { id: crypto.randomUUID(), name: "" }]);
@@ -211,6 +331,21 @@ export default function OnboardingPage() {
     const removeChild = (id: string) => {
         if (children.length > 1) {
             setChildren(children.filter(c => c.id !== id));
+        }
+    };
+
+    // Pet CRUD functions
+    const addPet = () => {
+        setPets([...pets, { id: crypto.randomUUID(), name: "", species: "dog" }]);
+    };
+
+    const updatePet = (id: string, updates: Partial<PetEntry>) => {
+        setPets(pets.map(p => p.id === id ? { ...p, ...updates } : p));
+    };
+
+    const removePet = (id: string) => {
+        if (pets.length > 1) {
+            setPets(pets.filter(p => p.id !== id));
         }
     };
 
@@ -306,7 +441,14 @@ export default function OnboardingPage() {
             setCreatedChildIds(childIds);
             // Update children state with real database IDs
             setChildren(updatedChildren);
-            setStep(3);
+
+            // If both children and pets selected, and we haven't added pets yet, show pets
+            if (managesPets && createdPetIds.length === 0) {
+                setAddingEntityType("pet");
+                // Stay on step 4 to add pets
+            } else {
+                setStep(5); // Go to homes
+            }
         } catch (err: any) {
             console.error("Error creating children:", err);
             setError(err.message || "Failed to save. Please try again.");
@@ -315,8 +457,77 @@ export default function OnboardingPage() {
         }
     };
 
+    // Handler for pet creation (NEW)
+    const handlePetsSubmit = async () => {
+        const validPets = pets.filter(p => p.name.trim());
+        if (validPets.length === 0) {
+            setError("Please enter at least one pet's name.");
+            return;
+        }
+        if (!user) {
+            setError("Authentication error. Please log in again.");
+            return;
+        }
+
+        setError("");
+        setSaving(true);
+
+        try {
+            const petIds: string[] = [];
+
+            for (const pet of validPets) {
+                // Create new pet
+                const { data: newPet, error: petError } = await supabase
+                    .from("pets")
+                    .insert({
+                        name: pet.name.trim(),
+                        species: pet.species,
+                        created_by: user.id,
+                        avatar_initials: pet.name.trim().charAt(0).toUpperCase(),
+                    })
+                    .select()
+                    .single();
+
+                if (petError) throw petError;
+                petIds.push(newPet.id);
+
+                // Add current user as owner with pet_access
+                const { error: accessError } = await supabase
+                    .from("pet_access")
+                    .upsert({
+                        pet_id: newPet.id,
+                        user_id: user.id,
+                        role_type: "owner",
+                        access_level: "manage",
+                    }, {
+                        onConflict: "pet_id,user_id",
+                    });
+
+                if (accessError) {
+                    console.error("Error creating pet_access:", accessError);
+                    throw new Error(`Failed to set up access to ${pet.name.trim()}. Please try again.`);
+                }
+            }
+
+            setCreatedPetIds(petIds);
+
+            // If both selected and we haven't added children yet, show children
+            if (managesChildren && createdChildIds.length === 0) {
+                setAddingEntityType("child");
+                // Stay on step 4 to add children
+            } else {
+                setStep(5); // Go to homes
+            }
+        } catch (err: any) {
+            console.error("Error creating pets:", err);
+            setError(err.message || "Failed to save. Please try again.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     // ==========================================
-    // STEP 3: Your Home(s)
+    // STEP 5: Your Home(s) (was Step 3)
     // ==========================================
     const addHome = () => {
         setHomes([...homes, { id: crypto.randomUUID(), name: "", manuallyEdited: false }]);
@@ -332,13 +543,14 @@ export default function OnboardingPage() {
         }
     };
 
-    const handleStep3Submit = async () => {
+    const handleHomesSubmit = async () => {
         const validHomes = homes.filter(h => h.name.trim());
         if (validHomes.length === 0) {
             setError("Please enter at least one home name.");
             return;
         }
-        if (!user || createdChildIds.length === 0) {
+        // Must have at least children OR pets created
+        if (!user || (createdChildIds.length === 0 && createdPetIds.length === 0)) {
             setError("Session error. Please refresh and try again.");
             return;
         }
@@ -379,16 +591,13 @@ export default function OnboardingPage() {
                 });
 
                 // Link each child to this home (child_space)
-                // NOTE: During initial onboarding, we link all children to all homes
-                // because the parent is setting up their own environment.
-                // For invite-driven flows, see setup-home/page.tsx which scopes to specific child.
                 for (const childId of createdChildIds) {
                     const { data: newChildSpace, error: csError } = await supabase
                         .from("child_spaces")
                         .insert({
                             home_id: newHome.id,
                             child_id: childId,
-                            status: "active", // Explicitly set active status
+                            status: "active",
                         })
                         .select()
                         .single();
@@ -405,11 +614,27 @@ export default function OnboardingPage() {
                         can_view_address: true,
                     });
                 }
+
+                // Link each pet to this home (pet_space) - NEW
+                for (const petId of createdPetIds) {
+                    const { error: psError } = await supabase
+                        .from("pet_spaces")
+                        .insert({
+                            home_id: newHome.id,
+                            pet_id: petId,
+                            status: "active",
+                        });
+
+                    if (psError) {
+                        console.error("Error creating pet_space:", psError);
+                        continue;
+                    }
+                }
             }
 
             setCreatedHomeIds(homeIds);
             setHomes(validHomes);
-            setStep(4);
+            setStep(6); // Go to caregivers (was step 4)
         } catch (err: any) {
             console.error("Error creating homes:", err);
             setError(err.message || "Failed to create home. Please try again.");
@@ -419,7 +644,7 @@ export default function OnboardingPage() {
     };
 
     // ==========================================
-    // STEP 4: Caregivers
+    // STEP 6: Caregivers (was Step 4)
     // ==========================================
     const addCaregiver = () => {
         // Create default relationships for all children
@@ -605,7 +830,7 @@ export default function OnboardingPage() {
 
             setOnboardingCompleted(true);
             await refreshData();
-            setStep(5);
+            setStep(7);
         } catch (err: any) {
             setError(err.message || "Failed to complete setup.");
         } finally {
@@ -660,40 +885,71 @@ export default function OnboardingPage() {
             case 1:
                 return {
                     title: "Welcome to homes.kids",
-                    description: "Let's set up your account.",
+                    description: "What would you like to organize?",
                     bullets: [
-                        "Tell us about yourself.",
-                        "This helps personalize the experience.",
+                        "Manage children, pets, or both.",
+                        "We'll customize your experience accordingly.",
                     ],
                 };
             case 2:
                 return {
-                    title: "Add your children",
-                    description: "Who is this setup for?",
+                    title: "Your role",
+                    description: "How do you relate to the children?",
                     bullets: [
-                        "Your children are the center of everything.",
-                        "All homes and caregivers connect through them.",
+                        "This helps us understand your perspective.",
+                        "You can always change this later.",
                     ],
                 };
             case 3:
                 return {
+                    title: "About you",
+                    description: "Tell us a bit about yourself.",
+                    bullets: [
+                        "Your name helps others identify you.",
+                        "What your children call you personalizes the experience.",
+                    ],
+                };
+            case 4:
+                return {
+                    title: managesChildren && managesPets
+                        ? "Your family"
+                        : managesChildren
+                            ? "Your children"
+                            : "Your pets",
+                    description: managesChildren && managesPets
+                        ? "Add children and pets to get started."
+                        : managesChildren
+                            ? "Who is this setup for?"
+                            : "Add your pets to get started.",
+                    bullets: managesChildren
+                        ? [
+                            "Your children are the center of everything.",
+                            "All homes and caregivers connect through them.",
+                        ]
+                        : [
+                            "Your pets are part of the family too.",
+                            "Track their schedules and care routines.",
+                        ],
+                };
+            case 5:
+                return {
                     title: "Your home",
-                    description: "Where do your children stay with you?",
+                    description: "Where does your family stay?",
                     bullets: [
                         "Name the home(s) you manage.",
                         "Other caregivers will set up their own homes later.",
                     ],
                 };
-            case 4:
+            case 6:
                 return {
                     title: "Caregivers",
-                    description: "Who else helps care for your children?",
+                    description: "Who else helps care for your family?",
                     bullets: [
                         "Add parents, grandparents, nannies, and more.",
                         "They'll receive an invite to join.",
                     ],
                 };
-            case 5:
+            case 7:
                 return {
                     title: "You're all set!",
                     description: "Your family hub is ready.",
@@ -708,7 +964,7 @@ export default function OnboardingPage() {
     };
 
     const stepInfo = getStepInfo();
-    const totalSteps = 5;
+    const totalSteps = 7;
 
     return (
         <div className="min-h-screen flex">
@@ -741,7 +997,7 @@ export default function OnboardingPage() {
                     </div>
 
                     {/* Progress indicator */}
-                    {step < 5 && (
+                    {step < 7 && (
                         <div className="flex justify-center gap-2 mb-8">
                             {Array.from({ length: totalSteps - 1 }, (_, i) => i + 1).map(s => (
                                 <div
@@ -760,8 +1016,156 @@ export default function OnboardingPage() {
                         </div>
                     )}
 
-                    {/* ==================== STEP 1: About You ==================== */}
+                    {/* ==================== STEP 1: What to Organize ==================== */}
                     {step === 1 && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-forest mb-2">What would you like to organize?</h1>
+                                <p className="text-gray-600">Select all that apply</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                {/* Children option */}
+                                <button
+                                    type="button"
+                                    onClick={() => setManagesChildren(!managesChildren)}
+                                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                                        managesChildren
+                                            ? "border-forest bg-softGreen/30"
+                                            : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                                            managesChildren ? "bg-forest/10" : "bg-gray-100"
+                                        }`}>
+                                            👶
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className={`font-semibold ${managesChildren ? "text-forest" : "text-gray-700"}`}>
+                                                Children
+                                            </span>
+                                            <p className="text-sm text-gray-500">Manage schedules, health, and activities</p>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                            managesChildren ? "border-forest bg-forest" : "border-gray-300"
+                                        }`}>
+                                            {managesChildren && (
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {/* Pets option */}
+                                <button
+                                    type="button"
+                                    onClick={() => setManagesPets(!managesPets)}
+                                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                                        managesPets
+                                            ? "border-forest bg-softGreen/30"
+                                            : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                                            managesPets ? "bg-forest/10" : "bg-gray-100"
+                                        }`}>
+                                            🐾
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className={`font-semibold ${managesPets ? "text-forest" : "text-gray-700"}`}>
+                                                Pets
+                                            </span>
+                                            <p className="text-sm text-gray-500">Track medications, routines, and care</p>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                            managesPets ? "border-forest bg-forest" : "border-gray-300"
+                                        }`}>
+                                            {managesPets && (
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={handleOrganizeSubmit}
+                                disabled={saving || (!managesChildren && !managesPets)}
+                                className="w-full py-3 bg-forest text-white rounded-xl font-medium hover:bg-forest/90 disabled:opacity-50"
+                            >
+                                {saving ? "Saving..." : "Continue"}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ==================== STEP 2: What is your role? (Conditional) ==================== */}
+                    {step === 2 && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h1 className="text-2xl font-bold text-forest mb-2">What is your role?</h1>
+                                <p className="text-gray-600">How do you relate to the children you'll be managing?</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                {CHILD_ROLE_OPTIONS.map(option => (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => setOnboardingChildRole(option.value as OnboardingChildRole)}
+                                        className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                                            onboardingChildRole === option.value
+                                                ? "border-forest bg-softGreen/30"
+                                                : "border-gray-200 hover:border-gray-300"
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className={`font-medium ${
+                                                onboardingChildRole === option.value ? "text-forest" : "text-gray-700"
+                                            }`}>
+                                                {option.label}
+                                            </span>
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                                                onboardingChildRole === option.value
+                                                    ? "border-forest bg-forest"
+                                                    : "border-gray-300"
+                                            }`}>
+                                                {onboardingChildRole === option.value && (
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setStep(1)}
+                                    className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    onClick={handleRoleSubmit}
+                                    disabled={saving || !onboardingChildRole}
+                                    className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                                >
+                                    {saving ? "Saving..." : "Continue"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ==================== STEP 3: About You ==================== */}
+                    {step === 3 && (
                         <div className="space-y-6">
                             <div className="text-center">
                                 <h1 className="text-2xl font-bold text-forest mb-2">About you</h1>
@@ -781,99 +1185,33 @@ export default function OnboardingPage() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Your role <span className="text-red-500">*</span>
-                                </label>
-                                <MobileSelect
-                                    value={userRole}
-                                    onChange={val => setUserRole(val as UserRole)}
-                                    options={USER_ROLE_OPTIONS}
-                                    title="Your role"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    What does your child call you? <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={childCallsYou}
-                                    onChange={e => setChildCallsYou(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
-                                    placeholder="Daddy, Mommy, Mama..."
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleStep1Submit}
-                                disabled={saving}
-                                className="w-full py-3 bg-forest text-white rounded-xl font-medium hover:bg-forest/90 disabled:opacity-50"
-                            >
-                                {saving ? "Saving..." : "Continue"}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* ==================== STEP 2: Your Child(ren) ==================== */}
-                    {step === 2 && (
-                        <div className="space-y-6">
-                            <div className="text-center">
-                                <h1 className="text-2xl font-bold text-forest mb-2">Your child</h1>
-                                <p className="text-gray-600">Add the child or children you're setting this up for.</p>
-                            </div>
-
-                            <div className="space-y-4">
-                                {children.map((child, index) => (
-                                    <div key={child.id} className="flex gap-3">
-                                        <div className="flex-1">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                {children.length > 1 ? `Child ${index + 1}'s name` : "Child's name"} <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={child.name}
-                                                onChange={e => updateChild(child.id, e.target.value)}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
-                                                placeholder="Emma"
-                                            />
-                                        </div>
-                                        {children.length > 1 && (
-                                            <button
-                                                onClick={() => removeChild(child.id)}
-                                                className="self-end mb-1 px-3 py-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
-                                                type="button"
-                                            >
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                                </svg>
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            <button
-                                onClick={addChild}
-                                type="button"
-                                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-forest hover:text-forest"
-                            >
-                                + Add another child
-                            </button>
+                            {/* Only show childCallsYou if managing children */}
+                            {managesChildren && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        What does your child call you? <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={childCallsYou}
+                                        onChange={e => setChildCallsYou(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                        placeholder="Daddy, Mommy, Mama..."
+                                    />
+                                </div>
+                            )}
 
                             <div className="flex gap-4">
                                 <button
-                                    onClick={() => setStep(1)}
+                                    onClick={() => setStep(managesChildren ? 2 : 1)}
                                     className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
                                 >
                                     Back
                                 </button>
                                 <button
-                                    onClick={handleStep2Submit}
+                                    onClick={handleAboutYouSubmit}
                                     disabled={saving}
-                                    className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                                    className="flex-1 py-3 bg-forest text-white rounded-xl font-medium hover:bg-forest/90 disabled:opacity-50"
                                 >
                                     {saving ? "Saving..." : "Continue"}
                                 </button>
@@ -881,12 +1219,243 @@ export default function OnboardingPage() {
                         </div>
                     )}
 
-                    {/* ==================== STEP 3: Your Home(s) ==================== */}
-                    {step === 3 && (
+                    {/* ==================== STEP 4: Add Children / Pets ==================== */}
+                    {step === 4 && (
+                        <div className="space-y-6">
+                            {/* Entity type selection (only if both children and pets selected and neither added yet) */}
+                            {managesChildren && managesPets && !addingEntityType && createdChildIds.length === 0 && createdPetIds.length === 0 && (
+                                <>
+                                    <div className="text-center">
+                                        <h1 className="text-2xl font-bold text-forest mb-2">What would you like to add first?</h1>
+                                        <p className="text-gray-600">You'll add both, we just need to start somewhere!</p>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setAddingEntityType("child")}
+                                            className="w-full p-4 rounded-xl border-2 border-gray-200 hover:border-forest hover:bg-forest/5 text-left transition-all"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl">
+                                                    👶
+                                                </div>
+                                                <div className="flex-1">
+                                                    <span className="font-semibold text-gray-700">Add children first</span>
+                                                    <p className="text-sm text-gray-500">Start with your kids</p>
+                                                </div>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+                                                    <polyline points="9 18 15 12 9 6" />
+                                                </svg>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setAddingEntityType("pet")}
+                                            className="w-full p-4 rounded-xl border-2 border-gray-200 hover:border-forest hover:bg-forest/5 text-left transition-all"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl">
+                                                    🐾
+                                                </div>
+                                                <div className="flex-1">
+                                                    <span className="font-semibold text-gray-700">Add pets first</span>
+                                                    <p className="text-sm text-gray-500">Start with your pets</p>
+                                                </div>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+                                                    <polyline points="9 18 15 12 9 6" />
+                                                </svg>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setStep(3)}
+                                        className="w-full py-3 border border-gray-300 rounded-xl font-medium"
+                                    >
+                                        Back
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Children form (show if: only children selected, OR both selected and chose children first, OR both selected and already added pets) */}
+                            {((managesChildren && !managesPets) ||
+                              (managesChildren && managesPets && addingEntityType === "child") ||
+                              (managesChildren && createdPetIds.length > 0 && createdChildIds.length === 0)) && (
+                                <>
+                                    <div className="text-center">
+                                        <h1 className="text-2xl font-bold text-forest mb-2">Your children</h1>
+                                        <p className="text-gray-600">Add the child or children you're setting this up for.</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {children.map((child, index) => (
+                                            <div key={child.id} className="flex gap-3">
+                                                <div className="flex-1">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                        {children.length > 1 ? `Child ${index + 1}'s name` : "Child's name"} <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={child.name}
+                                                        onChange={e => updateChild(child.id, e.target.value)}
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                                        placeholder="Emma"
+                                                    />
+                                                </div>
+                                                {children.length > 1 && (
+                                                    <button
+                                                        onClick={() => removeChild(child.id)}
+                                                        className="self-end mb-1 px-3 py-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                                                        type="button"
+                                                    >
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={addChild}
+                                        type="button"
+                                        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-forest hover:text-forest"
+                                    >
+                                        + Add another child
+                                    </button>
+
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => {
+                                                if (managesPets && createdPetIds.length > 0) {
+                                                    // Already added pets, can't go back to pet form
+                                                    setStep(3);
+                                                } else if (managesPets) {
+                                                    // Both selected, go back to choice
+                                                    setAddingEntityType(null);
+                                                } else {
+                                                    setStep(3);
+                                                }
+                                            }}
+                                            className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={handleStep2Submit}
+                                            disabled={saving}
+                                            className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                                        >
+                                            {saving ? "Saving..." : "Continue"}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Pets form (show if: only pets selected, OR both selected and chose pets first, OR both selected and already added children) */}
+                            {((managesPets && !managesChildren) ||
+                              (managesChildren && managesPets && addingEntityType === "pet") ||
+                              (managesPets && createdChildIds.length > 0 && createdPetIds.length === 0)) && (
+                                <>
+                                    <div className="text-center">
+                                        <h1 className="text-2xl font-bold text-forest mb-2">Your pets</h1>
+                                        <p className="text-gray-600">Add the pets you want to manage.</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {pets.map((pet, index) => (
+                                            <div key={pet.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                                                <div className="flex gap-3">
+                                                    <div className="flex-1">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                            {pets.length > 1 ? `Pet ${index + 1}'s name` : "Pet's name"} <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={pet.name}
+                                                            onChange={e => updatePet(pet.id, { name: e.target.value })}
+                                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
+                                                            placeholder="Max"
+                                                        />
+                                                    </div>
+                                                    {pets.length > 1 && (
+                                                        <button
+                                                            onClick={() => removePet(pet.id)}
+                                                            className="self-end mb-1 px-3 py-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                                                            type="button"
+                                                        >
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                        Type <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <MobileSelect
+                                                        value={pet.species}
+                                                        onChange={val => updatePet(pet.id, { species: val as PetSpecies })}
+                                                        options={PET_SPECIES_OPTIONS}
+                                                        title="Pet type"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={addPet}
+                                        type="button"
+                                        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-forest hover:text-forest"
+                                    >
+                                        + Add another pet
+                                    </button>
+
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => {
+                                                if (managesChildren && createdChildIds.length > 0) {
+                                                    // Already added children, can't go back to child form
+                                                    setStep(3);
+                                                } else if (managesChildren) {
+                                                    // Both selected, go back to choice
+                                                    setAddingEntityType(null);
+                                                } else {
+                                                    setStep(3);
+                                                }
+                                            }}
+                                            className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={handlePetsSubmit}
+                                            disabled={saving}
+                                            className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
+                                        >
+                                            {saving ? "Saving..." : "Continue"}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ==================== STEP 5: Your Home(s) ==================== */}
+                    {step === 5 && (
                         <div className="space-y-6">
                             <div className="text-center">
                                 <h1 className="text-2xl font-bold text-forest mb-2">Your home</h1>
-                                <p className="text-gray-600">Name the home(s) you manage for {getChildrenDisplayText()}.</p>
+                                <p className="text-gray-600">
+                                    {managesChildren ? `Name the home(s) you manage for ${getChildrenDisplayText()}.` : "Name the home(s) where your pets live."}
+                                </p>
                             </div>
 
                             <div className="space-y-4">
@@ -901,7 +1470,7 @@ export default function OnboardingPage() {
                                                 value={home.name}
                                                 onChange={e => updateHome(home.id, e.target.value)}
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent"
-                                                placeholder={index === 0 ? generateHomeName(childCallsYou) || "Home name" : "Home name"}
+                                                placeholder={index === 0 && childCallsYou ? generateHomeName(childCallsYou) : "Home name"}
                                             />
                                         </div>
                                         {homes.length > 1 && (
@@ -934,13 +1503,13 @@ export default function OnboardingPage() {
 
                             <div className="flex gap-4">
                                 <button
-                                    onClick={() => setStep(2)}
+                                    onClick={() => setStep(4)}
                                     className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
                                 >
                                     Back
                                 </button>
                                 <button
-                                    onClick={handleStep3Submit}
+                                    onClick={handleHomesSubmit}
                                     disabled={saving}
                                     className="flex-1 py-3 bg-forest text-white rounded-xl font-medium disabled:opacity-50"
                                 >
@@ -950,13 +1519,15 @@ export default function OnboardingPage() {
                         </div>
                     )}
 
-                    {/* ==================== STEP 4: Caregivers ==================== */}
-                    {step === 4 && (
+                    {/* ==================== STEP 6: Caregivers ==================== */}
+                    {step === 6 && (
                         <div className="space-y-6">
                             <div className="text-center">
                                 <h1 className="text-2xl font-bold text-forest mb-2">Caregivers</h1>
                                 <p className="text-gray-600">
-                                    Who else helps care for {getChildrenDisplayText()}?
+                                    {managesChildren
+                                        ? `Who else helps care for ${getChildrenDisplayText()}?`
+                                        : "Who else helps take care of your pets?"}
                                 </p>
                             </div>
 
@@ -987,8 +1558,8 @@ export default function OnboardingPage() {
                                 </div>
                             )}
 
-                            {/* Caregiver form */}
-                            {wantsToAddCaregivers === true && (
+                            {/* Caregiver form (only show if managing children - pet-only users skip this detail) */}
+                            {wantsToAddCaregivers === true && managesChildren && (
                                 <div className="space-y-5">
                                     {caregivers.map((cg, index) => (
                                         <div key={cg.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -1144,6 +1715,18 @@ export default function OnboardingPage() {
                                         </svg>
                                         Add another caregiver
                                     </button>
+
+                                    {/* Skip option */}
+                                    <button
+                                        onClick={() => {
+                                            setCaregivers([]);
+                                            setWantsToAddCaregivers(false);
+                                        }}
+                                        type="button"
+                                        className="w-full py-3 text-sm font-medium text-gray-500 hover:text-forest transition-colors"
+                                    >
+                                        I'll add caregivers later
+                                    </button>
                                 </div>
                             )}
 
@@ -1153,7 +1736,7 @@ export default function OnboardingPage() {
                                         if (wantsToAddCaregivers !== null) {
                                             setWantsToAddCaregivers(null);
                                         } else {
-                                            setStep(3);
+                                            setStep(5);
                                         }
                                     }}
                                     className="flex-1 py-3 border border-gray-300 rounded-xl font-medium"
@@ -1173,14 +1756,18 @@ export default function OnboardingPage() {
                         </div>
                     )}
 
-                    {/* ==================== STEP 5: Finished ==================== */}
-                    {step === 5 && (
+                    {/* ==================== STEP 7: Finished ==================== */}
+                    {step === 7 && (
                         <div className="space-y-6">
                             <div className="text-center">
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h1 className="text-2xl font-bold text-forest mb-2">Finished!</h1>
                                 <p className="text-gray-600">
-                                    Your setup for {getChildrenDisplayText()} is ready.
+                                    {managesChildren && managesPets
+                                        ? "Your family hub is ready."
+                                        : managesChildren
+                                            ? `Your setup for ${getChildrenDisplayText()} is ready.`
+                                            : "Your pet management hub is ready."}
                                 </p>
                             </div>
 
