@@ -1144,49 +1144,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setManagesChildren(profileData?.manages_children || false);
             setManagesPets(profileData?.manages_pets || false);
 
-            // 5a. Load pets if user manages pets
-            if (profileData?.manages_pets) {
-                const { data: petAccessData } = await supabase
-                    .from("pet_access")
-                    .select(`
-                        pet_id,
-                        pets (
-                            id,
-                            name,
-                            species,
-                            breed,
-                            dob,
-                            avatar_url,
-                            avatar_initials,
-                            avatar_color,
-                            notes
-                        )
-                    `)
-                    .eq("user_id", user.id);
+            // 5a. Load pets using RPC function (handles all access paths: direct, home membership, creator)
+            const { data: petsData } = await supabase.rpc("get_user_pets");
 
-                const loadedPets: PetProfile[] = [];
-                if (petAccessData) {
-                    for (const pa of petAccessData as any[]) {
-                        if (pa.pets) {
-                            const avatarUrl = await getAvatarUrl(pa.pets.avatar_url);
-                            loadedPets.push({
-                                id: pa.pets.id,
-                                name: pa.pets.name,
-                                species: pa.pets.species,
-                                breed: pa.pets.breed,
-                                dob: pa.pets.dob,
-                                avatarUrl,
-                                avatarInitials: pa.pets.avatar_initials || pa.pets.name?.[0]?.toUpperCase() || "?",
-                                avatarColor: pa.pets.avatar_color,
-                                notes: pa.pets.notes,
-                            });
-                        }
-                    }
+            const loadedPets: PetProfile[] = [];
+            if (petsData) {
+                for (const pet of petsData as any[]) {
+                    const avatarUrl = await getAvatarUrl(pet.avatar_url);
+                    loadedPets.push({
+                        id: pet.id,
+                        name: pet.name,
+                        species: pet.species,
+                        breed: pet.breed,
+                        dob: pet.dob,
+                        avatarUrl,
+                        avatarInitials: pet.avatar_initials || pet.name?.[0]?.toUpperCase() || "?",
+                        avatarColor: pet.avatar_color,
+                        notes: pet.notes,
+                    });
                 }
-                setPetsList(loadedPets);
-            } else {
-                setPetsList([]);
             }
+            setPetsList(loadedPets);
 
             // 5b. Load invite info if user was invited (for no-home-access empty state)
             const { data: acceptedInvite } = await supabase
