@@ -18,11 +18,11 @@ import {
     ReptileIcon,
     HamsterIcon,
     PawIcon,
-    IconProps
+    LucideIconComponent
 } from "@/components/icons/DuotoneIcons";
 
 // Helper to get pet species icon
-function getSpeciesIcon(species: PetSpecies | string | undefined): React.ComponentType<IconProps> {
+function getSpeciesIcon(species: PetSpecies | string | undefined): LucideIconComponent {
     switch (species) {
         case "dog": return DogIcon;
         case "cat": return CatIcon;

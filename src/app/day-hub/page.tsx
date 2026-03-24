@@ -15,12 +15,12 @@ import {
     ReptileIcon,
     HamsterIcon,
     PawIcon,
-    IconProps
+    LucideIconComponent
 } from "@/components/icons/DuotoneIcons";
 import { CircleCheckbox } from "@/components/ui/CircleCheckbox";
 
 // Helper to get pet species icon
-function getSpeciesIcon(species: PetSpecies | undefined): React.ComponentType<IconProps> {
+function getSpeciesIcon(species: PetSpecies | undefined): LucideIconComponent {
     switch (species) {
         case "dog": return DogIcon;
         case "cat": return CatIcon;
@@ -588,7 +588,7 @@ interface FilterableMember {
     name: string;
     type: FamilyMemberType;
     avatarUrl?: string;
-    AvatarIcon?: React.ComponentType<IconProps>;
+    AvatarIcon?: LucideIconComponent;
     badgeColor: string;
     hasTasksToday: boolean;
 }

@@ -20,10 +20,10 @@ import {
     ReptileIcon,
     HamsterIcon,
     PawIcon,
-    IconProps
+    LucideIconComponent
 } from "@/components/icons/DuotoneIcons";
 
-const PET_SPECIES_OPTIONS: { value: PetSpecies; label: string; Icon: React.ComponentType<IconProps> }[] = [
+const PET_SPECIES_OPTIONS: { value: PetSpecies; label: string; Icon: LucideIconComponent }[] = [
     { value: "dog", label: "Dog", Icon: DogIcon },
     { value: "cat", label: "Cat", Icon: CatIcon },
     { value: "bird", label: "Bird", Icon: BirdIcon },
@@ -33,7 +33,7 @@ const PET_SPECIES_OPTIONS: { value: PetSpecies; label: string; Icon: React.Compo
     { value: "other", label: "Other", Icon: PawIcon },
 ];
 
-function getSpeciesIcon(species: PetSpecies): React.ComponentType<IconProps> {
+function getSpeciesIcon(species: PetSpecies): LucideIconComponent {
     const found = PET_SPECIES_OPTIONS.find(s => s.value === species);
     return found?.Icon || PawIcon;
 }
