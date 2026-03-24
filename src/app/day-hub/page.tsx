@@ -19,6 +19,9 @@ import {
 } from "@/components/icons/DuotoneIcons";
 import { CircleCheckbox } from "@/components/ui/CircleCheckbox";
 
+// All pet family member types for type checking
+const PET_FAMILY_MEMBER_TYPES = ["cat", "dog", "bird", "fish", "reptile", "small_mammal", "other"] as const;
+
 // Helper to get pet species icon
 function getSpeciesIcon(species: PetSpecies | undefined): LucideIconComponent {
     switch (species) {
@@ -169,7 +172,7 @@ function TaskCard({
                                 alt={task.familyMemberName}
                                 className="w-full h-full object-cover"
                             />
-                        ) : ["cat", "dog", "bird", "other"].includes(task.familyMemberType) ? (
+                        ) : PET_FAMILY_MEMBER_TYPES.includes(task.familyMemberType as typeof PET_FAMILY_MEMBER_TYPES[number]) ? (
                             // Render pet icon based on species stored in avatarEmoji field
                             React.createElement(getSpeciesIcon(task.familyMemberAvatarEmoji as PetSpecies), { size: 26 })
                         ) : (

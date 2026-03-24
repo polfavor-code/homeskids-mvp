@@ -1,7 +1,18 @@
 -- =====================================================
 -- FIX: Regimens RLS policies
--- Make INSERT policy more permissive - just require authentication
+-- Uses SECURITY DEFINER helper functions for consistent access checks
 -- =====================================================
+
+-- Create helper function for child access (consistent with has_pet_access)
+CREATE OR REPLACE FUNCTION has_child_access(p_child_id UUID, p_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM child_access
+        WHERE child_id = p_child_id AND user_id = p_user_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "regimens_select" ON regimens;
@@ -14,15 +25,20 @@ DROP POLICY IF EXISTS "regimens_delete" ON regimens;
 CREATE POLICY "regimens_select" ON regimens
     FOR SELECT USING (
         created_by = auth.uid()
-        OR (child_id IS NOT NULL AND EXISTS (
-            SELECT 1 FROM child_access ca WHERE ca.child_id = regimens.child_id AND ca.user_id = auth.uid()
-        ))
+        OR (child_id IS NOT NULL AND has_child_access(child_id, auth.uid()))
         OR (pet_id IS NOT NULL AND has_pet_access(pet_id, auth.uid()))
     );
 
--- INSERT: Any authenticated user can insert (created_by will be set by the app)
+-- INSERT: Authenticated user must be the creator OR own the referenced child/pet
 CREATE POLICY "regimens_insert" ON regimens
-    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+    FOR INSERT WITH CHECK (
+        auth.uid() IS NOT NULL
+        AND (
+            created_by = auth.uid()
+            OR (child_id IS NOT NULL AND has_child_access(child_id, auth.uid()))
+            OR (pet_id IS NOT NULL AND has_pet_access(pet_id, auth.uid()))
+        )
+    );
 
 -- UPDATE: Users can update regimens they created
 CREATE POLICY "regimens_update" ON regimens

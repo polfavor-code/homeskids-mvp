@@ -352,12 +352,16 @@ export default function CaregiversPage() {
         loadOtherCaregivers();
     }, [currentChildId, user, children, caregivers, otherCaregiversRefreshTrigger]);
 
-    // Fetch last login info for caregivers
+    // Fetch last login info for caregivers (excluding pending)
     useEffect(() => {
         const fetchAuthInfo = async () => {
             if (caregivers.length === 0) return;
 
-            const userIds = caregivers.map(c => c.id);
+            // Filter out pending caregivers (they have synthetic IDs like "pending-{inviteId}")
+            const nonPendingCaregivers = caregivers.filter(c => c.status !== "pending");
+            if (nonPendingCaregivers.length === 0) return;
+
+            const userIds = nonPendingCaregivers.map(c => c.id);
 
             try {
                 const { data: sessionData } = await supabase.auth.getSession();

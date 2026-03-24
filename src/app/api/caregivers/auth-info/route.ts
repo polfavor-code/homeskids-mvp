@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// UUID v4 regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,8 +41,51 @@ export async function POST(request: NextRequest) {
         if (userIds.length > 50) {
             return NextResponse.json({ error: 'Maximum 50 users per request' }, { status: 400 });
         }
+
+        // Validate each userId is a non-empty string matching UUID format
+        for (const userId of userIds) {
+            if (typeof userId !== 'string' || !userId.trim()) {
+                return NextResponse.json({ error: 'Invalid userIds: all items must be non-empty strings' }, { status: 400 });
+            }
+            if (!UUID_REGEX.test(userId)) {
+                return NextResponse.json({ error: 'Invalid userIds: all items must be valid UUIDs' }, { status: 400 });
+            }
+        }
     } catch {
         return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    // Authorization check: caller must be admin OR share a home/child relationship with requested users
+    const isAdmin = user.user_metadata?.is_admin === true;
+
+    if (!isAdmin) {
+        // Get homes the caller has access to
+        const { data: callerHomes } = await supabaseAdmin
+            .from('home_memberships')
+            .select('home_id')
+            .eq('user_id', user.id);
+
+        const callerHomeIds = callerHomes?.map(h => h.home_id) || [];
+
+        if (callerHomeIds.length === 0) {
+            // No home access means can't see any other users
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        // Get all users who share homes with the caller
+        const { data: sharedHomeUsers } = await supabaseAdmin
+            .from('home_memberships')
+            .select('user_id')
+            .in('home_id', callerHomeIds);
+
+        const allowedUserIds = new Set(sharedHomeUsers?.map(u => u.user_id) || []);
+        allowedUserIds.add(user.id); // Caller can always see themselves
+
+        // Check if all requested userIds are in the allowed set
+        const unauthorizedIds = userIds.filter(id => !allowedUserIds.has(id));
+        if (unauthorizedIds.length > 0) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
     }
 
     try {

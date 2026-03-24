@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface CircleCheckboxProps {
     checked: boolean;
@@ -19,18 +19,33 @@ export function CircleCheckbox({
 }: CircleCheckboxProps) {
     const [isAnimating, setIsAnimating] = useState(false);
     const [showCheck, setShowCheck] = useState(checked);
+    const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         setShowCheck(checked);
     }, [checked]);
 
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (animationTimeoutRef.current) {
+                clearTimeout(animationTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const handleClick = () => {
         if (disabled || !onChange) return;
+
+        // Clear any existing timeout before creating a new one
+        if (animationTimeoutRef.current) {
+            clearTimeout(animationTimeoutRef.current);
+        }
 
         setIsAnimating(true);
         onChange();
 
-        setTimeout(() => {
+        animationTimeoutRef.current = setTimeout(() => {
             setIsAnimating(false);
         }, 300);
     };

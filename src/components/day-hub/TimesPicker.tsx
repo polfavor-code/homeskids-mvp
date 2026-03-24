@@ -32,9 +32,21 @@ function formatTime(time: string): string {
 
 // Helper to get default times for filling in missing slots
 // Exported so it can be used when saving tasks
+// Generates evenly spaced times between 09:00 and 21:00 when index >= predefined defaults
 export function getDefaultTime(index: number): string {
     const defaults = ["09:00", "12:00", "15:00", "18:00"];
-    return defaults[index] || "18:00";
+    if (index < defaults.length) {
+        return defaults[index];
+    }
+    // For indices beyond the defaults, compute evenly spaced times
+    // Calculate a time between 09:00 and 21:00 based on index
+    const startHour = 9;
+    const endHour = 21;
+    const totalSlots = Math.max(index + 1, 4);
+    const interval = (endHour - startHour) / totalSlots;
+    const hour = Math.round(startHour + (index * interval));
+    const clampedHour = Math.min(Math.max(hour, startHour), endHour);
+    return `${String(clampedHour).padStart(2, "0")}:00`;
 }
 
 // Helper to expand times array to required count

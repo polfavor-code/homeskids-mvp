@@ -14,7 +14,7 @@ BEGIN
         WHERE pet_id = p_pet_id AND user_id = p_user_id
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 3. Create helper function to check if user can manage a pet (bypasses RLS)
 -- =====================================================
@@ -28,7 +28,7 @@ BEGIN
         AND access_level = 'manage'
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 4. Create helper to check if user created the pet (bypasses RLS)
 -- =====================================================
@@ -41,7 +41,7 @@ BEGIN
         AND created_by = p_user_id
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 5. Drop and recreate pets policies using the helper functions
 -- =====================================================
