@@ -3,12 +3,52 @@
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState, PetSpecies } from "@/lib/AppStateContext";
 import { useDayHub, ScheduleType, FrequencyType } from "@/lib/DayHubContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import FrequencyPicker from "@/components/day-hub/FrequencyPicker";
-import TimesPicker from "@/components/day-hub/TimesPicker";
+import TimesPicker, { expandScheduledTimes } from "@/components/day-hub/TimesPicker";
 import DurationPicker, { DurationType } from "@/components/day-hub/DurationPicker";
+import {
+    DogIcon,
+    CatIcon,
+    BirdIcon,
+    FishIcon,
+    ReptileIcon,
+    HamsterIcon,
+    PawIcon,
+    IconProps
+} from "@/components/icons/DuotoneIcons";
+
+// Helper to get pet species icon
+function getSpeciesIcon(species: PetSpecies | string | undefined): React.ComponentType<IconProps> {
+    switch (species) {
+        case "dog": return DogIcon;
+        case "cat": return CatIcon;
+        case "bird": return BirdIcon;
+        case "fish": return FishIcon;
+        case "reptile": return ReptileIcon;
+        case "small_mammal": return HamsterIcon;
+        default: return PawIcon;
+    }
+}
+
+// Helper to get required times count based on frequency
+function getRequiredTimesCount(frequencyType: FrequencyType, frequencyValue?: number): number {
+    switch (frequencyType) {
+        case "daily":
+        case "every_x_days":
+        case "specific_days":
+        case "one_time":
+            return 1;
+        case "x_times_daily":
+            return frequencyValue || 2;
+        case "every_x_hours":
+            return 1;
+        default:
+            return 1;
+    }
+}
 import PhaseEditor, { PhaseEntry, PhaseTaskEntry } from "@/components/day-hub/PhaseEditor";
 
 // Generate unique ID
@@ -92,8 +132,7 @@ export default function AddTaskPage() {
             name: p.name,
             type: "pet" as const,
             avatarUrl: p.avatarUrl,
-            avatarEmoji: p.species === "cat" ? "🐱" : p.species === "dog" ? "🐕" : "🐾",
-            species: p.species,
+            species: p.species, // Store species for icon mapping
         })),
     ];
 
@@ -272,13 +311,17 @@ export default function AddTaskPage() {
                                     imageUrls.push(result.url);
                                 }
                             }
+                            // Expand scheduledTimes to required count (ensures 2x/3x/4x daily have all times)
+                            const requiredCount = getRequiredTimesCount(task.frequencyType, task.frequencyValue);
+                            const expandedTimes = expandScheduledTimes(task.scheduledTimes, requiredCount);
+
                             return {
                                 name: task.name,
                                 description: task.description || undefined,
                                 taskType: task.taskType,
                                 frequencyType: task.frequencyType,
                                 frequencyValue: task.frequencyValue,
-                                scheduledTimes: task.scheduledTimes,
+                                scheduledTimes: expandedTimes,
                                 daysOfWeek: task.daysOfWeek,
                                 sortOrder: taskIndex,
                                 imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
@@ -305,7 +348,7 @@ export default function AddTaskPage() {
                 })
             );
 
-            await createRegimen(
+            const result = await createRegimen(
                 {
                     childId: selectedMember.type === "child" ? selectedMember.id : undefined,
                     petId: selectedMember.type === "pet" ? selectedMember.id : undefined,
@@ -317,6 +360,13 @@ export default function AddTaskPage() {
                 },
                 phasesWithImages
             );
+
+            if (!result.success) {
+                console.error("Failed to create regimen:", result.error);
+                setError(result.error || "Failed to create task");
+                setIsSubmitting(false);
+                return;
+            }
 
             router.push("/day-hub");
         } catch (err) {
@@ -395,7 +445,11 @@ export default function AddTaskPage() {
                                                     />
                                                 ) : (
                                                     <div className="w-12 h-12 rounded-xl bg-sage/30 flex items-center justify-center text-2xl">
-                                                        {member.avatarEmoji || "👤"}
+                                                        {member.type === "pet" ? (
+                                                            React.createElement(getSpeciesIcon(member.species), { size: 26 })
+                                                        ) : (
+                                                            member.name[0]
+                                                        )}
                                                     </div>
                                                 )}
                                                 <div className="text-left">
@@ -722,7 +776,11 @@ export default function AddTaskPage() {
                                             />
                                         ) : (
                                             <div className="w-14 h-14 rounded-xl bg-sage/30 flex items-center justify-center text-3xl">
-                                                {selectedMember?.avatarEmoji || "👤"}
+                                                {selectedMember?.type === "pet" ? (
+                                                    React.createElement(getSpeciesIcon(selectedMember.species), { size: 30 })
+                                                ) : (
+                                                    selectedMember?.name[0] || "👤"
+                                                )}
                                             </div>
                                         )}
                                         <div>

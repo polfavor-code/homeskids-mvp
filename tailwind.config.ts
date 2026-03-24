@@ -41,6 +41,21 @@ const config: Config = {
                 'gradient-forest': 'linear-gradient(135deg, #2C3E2D 0%, #4CA1AF 100%)',
                 'gradient-ai': 'linear-gradient(90deg, #FF9A9E 0%, #FECFEF 99%)',
             },
+            keyframes: {
+                'check-bounce': {
+                    '0%': { transform: 'scale(0.95)' },
+                    '50%': { transform: 'scale(1.08)' },
+                    '100%': { transform: 'scale(1)' },
+                },
+                'draw-check': {
+                    '0%': { strokeDashoffset: '24' },
+                    '100%': { strokeDashoffset: '0' },
+                },
+            },
+            animation: {
+                'check-bounce': 'check-bounce 0.3s ease-out',
+                'draw-check': 'draw-check 0.25s ease-out forwards',
+            },
         },
     },
     plugins: [],

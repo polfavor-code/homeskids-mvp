@@ -425,3 +425,14 @@ export function GridIcon(props: IconProps) {
         </DuotoneIcon>
     );
 }
+
+// Pet Species Icons - Re-exported from Lucide for consistent minimal style
+export {
+    Dog as DogIcon,
+    Cat as CatIcon,
+    Bird as BirdIcon,
+    Fish as FishIcon,
+    Turtle as ReptileIcon,
+    Rabbit as HamsterIcon,
+    PawPrint as PawIcon
+} from 'lucide-react';

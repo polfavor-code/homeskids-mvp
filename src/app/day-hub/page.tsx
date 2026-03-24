@@ -3,18 +3,45 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState, ChildProfile, PetProfile } from "@/lib/AppStateContext";
+import { useAppState, ChildProfile, PetProfile, PetSpecies } from "@/lib/AppStateContext";
 import { useDayHub, TimeSlot, DayTask, PostponeOption, TimelineTask, RegimenDayTask, FamilyMemberType } from "@/lib/DayHubContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useAuth } from "@/lib/AuthContext";
+import {
+    DogIcon,
+    CatIcon,
+    BirdIcon,
+    FishIcon,
+    ReptileIcon,
+    HamsterIcon,
+    PawIcon,
+    IconProps
+} from "@/components/icons/DuotoneIcons";
+import { CircleCheckbox } from "@/components/ui/CircleCheckbox";
 
-// Time slot display info
+// Helper to get pet species icon
+function getSpeciesIcon(species: PetSpecies | undefined): React.ComponentType<IconProps> {
+    switch (species) {
+        case "dog": return DogIcon;
+        case "cat": return CatIcon;
+        case "bird": return BirdIcon;
+        case "fish": return FishIcon;
+        case "reptile": return ReptileIcon;
+        case "small_mammal": return HamsterIcon;
+        default: return PawIcon;
+    }
+}
+
+// Time slot display info (order: night before 6am, then morning, afternoon, evening)
 const TIME_SLOT_INFO: Record<TimeSlot, { label: string; abbrev: string; time: string }> = {
+    night: { label: "Night", abbrev: "NT", time: "05:00" },
     morning: { label: "Morning", abbrev: "AM", time: "08:00" },
     afternoon: { label: "Afternoon", abbrev: "PM", time: "14:00" },
-    evening: { label: "Evening", abbrev: "EV", time: "20:00" },
-    night: { label: "Night", abbrev: "NT", time: "22:00" },
+    evening: { label: "Evening", abbrev: "EV", time: "19:00" },
 };
+
+// Ordered list of time slots for iteration
+const TIME_SLOT_ORDER: TimeSlot[] = ["night", "morning", "afternoon", "evening"];
 
 // Type tag colors
 const TYPE_TAG_COLORS: Record<string, { bg: string; text: string }> = {
@@ -142,6 +169,9 @@ function TaskCard({
                                 alt={task.familyMemberName}
                                 className="w-full h-full object-cover"
                             />
+                        ) : ["cat", "dog", "bird", "other"].includes(task.familyMemberType) ? (
+                            // Render pet icon based on species stored in avatarEmoji field
+                            React.createElement(getSpeciesIcon(task.familyMemberAvatarEmoji as PetSpecies), { size: 26 })
                         ) : (
                             task.familyMemberAvatarEmoji || task.familyMemberName[0]
                         )}
@@ -155,6 +185,12 @@ function TaskCard({
                             }`}
                         >
                             {task.name}
+                            {/* Show scheduled time for multi-dose tasks */}
+                            {task.scheduledTime && (
+                                <span className="ml-2 text-[11px] font-medium text-[#8BA18D] bg-gray-100 px-1.5 py-0.5 rounded">
+                                    {task.scheduledTime.slice(0, 5)}
+                                </span>
+                            )}
                         </h3>
                         {task.description && (
                             <p className="text-[13px] text-[#8BA18D] mb-2">{task.description}</p>
@@ -184,6 +220,12 @@ function TaskCard({
                             {task.isRegimenTask && (task as RegimenDayTask).phaseName && (
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide bg-purple-100 text-purple-700">
                                     {(task as RegimenDayTask).phaseName}
+                                </span>
+                            )}
+                            {/* Creator info - subtle, inline with pills */}
+                            {task.createdBy && (
+                                <span className="text-[10px] text-[#8BA18D]/70">
+                                    · {getCompleterName(task.createdBy).replace(" (you)", "")}
                                 </span>
                             )}
                         </div>
@@ -241,18 +283,23 @@ function TaskCard({
 
                 {/* Action buttons (when not completed/skipped) */}
                 {!isCompleted && !isSkipped && !isPostponed && (
-                    <div className="flex gap-2.5 mt-4 pt-4 border-t border-forest/5">
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-forest/5">
                         <button
                             onClick={onDone}
                             disabled={isProcessing}
-                            className="flex-[2] py-2.5 px-4 rounded-xl bg-forest text-white font-semibold text-sm transition-transform active:scale-95 disabled:opacity-50"
+                            className="flex items-center gap-2 py-2 px-4 rounded-lg bg-gray-100 text-forest font-medium text-sm transition-all active:scale-95 disabled:opacity-50"
                         >
-                            Done
+                            <CircleCheckbox
+                                checked={false}
+                                disabled={isProcessing}
+                                size={20}
+                            />
+                            Done?
                         </button>
                         <button
                             onClick={() => setShowPostponeSheet(true)}
                             disabled={isProcessing}
-                            className="flex-1 py-2.5 px-4 rounded-xl bg-gray-100 text-gray-500 font-semibold text-sm transition-transform active:scale-95 disabled:opacity-50"
+                            className="py-2 px-4 rounded-lg border border-gray-200 text-textSub font-medium text-sm transition-all active:scale-95 disabled:opacity-50"
                         >
                             Later
                         </button>
@@ -261,41 +308,35 @@ function TaskCard({
 
                 {/* Postponed actions */}
                 {isPostponed && (
-                    <div className="flex gap-2.5 mt-3.5 pt-3.5 border-t border-forest/5">
+                    <div className="flex items-center mt-3.5 pt-3.5 border-t border-forest/5">
                         <button
                             onClick={onDone}
                             disabled={isProcessing}
-                            className="flex-1 py-2.5 px-3.5 rounded-xl bg-forest text-white font-semibold text-[13px] transition-transform active:scale-95 disabled:opacity-50"
+                            className="flex items-center gap-2 py-2 px-4 rounded-lg bg-gray-100 text-forest font-medium text-sm transition-all active:scale-95 disabled:opacity-50"
                         >
-                            Do it now
-                        </button>
-                        <button
-                            onClick={onUndo}
-                            disabled={isProcessing}
-                            className="flex-1 py-2.5 px-3.5 rounded-xl bg-gray-100 text-gray-500 font-semibold text-[13px] transition-transform active:scale-95 disabled:opacity-50"
-                        >
-                            Undo
+                            <CircleCheckbox
+                                checked={false}
+                                disabled={isProcessing}
+                                size={20}
+                            />
+                            Done?
                         </button>
                     </div>
                 )}
 
-                {/* Completed stamp with undo */}
+                {/* Completed stamp - tap checkbox to undo */}
                 {isCompleted && (
-                    <div className="flex items-center justify-between mt-3.5 pt-3.5 border-t border-forest/5">
-                        <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[#4A7C59]">
-                            <span className="w-5 h-5 bg-[#4A7C59] rounded-full flex items-center justify-center text-white text-[12px]">
-                                ✓
-                            </span>
+                    <div className="flex items-center gap-2 mt-3.5 pt-3.5 border-t border-forest/5">
+                        <CircleCheckbox
+                            checked={true}
+                            onChange={onUndo}
+                            disabled={isProcessing}
+                            size={20}
+                        />
+                        <span className="text-[12px] font-semibold text-[#4A7C59]">
                             Done{task.completedBy && ` by ${getCompleterName(task.completedBy)}`}
                             {task.completedAt && ` at ${new Date(task.completedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`}
-                        </div>
-                        <button
-                            onClick={onUndo}
-                            disabled={isProcessing}
-                            className="text-[12px] font-medium text-textSub hover:text-forest transition-colors disabled:opacity-50"
-                        >
-                            Undo
-                        </button>
+                        </span>
                     </div>
                 )}
             </div>
@@ -547,7 +588,7 @@ interface FilterableMember {
     name: string;
     type: FamilyMemberType;
     avatarUrl?: string;
-    avatarEmoji?: string;
+    AvatarIcon?: React.ComponentType<IconProps>;
     badgeColor: string;
     hasTasksToday: boolean;
 }
@@ -602,7 +643,7 @@ export default function DayHubPage() {
                 name: child.name,
                 type: "child",
                 avatarUrl: child.avatarUrl,
-                avatarEmoji: undefined,
+                AvatarIcon: undefined,
                 badgeColor: "#E0F2F1",
                 hasTasksToday: membersWithTasks.has(key),
             });
@@ -614,13 +655,12 @@ export default function DayHubPage() {
                 ? (pet.species as FamilyMemberType)
                 : "other";
             const key = `${petType}-${pet.name}`;
-            const emoji = petType === "cat" ? "🐱" : petType === "dog" ? "🐕" : petType === "bird" ? "🐦" : "🐾";
             members.push({
                 id: `pet-${pet.id}`,
                 name: pet.name,
                 type: petType,
                 avatarUrl: pet.avatarUrl,
-                avatarEmoji: emoji,
+                AvatarIcon: getSpeciesIcon(pet.species),
                 badgeColor: "#D4EDDA",
                 hasTasksToday: membersWithTasks.has(key),
             });
@@ -856,8 +896,8 @@ export default function DayHubPage() {
                     </header>
 
                     <div className="card-organic p-8 text-center">
-                        <div className="w-16 h-16 rounded-full bg-softGreen/50 flex items-center justify-center text-3xl mx-auto mb-4">
-                            {managesPets && !managesChildren ? "🐾" : "📋"}
+                        <div className="w-16 h-16 rounded-full bg-softGreen/50 flex items-center justify-center mx-auto mb-4 text-forest">
+                            {managesPets && !managesChildren ? <PawIcon size={32} /> : <span className="text-3xl">📋</span>}
                         </div>
                         <h3 className="font-bold text-forest text-lg mb-2">No schedules yet</h3>
                         <p className="text-sm text-textSub mb-6">
@@ -929,8 +969,8 @@ export default function DayHubPage() {
                                                     alt={member.name}
                                                     className="w-full h-full object-cover"
                                                 />
-                                            ) : member.avatarEmoji ? (
-                                                <span className="text-xl">{member.avatarEmoji}</span>
+                                            ) : member.AvatarIcon ? (
+                                                <member.AvatarIcon size={24} className="text-forest" />
                                             ) : (
                                                 <span className="text-lg font-semibold text-forest">{member.name[0]}</span>
                                             )}
@@ -1012,7 +1052,7 @@ export default function DayHubPage() {
                         style={{ backgroundColor: "rgba(44, 62, 45, 0.1)" }}
                     />
 
-                    {(Object.keys(TIME_SLOT_INFO) as TimeSlot[]).map((slot) => {
+                    {TIME_SLOT_ORDER.map((slot) => {
                         const tasks = filteredTasksByTimeSlot[slot];
                         const slotInfo = TIME_SLOT_INFO[slot];
                         if (tasks.length === 0) return null;
@@ -1033,7 +1073,7 @@ export default function DayHubPage() {
                                         {slotInfo.abbrev}
                                     </div>
                                     <div className="text-[12px] font-bold uppercase tracking-widest text-[#8BA18D]">
-                                        {slotInfo.label} ({slotInfo.time})
+                                        {slotInfo.label}
                                     </div>
                                 </div>
 
