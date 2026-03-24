@@ -341,7 +341,8 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
             if (isMounted) {
-                setIsLoaded(false);
+                // Don't set isLoaded(false) - this causes loader flash on tab switch
+                // Data remains valid during token refresh
                 fetchContacts();
             }
         });

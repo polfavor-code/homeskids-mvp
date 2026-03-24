@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -40,8 +40,8 @@ interface ChildDetail {
     }>;
 }
 
-export default function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params);
+export default function ChildDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const [child, setChild] = useState<ChildDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -57,7 +57,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
                 // Fetch child data
                 const { data: childData, error: childError } = await supabase
-                    .from('children_v2')
+                    .from('children')
                     .select('*')
                     .eq('id', id)
                     .single();
@@ -104,7 +104,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
                 const { data: childSpaces } = await supabase
                     .from('child_spaces')
                     .select(`
-                        homes_v2 (
+                        homes (
                             id,
                             name
                         )
@@ -127,7 +127,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
                         profile: h.profiles as any,
                     })) || [],
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    homes: childSpaces?.map(cs => cs.homes_v2 as any).filter(Boolean) || [],
+                    homes: childSpaces?.map(cs => cs.homes as any).filter(Boolean) || [],
                 });
             } catch (err) {
                 console.error('Error fetching child:', err);

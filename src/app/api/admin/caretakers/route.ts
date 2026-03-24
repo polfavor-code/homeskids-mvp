@@ -51,9 +51,25 @@ export async function GET(request: NextRequest) {
         let query = supabaseAdmin
             .from('child_access')
             .select(`
-                *,
-                profiles (*),
-                children_v2 (*)
+                id,
+                role_type,
+                helper_type,
+                access_level,
+                created_at,
+                user_id,
+                child_id,
+                profiles (
+                    id,
+                    name,
+                    email,
+                    avatar_initials,
+                    avatar_color
+                ),
+                children (
+                    id,
+                    name,
+                    avatar_url
+                )
             `)
             .order('created_at', { ascending: false });
 
@@ -87,20 +103,23 @@ export async function GET(request: NextRequest) {
             .from('home_memberships')
             .select(`
                 user_id,
-                homes_v2 (*)
+                homes (
+                    id,
+                    name
+                )
             `)
             .in('user_id', userIds);
 
         // Filter out records with null profiles or children, then enrich with home data
         const validRecords = accessRecords?.filter(record =>
-            record.profiles && record.children_v2
+            record.profiles && record.children
         ) || [];
 
         const enrichedRecords = validRecords.map(record => {
             const userHomes = homeMemberships?.filter(hm => hm.user_id === record.user_id) || [];
             return {
                 ...record,
-                homes: userHomes.map(hm => hm.homes_v2).filter(Boolean),
+                homes: userHomes.map(hm => hm.homes).filter(Boolean),
             };
         });
 

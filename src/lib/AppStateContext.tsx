@@ -47,8 +47,10 @@ export type PetProfile = {
 };
 
 // Role types for guardians and helpers
+// Guardian = child/pet-centric (follows child/pet globally across ALL homes)
+// Helper = home-centric (scoped to specific home with explicit child/pet selection)
 export type GuardianRole = "parent" | "stepparent";
-export type HelperType = "family_member" | "friend" | "nanny";
+export type HelperType = "family_member" | "friend" | "nanny" | "babysitter" | "other";
 export type RoleType = "guardian" | "helper";
 export type AccessLevel = "view" | "contribute" | "manage";
 export type CaregiverStatus = "active" | "inactive" | "pending"; // V1 compatibility
@@ -72,8 +74,8 @@ export type CaregiverProfile = {
     isCurrentUser: boolean;
     // V2: role information
     roleType: RoleType;
-    guardianRole?: GuardianRole; // Only for guardians
-    helperType?: HelperType; // Only for helpers
+    guardianRole?: GuardianRole; // Only for guardians (parent/stepparent)
+    helperType?: HelperType; // Only for helpers (nanny, family_member, etc.)
     accessLevel: AccessLevel;
     // V2: permission capabilities
     canViewCalendar: boolean;
@@ -233,11 +235,15 @@ interface AppStateContextType {
 
     // Current user's permissions for current child
     currentUserPermissions: {
-        isGuardian: boolean;
-        canManageHelpers: boolean;
+        isGuardian: boolean;          // Has guardian role (full cross-home access)
+        isHelper: boolean;            // Has helper role (home-scoped access)
+        canManageHousehold: boolean;  // Can manage household settings (guardians only)
+        canManageHelpers: boolean;    // Can invite/manage helpers (guardians only)
         canEditCalendar: boolean;
         canEditItems: boolean;
         canViewContacts: boolean;
+        canSeeAllHomes: boolean;      // Can see all homes for child (guardians only)
+        canSeeFullHistory: boolean;   // Can see full timeline (guardians only)
     };
 
     // Contacts for current child_space
@@ -386,12 +392,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     );
 
     // Derived: current user's permissions
+    const isGuardian = currentUserCaregiver?.roleType === "guardian";
+    const isHelper = currentUserCaregiver?.roleType === "helper";
     const currentUserPermissions = {
-        isGuardian: currentUserCaregiver?.roleType === "guardian",
-        canManageHelpers: currentUserCaregiver?.canManageHelpers || false,
+        isGuardian,
+        isHelper,
+        canManageHousehold: isGuardian, // Only guardians can manage household
+        canManageHelpers: isGuardian || (currentUserCaregiver?.canManageHelpers || false),
         canEditCalendar: currentUserCaregiver?.canEditCalendar || false,
         canEditItems: currentUserCaregiver?.canEditItems || false,
         canViewContacts: currentUserCaregiver?.canViewContacts || false,
+        canSeeAllHomes: isGuardian, // Guardians see all homes
+        canSeeFullHistory: isGuardian, // Guardians see full timeline
     };
     
     // Derived: homes visible for the current child's dashboard
@@ -481,7 +493,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        setIsLoaded(false);
+        // Note: We intentionally don't set isLoaded=false here anymore.
+        // This prevents the loading spinner from showing on every navigation/refresh.
+        // The spinner only shows on the initial load when isLoaded starts as false.
 
         try {
             // 1. Get all children this user has access to
@@ -1190,31 +1204,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setPetsList(loadedPets);
 
             // 5b. Load invite info if user was invited (for no-home-access empty state)
-            const { data: acceptedInvite } = await supabase
-                .from("invites")
-                .select(`
-                    invited_by,
-                    has_own_home,
-                    child_id,
-                    children (name),
-                    inviter:profiles!invited_by (name, label)
-                `)
-                .eq("accepted_by", user.id)
-                .eq("status", "accepted")
-                .order("accepted_at", { ascending: false })
-                .limit(1)
-                .single();
+            try {
+                const { data: acceptedInvite } = await supabase
+                    .from("invites")
+                    .select("invited_by, has_own_home, child_id, invitee_name, accepted_at")
+                    .eq("accepted_by", user.id)
+                    .eq("status", "accepted")
+                    .order("accepted_at", { ascending: false })
+                    .limit(1)
+                    .single();
 
-            if (acceptedInvite) {
-                const inviterProfile = acceptedInvite.inviter as any;
-                const childData = acceptedInvite.children as any;
-                setInviteInfo({
-                    inviterName: inviterProfile?.label || inviterProfile?.name || "Someone",
-                    inviterId: acceptedInvite.invited_by,
-                    childName: childData?.name || "your child",
-                    hasOwnHome: acceptedInvite.has_own_home || false,
-                });
-            } else {
+                if (acceptedInvite) {
+                    // Look up inviter name from loaded caregivers
+                    const inviterCaregiver = loadedCaregivers.find(c => c.id === acceptedInvite.invited_by);
+                    const inviterName = inviterCaregiver?.label || inviterCaregiver?.name || "Someone";
+                    // Look up child name from loaded children
+                    const inviteChild = loadedChildren.find(c => c.id === acceptedInvite.child_id);
+                    setInviteInfo({
+                        inviterName,
+                        inviterId: acceptedInvite.invited_by,
+                        childName: inviteChild?.name || "your child",
+                        hasOwnHome: acceptedInvite.has_own_home || false,
+                    });
+                } else {
+                    setInviteInfo(null);
+                }
+            } catch {
                 setInviteInfo(null);
             }
 

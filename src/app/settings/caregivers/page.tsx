@@ -8,6 +8,7 @@ import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import MobileSelect from "@/components/MobileSelect";
 import InviteCaregiverPanel from "@/components/InviteCaregiverPanel";
+import InviteGuardianPanel from "@/components/InviteGuardianPanel";
 import CaregiverStatusPill from "@/components/caregivers/CaregiverStatusPill";
 import CaregiverConfirmDialog, { CaregiverAction } from "@/components/caregivers/CaregiverConfirmDialog";
 import HomeSelectionDialog from "@/components/caregivers/HomeSelectionDialog";
@@ -86,14 +87,20 @@ export default function CaregiversPage() {
     const [expandedCaregiverId, setExpandedCaregiverId] = useState<string | null>(null);
     const [editingCaregiverId, setEditingCaregiverId] = useState<string | null>(null);
     const [showInviteForm, setShowInviteForm] = useState(false);
+    const [inviteType, setInviteType] = useState<"guardian" | "helper">("helper");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
 
     // Check for invite query parameter on mount
     useEffect(() => {
-        if (searchParams.get('invite') === 'true') {
+        const inviteParam = searchParams.get('invite');
+        if (inviteParam === 'guardian') {
             setShowInviteForm(true);
+            setInviteType('guardian');
+        } else if (inviteParam === 'helper' || inviteParam === 'true') {
+            setShowInviteForm(true);
+            setInviteType('helper');
         }
     }, [searchParams]);
 
@@ -1317,27 +1324,54 @@ export default function CaregiversPage() {
                         }
                     </p>
                     {hasHomeAccess && isGuardian && !showInviteForm && (
-                        <button
-                            onClick={() => setShowInviteForm(true)}
-                            className="btn-primary flex items-center justify-center gap-2"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="8.5" cy="7" r="4" />
-                                <line x1="20" y1="8" x2="20" y2="14" />
-                                <line x1="23" y1="11" x2="17" y2="11" />
-                            </svg>
-                            Invite caregiver
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={() => {
+                                    setInviteType("guardian");
+                                    setShowInviteForm(true);
+                                }}
+                                className="btn-primary flex items-center justify-center gap-2"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="8.5" cy="7" r="4" />
+                                    <line x1="20" y1="8" x2="20" y2="14" />
+                                    <line x1="23" y1="11" x2="17" y2="11" />
+                                </svg>
+                                Invite guardian
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setInviteType("helper");
+                                    setShowInviteForm(true);
+                                }}
+                                className="btn-secondary flex items-center justify-center gap-2"
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="8.5" cy="7" r="4" />
+                                    <line x1="20" y1="8" x2="20" y2="14" />
+                                    <line x1="23" y1="11" x2="17" y2="11" />
+                                </svg>
+                                Invite helper
+                            </button>
+                        </div>
                     )}
                 </div>
 
                 {/* Invite Form - Guardian only */}
                 {isGuardian && showInviteForm && (
-                    <InviteCaregiverPanel
-                        onClose={() => setShowInviteForm(false)}
-                        onSuccess={() => showToast("Invite created!")}
-                    />
+                    inviteType === "guardian" ? (
+                        <InviteGuardianPanel
+                            onClose={() => setShowInviteForm(false)}
+                            onSuccess={() => showToast("Guardian invite created!")}
+                        />
+                    ) : (
+                        <InviteCaregiverPanel
+                            onClose={() => setShowInviteForm(false)}
+                            onSuccess={() => showToast("Helper invite created!")}
+                        />
+                    )
                 )}
 
                 {/* Active Caregivers List */}

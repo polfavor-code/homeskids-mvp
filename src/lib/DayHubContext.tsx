@@ -392,6 +392,12 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
     const realtimeChannelRef = useRef<any>(null);
     const regimenRealtimeChannelRef = useRef<any>(null);
     const contentRealtimeChannelRef = useRef<any>(null);
+
+    // Stable refs for fetch functions used in realtime subscriptions (prevents subscription cycling)
+    const fetchTemplatesRef = useRef<() => void>(() => {});
+    const fetchDayTasksRef = useRef<() => void>(() => {});
+    const fetchRegimensRef = useRef<() => void>(() => {});
+    const fetchRegimenDayTasksRef = useRef<() => void>(() => {});
     const contentBroadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
     // Broadcast content update to other caregivers
@@ -1093,6 +1099,12 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
             setRegimenDayTasks([]);
         }
     }, [user, regimens, currentDate, getActivePhase, shouldTaskRunOnDate, getTaskOccurrences, getRegimenFamilyMemberInfo]);
+
+    // Keep stable refs in sync for realtime subscription handlers
+    fetchTemplatesRef.current = fetchTemplates;
+    fetchDayTasksRef.current = fetchDayTasks;
+    fetchRegimensRef.current = fetchRegimens;
+    fetchRegimenDayTasksRef.current = fetchRegimenDayTasks;
 
     // Mark task as done
     const markTaskDone = useCallback(async (taskId: string, instanceId: string, notes?: string): Promise<DayHubResult> => {
@@ -2259,46 +2271,33 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
         }
 
         const channel = supabase
-            .channel(`day-hub-content-${user.id}-${Date.now()}`)
+            .channel(`day-hub-content-${user.id}`)
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "schedule_templates" },
-                (payload) => {
-                    console.log("[DayHub] Template change:", payload.eventType);
-                    fetchTemplates();
-                }
+                () => { fetchTemplatesRef.current(); }
             )
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "schedule_tasks" },
-                (payload) => {
-                    console.log("[DayHub] Task change:", payload.eventType);
-                    fetchDayTasks();
-                }
+                () => { fetchDayTasksRef.current(); }
             )
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "regimens" },
-                (payload) => {
-                    console.log("[DayHub] Regimen change:", payload.eventType);
-                    fetchRegimens();
-                }
+                () => { fetchRegimensRef.current(); }
             )
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "regimen_phases" },
-                (payload) => {
-                    console.log("[DayHub] Phase change:", payload.eventType);
-                    fetchRegimens();
-                }
+                () => { fetchRegimensRef.current(); }
             )
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "phase_tasks" },
-                (payload) => {
-                    console.log("[DayHub] Phase task change:", payload.eventType);
-                    fetchRegimens();
-                    fetchRegimenDayTasks();
+                () => {
+                    fetchRegimensRef.current();
+                    fetchRegimenDayTasksRef.current();
                 }
             )
             .subscribe((status) => {
@@ -2312,7 +2311,8 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                 supabase.removeChannel(contentRealtimeChannelRef.current);
             }
         };
-    }, [user, fetchTemplates, fetchDayTasks, fetchRegimens, fetchRegimenDayTasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
 
     // Broadcast channel for instant sync between caregivers (scoped to current child)
     useEffect(() => {

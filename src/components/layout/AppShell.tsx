@@ -12,18 +12,18 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
     return (
-        <div className="min-h-screen bg-cream flex">
+        <div className="min-h-screen bg-cream flex overflow-x-hidden">
             {/* Desktop Side Navigation */}
             <DesktopNav />
 
             {/* Main Content Area */}
-            <main className="flex-1 min-h-screen pb-20 lg:pb-6">
+            <main className="flex-1 min-h-screen pb-20 lg:pb-6 w-full min-w-0">
                 {/* Install App Prompt (shows for non-installed users) */}
                 <InstallPrompt />
-                
+
                 {/* Mobile Child Context Bar - sticky at top */}
                 <ChildContextBar />
-                
+
                 <div className="max-w-[1200px] mx-auto px-6 py-6">
                     {children}
                 </div>

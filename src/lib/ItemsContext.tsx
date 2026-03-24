@@ -313,7 +313,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
                     fetchItems();
                 }
             } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-                setIsLoaded(false);
+                // Don't set isLoaded(false) - this causes loader flash on tab switch
+                // Data remains valid during token refresh
                 fetchItems();
             } else if (event === "SIGNED_OUT") {
                 setItems([]);

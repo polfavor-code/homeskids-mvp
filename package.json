@@ -21,6 +21,7 @@
     "react-dom": "^18",
     "react-easy-crop": "^5.5.6",
     "react-leaflet": "^4.2.1",
+    "recharts": "^3.8.0",
     "styled-jsx": "^5.1.7",
     "web-push": "^3.6.7"
   },

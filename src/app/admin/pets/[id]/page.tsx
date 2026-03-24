@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -41,8 +41,8 @@ const speciesEmoji: Record<string, string> = {
     other: '🐾',
 };
 
-export default function PetDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params);
+export default function PetDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const [pet, setPet] = useState<PetDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -87,7 +87,7 @@ export default function PetDetailPage({ params }: { params: Promise<{ id: string
                 const { data: petSpaces } = await supabase
                     .from('pet_spaces')
                     .select(`
-                        homes_v2 (
+                        homes (
                             id,
                             name
                         )
@@ -104,7 +104,7 @@ export default function PetDetailPage({ params }: { params: Promise<{ id: string
                         profile: a.profiles as any,
                     })) || [],
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    homes: petSpaces?.map(ps => ps.homes_v2 as any).filter(Boolean) || [],
+                    homes: petSpaces?.map(ps => ps.homes as any).filter(Boolean) || [],
                 });
             } catch (err) {
                 console.error('Error fetching pet:', err);

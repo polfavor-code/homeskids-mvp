@@ -140,6 +140,9 @@ export default function OnboardingPage() {
         { id: crypto.randomUUID(), name: "", manuallyEdited: false }
     ]);
 
+    // Household name (family label for grouping homes)
+    const [householdName, setHouseholdName] = useState("");
+
     // Step 4: Caregivers
     const [wantsToAddCaregivers, setWantsToAddCaregivers] = useState<boolean | null>(null);
     const [caregivers, setCaregivers] = useState<CaregiverEntry[]>([]);
@@ -177,6 +180,30 @@ export default function OnboardingPage() {
         return `${capitalized}'s home`;
     };
 
+    // Check if household name looks like a location (should be a family/group name)
+    const isLocationLikeName = (name: string): boolean => {
+        const locationPatterns = [
+            /home$/i,
+            /house$/i,
+            /apartment$/i,
+            /flat$/i,
+            /place$/i,
+            /residence$/i,
+            /'s\s*home$/i,
+            /'s\s*house$/i,
+            /daddy.?s/i,
+            /mommy.?s/i,
+            /mum.?s/i,
+            /dad.?s/i,
+            /mom.?s/i,
+        ];
+        return locationPatterns.some(pattern => pattern.test(name.trim()));
+    };
+
+    const householdNameWarning = householdName && isLocationLikeName(householdName)
+        ? "This looks like a home name. Household names should describe your family (e.g., \"Somers Family\", \"Emma Care\")."
+        : null;
+
     // Auto-suggest first home name when childCallsYou changes
     useEffect(() => {
         if (childCallsYou && homes.length > 0 && !homes[0].manuallyEdited) {
@@ -186,6 +213,21 @@ export default function OnboardingPage() {
             ]);
         }
     }, [childCallsYou]);
+
+    // Auto-suggest household name based on children
+    useEffect(() => {
+        if (householdName) return; // Don't overwrite if user set one
+        const validChildren = children.filter(c => c.name.trim());
+        if (validChildren.length === 0) return;
+
+        if (validChildren.length === 1) {
+            setHouseholdName(`${validChildren[0].name.trim()} Care`);
+        } else if (validChildren.length === 2) {
+            setHouseholdName(`${validChildren[0].name.trim()} & ${validChildren[1].name.trim()} Care`);
+        } else {
+            setHouseholdName(`${validChildren[0].name.trim()} Family Care`);
+        }
+    }, [createdChildIds]); // Trigger when children are actually created
 
     // Get children names for display
     const getChildrenDisplayText = () => {
@@ -570,11 +612,12 @@ export default function OnboardingPage() {
             const homeIds: string[] = [];
 
             for (const home of validHomes) {
-                // Create home
+                // Create home with household_name
                 const { data: newHome, error: homeError } = await supabase
                     .from("homes")
                     .insert({
                         name: home.name.trim(),
+                        household_name: householdName.trim() || null,
                         created_by: user.id,
                     })
                     .select()
@@ -1456,6 +1499,33 @@ export default function OnboardingPage() {
                                 <p className="text-gray-600">
                                     {managesChildren ? `Name the home(s) you manage for ${getChildrenDisplayText()}.` : "Name the home(s) where your pets live."}
                                 </p>
+                            </div>
+
+                            {/* Household name (family label) */}
+                            <div className="bg-softGreen/30 rounded-xl p-4 border border-forest/10">
+                                <label className="block text-sm font-medium text-forest mb-1">
+                                    Family/Household name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={householdName}
+                                    onChange={e => setHouseholdName(e.target.value)}
+                                    className="w-full px-4 py-3 border border-forest/20 rounded-xl focus:ring-2 focus:ring-forest focus:border-transparent bg-white"
+                                    placeholder={managesChildren ? `${getChildrenDisplayText()} Care` : "My Family"}
+                                />
+                                <p className="text-xs text-gray-500 mt-1.5">
+                                    This groups your homes together (e.g., &quot;Somers Family&quot;, &quot;Emma Care&quot;)
+                                </p>
+                                {householdNameWarning && (
+                                    <p className="text-xs text-amber-600 mt-2 flex items-start gap-1.5">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0 mt-0.5">
+                                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                            <line x1="12" y1="9" x2="12" y2="13" />
+                                            <line x1="12" y1="17" x2="12.01" y2="17" />
+                                        </svg>
+                                        {householdNameWarning}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-4">

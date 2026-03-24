@@ -48,8 +48,16 @@ export async function GET(request: NextRequest) {
 
     try {
         let query = supabaseAdmin
-            .from('children_v2')
-            .select('*')
+            .from('children')
+            .select(`
+                id,
+                name,
+                dob,
+                avatar_url,
+                notes,
+                created_at,
+                created_by
+            `)
             .order('created_at', { ascending: false });
 
         if (search) {

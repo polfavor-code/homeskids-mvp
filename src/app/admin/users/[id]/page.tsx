@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -29,7 +29,7 @@ interface UserDetail {
         role_type: string;
         helper_type: string | null;
         access_level: string;
-        children_v2: {
+        children: {
             id: string;
             name: string;
             avatar_url: string | null;
@@ -38,7 +38,7 @@ interface UserDetail {
     homeMemberships: Array<{
         id: string;
         is_home_admin: boolean;
-        homes_v2: {
+        homes: {
             id: string;
             name: string;
             address: string | null;
@@ -57,8 +57,8 @@ interface UserDetail {
     }>;
 }
 
-export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params);
+export default function UserDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const router = useRouter();
     const [user, setUser] = useState<UserDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -79,6 +79,19 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     const [newPassword, setNewPassword] = useState('');
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [toast, setToast] = useState('');
+    const [deletionImpact, setDeletionImpact] = useState<{
+        householdsAffected: number;
+        householdsToArchive: number;
+        householdsToArchiveDetails: Array<{ id: string; name: string; helpersCount: number }>;
+        childrenAffected: number;
+        childrenDetails: Array<{ id: string; name: string; willLoseAllGuardians: boolean }>;
+        petsAffected: number;
+        petsDetails: Array<{ id: string; name: string; willLoseAllGuardians: boolean }>;
+        caregiversToRemove: number;
+        isLastGuardian: boolean;
+    } | null>(null);
+    const [loadingImpact, setLoadingImpact] = useState(false);
+    const [confirmArchive, setConfirmArchive] = useState(false);
 
     const fetchUser = async () => {
         try {
@@ -151,7 +164,40 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         }
     };
 
+    const fetchDeletionImpact = async () => {
+        setLoadingImpact(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Not authenticated');
+
+            const response = await fetch(`/api/admin/users/${id}?action=deletion-impact`, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to fetch deletion impact');
+            }
+
+            const data = await response.json();
+            setDeletionImpact(data.impact);
+            setShowDeleteModal(true);
+        } catch (err) {
+            console.error('Error fetching deletion impact:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch deletion impact');
+        } finally {
+            setLoadingImpact(false);
+        }
+    };
+
     const handleDelete = async () => {
+        // Require confirmation if households will be archived
+        if (deletionImpact?.isLastGuardian && !confirmArchive) {
+            return;
+        }
+
         setDeleting(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -167,6 +213,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.error || 'Failed to delete user');
+            }
+
+            const data = await response.json();
+            if (data.archivedHouseholds > 0) {
+                showToast(`User deleted. ${data.archivedHouseholds} household(s) archived.`);
             }
 
             router.push('/admin/users');
@@ -188,13 +239,17 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                 body.password = newPassword;
             }
 
-            const response = await fetch(`/api/admin/users/${id}/password`, {
+            const requestBody = passwordAction === 'set_password'
+                ? { action: 'change_password', password: newPassword }
+                : { action: 'send_reset' };
+
+            const response = await fetch(`/api/admin/users/${id}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(body),
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
@@ -410,10 +465,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                                 Password
                             </button>
                             <button
-                                onClick={() => setShowDeleteModal(true)}
-                                className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50"
+                                onClick={fetchDeletionImpact}
+                                disabled={loadingImpact}
+                                className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 disabled:opacity-50"
                             >
-                                Delete
+                                {loadingImpact ? 'Loading...' : 'Delete'}
                             </button>
                         </div>
                     )}
@@ -430,14 +486,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                         {user.childAccess.map((access) => (
                             <Link
                                 key={access.id}
-                                href={`/admin/children/${access.children_v2.id}`}
+                                href={`/admin/children/${access.children.id}`}
                                 className="flex items-center gap-4 p-3 rounded-xl bg-softGreen/50 hover:bg-softGreen transition-colors"
                             >
                                 <div className="w-10 h-10 rounded-full bg-terracotta/20 flex items-center justify-center text-terracotta font-semibold">
-                                    {access.children_v2.name?.[0] || '?'}
+                                    {access.children.name?.[0] || '?'}
                                 </div>
                                 <div className="flex-1">
-                                    <p className="font-medium text-forest">{access.children_v2.name}</p>
+                                    <p className="font-medium text-forest">{access.children.name}</p>
                                     <p className="text-xs text-textSub capitalize">
                                         {access.role_type} {access.helper_type ? `(${access.helper_type.replace('_', ' ')})` : ''} - {access.access_level}
                                     </p>
@@ -458,7 +514,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                         {user.homeMemberships.map((membership) => (
                             <Link
                                 key={membership.id}
-                                href={`/admin/homes/${membership.homes_v2.id}`}
+                                href={`/admin/homes/${membership.homes.id}`}
                                 className="flex items-center gap-4 p-3 rounded-xl bg-softGreen/50 hover:bg-softGreen transition-colors"
                             >
                                 <div className="w-10 h-10 rounded-full bg-teal/20 flex items-center justify-center text-teal">
@@ -467,8 +523,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                                     </svg>
                                 </div>
                                 <div className="flex-1">
-                                    <p className="font-medium text-forest">{membership.homes_v2.name}</p>
-                                    <p className="text-xs text-textSub">{membership.homes_v2.address || 'No address'}</p>
+                                    <p className="font-medium text-forest">{membership.homes.name}</p>
+                                    <p className="text-xs text-textSub">{membership.homes.address || 'No address'}</p>
                                 </div>
                                 {membership.is_home_admin && (
                                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
@@ -512,31 +568,123 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             {/* Delete Modal */}
             {showDeleteModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+                    <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
                         <h3 className="font-semibold text-xl text-forest mb-2">Delete User</h3>
                         <p className="text-textSub mb-4">
                             Are you sure you want to delete <strong>{user.name || user.email}</strong>?
-                            This will remove all their data including:
                         </p>
-                        <ul className="text-sm text-textSub mb-6 space-y-1">
-                            <li>- Profile information</li>
-                            <li>- {user.childAccess.length} child access record(s)</li>
-                            <li>- {user.homeMemberships.length} home membership(s)</li>
-                            <li>- {user.petAccess.length} pet access record(s)</li>
-                        </ul>
+
+                        {/* Warning banner if last guardian */}
+                        {deletionImpact?.isLastGuardian && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                                <div className="flex items-start gap-3">
+                                    <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <div>
+                                        <p className="font-medium text-amber-800">This is a Last Guardian</p>
+                                        <p className="text-sm text-amber-700">
+                                            Deleting this user will archive {deletionImpact.householdsToArchive} household(s)
+                                            and remove access for {deletionImpact.caregiversToRemove} caregiver(s).
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Impact Summary */}
+                        <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
+                            <p className="font-medium text-forest text-sm">Deletion Impact:</p>
+
+                            {/* Households to archive */}
+                            {deletionImpact && deletionImpact.householdsToArchive > 0 && (
+                                <div className="text-sm">
+                                    <p className="text-red-600 font-medium">
+                                        {deletionImpact.householdsToArchive} household(s) will be ARCHIVED:
+                                    </p>
+                                    <ul className="ml-4 text-textSub">
+                                        {deletionImpact.householdsToArchiveDetails.map(h => (
+                                            <li key={h.id}>
+                                                • {h.name} ({h.helpersCount} caregiver(s) will lose access)
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Children affected */}
+                            {deletionImpact && deletionImpact.childrenAffected > 0 && (
+                                <div className="text-sm">
+                                    <p className="text-textSub font-medium">{deletionImpact.childrenAffected} child(ren) affected:</p>
+                                    <ul className="ml-4 text-textSub">
+                                        {deletionImpact.childrenDetails.map(c => (
+                                            <li key={c.id} className={c.willLoseAllGuardians ? 'text-red-600' : ''}>
+                                                • {c.name} {c.willLoseAllGuardians && '(will lose all guardians)'}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Pets affected */}
+                            {deletionImpact && deletionImpact.petsAffected > 0 && (
+                                <div className="text-sm">
+                                    <p className="text-textSub font-medium">{deletionImpact.petsAffected} pet(s) affected:</p>
+                                    <ul className="ml-4 text-textSub">
+                                        {deletionImpact.petsDetails.map(p => (
+                                            <li key={p.id} className={p.willLoseAllGuardians ? 'text-red-600' : ''}>
+                                                • {p.name} {p.willLoseAllGuardians && '(will lose all guardians)'}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Access records to remove */}
+                            <div className="text-sm text-textSub">
+                                <p>Records to remove:</p>
+                                <ul className="ml-4">
+                                    <li>• Profile information</li>
+                                    <li>• {user.childAccess.length} child access record(s)</li>
+                                    <li>• {user.homeMemberships.length} home membership(s)</li>
+                                    <li>• {user.petAccess.length} pet access record(s)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Confirmation checkbox for archiving */}
+                        {deletionImpact?.isLastGuardian && (
+                            <label className="flex items-start gap-3 mb-4 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={confirmArchive}
+                                    onChange={(e) => setConfirmArchive(e.target.checked)}
+                                    className="mt-1 rounded border-gray-300"
+                                />
+                                <span className="text-sm text-textSub">
+                                    I understand that archiving households will remove all caregiver access
+                                    and the data will only be recoverable by an admin.
+                                </span>
+                            </label>
+                        )}
+
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setShowDeleteModal(false)}
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setDeletionImpact(null);
+                                    setConfirmArchive(false);
+                                }}
                                 className="flex-1 px-4 py-2 border border-border rounded-xl font-medium hover:bg-softGreen"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDelete}
-                                disabled={deleting}
+                                disabled={deleting || (deletionImpact?.isLastGuardian && !confirmArchive)}
                                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50"
                             >
-                                {deleting ? 'Deleting...' : 'Delete User'}
+                                {deleting ? 'Deleting...' : deletionImpact?.isLastGuardian ? 'Delete & Archive' : 'Delete User'}
                             </button>
                         </div>
                     </div>

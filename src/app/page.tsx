@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
@@ -79,6 +79,37 @@ export default function Home() {
     // Toast state (for errors and info messages)
     const [toasts, setToasts] = useState<ToastData[]>([]);
     const [switchingHomeId, setSwitchingHomeId] = useState<string | null>(null);
+    const [showInviteDropdown, setShowInviteDropdown] = useState(false);
+    const inviteDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close invite dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (inviteDropdownRef.current && !inviteDropdownRef.current.contains(event.target as Node)) {
+                setShowInviteDropdown(false);
+            }
+        };
+
+        if (showInviteDropdown) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showInviteDropdown]);
+
+    // Prevent body scroll when mobile invite sheet is open
+    useEffect(() => {
+        if (showInviteDropdown) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [showInviteDropdown]);
 
     // Home switch alert (shows to all caregivers in realtime)
     const { showLocalAlert } = useHomeSwitchAlert();
@@ -353,12 +384,107 @@ export default function Home() {
                             Request to pack
                         </Link>
                     )}
-                    <Link
-                        href="/settings/caregivers?invite=true"
-                        className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
-                    >
-                        Invite caregiver
-                    </Link>
+                    <div className="relative" ref={inviteDropdownRef}>
+                        <button
+                            onClick={() => setShowInviteDropdown(!showInviteDropdown)}
+                            className="bg-transparent border border-forest text-forest px-5 py-2.5 rounded-full text-[13px] font-bold whitespace-nowrap hover:bg-forest hover:text-white transition-colors"
+                        >
+                            Invite caregiver
+                        </button>
+
+                        {/* Desktop Dropdown */}
+                        {showInviteDropdown && (
+                            <div className="hidden sm:block absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-border p-1 min-w-[220px] z-50">
+                                <button
+                                    onClick={() => {
+                                        setShowInviteDropdown(false);
+                                        router.push('/settings/caregivers?invite=guardian');
+                                    }}
+                                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-cream transition-colors"
+                                >
+                                    <div className="font-semibold text-forest text-sm">Guardian</div>
+                                    <div className="text-xs text-textSub">Full access to all homes</div>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowInviteDropdown(false);
+                                        router.push('/settings/caregivers?invite=helper');
+                                    }}
+                                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-cream transition-colors"
+                                >
+                                    <div className="font-semibold text-forest text-sm">Helper</div>
+                                    <div className="text-xs text-textSub">Access to selected home only</div>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Mobile Bottom Sheet */}
+                        {showInviteDropdown && (
+                            <div className="sm:hidden fixed inset-0 z-50">
+                                {/* Backdrop */}
+                                <div
+                                    className="absolute inset-0 bg-black/30"
+                                    onClick={() => setShowInviteDropdown(false)}
+                                />
+
+                                {/* Sheet - positioned above mobile nav */}
+                                <div className="absolute bottom-[90px] left-3 right-3 bg-white rounded-3xl shadow-2xl animate-slide-up overflow-hidden">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                                        <h2 className="text-lg font-dmSerif text-forest">Invite caregiver</h2>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowInviteDropdown(false)}
+                                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 text-forest"
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    {/* Options */}
+                                    <div className="px-4 py-4 space-y-2">
+                                        <button
+                                            onClick={() => {
+                                                setShowInviteDropdown(false);
+                                                router.push('/settings/caregivers?invite=guardian');
+                                            }}
+                                            className="w-full text-left px-4 py-4 rounded-xl hover:bg-cream transition-colors"
+                                        >
+                                            <div className="font-semibold text-forest text-base">Guardian</div>
+                                            <div className="text-sm text-textSub mt-0.5">Full access to all homes</div>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowInviteDropdown(false);
+                                                router.push('/settings/caregivers?invite=helper');
+                                            }}
+                                            className="w-full text-left px-4 py-4 rounded-xl hover:bg-cream transition-colors"
+                                        >
+                                            <div className="font-semibold text-forest text-base">Helper</div>
+                                            <div className="text-sm text-textSub mt-0.5">Access to selected home only</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <style jsx>{`
+                                    @keyframes slide-up {
+                                        from {
+                                            transform: translateY(100%);
+                                        }
+                                        to {
+                                            transform: translateY(0);
+                                        }
+                                    }
+                                    .animate-slide-up {
+                                        animation: slide-up 0.3s ease-out;
+                                    }
+                                `}</style>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Awaiting Location Alert - Inline */}
