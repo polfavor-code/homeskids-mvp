@@ -1193,7 +1193,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
                 if (acceptedInvite) {
                     // Look up inviter name from loaded caregivers
-                    const inviterCaregiver = loadedCaregivers.find(c => c.userId === acceptedInvite.invited_by);
+                    const inviterCaregiver = loadedCaregivers.find(c => c.id === acceptedInvite.invited_by);
                     const inviterName = inviterCaregiver?.label || inviterCaregiver?.name || "Someone";
                     // Look up child name from loaded children
                     const inviteChild = loadedChildren.find(c => c.id === acceptedInvite.child_id);

@@ -36,21 +36,39 @@ async function getAdminClient(request: NextRequest) {
     return { supabaseAdmin, adminUser: user };
 }
 
+// Type definitions for Supabase query results
+interface HomeMembershipWithHome {
+    home_id: string;
+    homes: { id: string; name: string; status: string } | null;
+}
+
+interface ChildAccessWithChild {
+    child_id: string;
+    children: { id: string; name: string } | null;
+}
+
+interface PetAccessWithPet {
+    pet_id: string;
+    role_type: string;
+    pets: { id: string; name: string } | null;
+}
+
 // Helper function to calculate deletion impact
-async function getDeletionImpact(supabaseAdmin: ReturnType<typeof createClient>, userId: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getDeletionImpact(supabaseAdmin: any, userId: string) {
     try {
         // Get user's guardian child access (not helper)
         const { data: guardianChildAccess } = await supabaseAdmin
             .from('child_access')
             .select('child_id, children(id, name)')
             .eq('user_id', userId)
-            .eq('role_type', 'guardian');
+            .eq('role_type', 'guardian') as { data: ChildAccessWithChild[] | null };
 
         // Get user's home memberships
         const { data: userHomeMemberships } = await supabaseAdmin
             .from('home_memberships')
             .select('home_id, homes(id, name, status)')
-            .eq('user_id', userId);
+            .eq('user_id', userId) as { data: HomeMembershipWithHome[] | null };
 
         const homeIds = userHomeMemberships?.map(m => m.home_id) || [];
 
@@ -72,7 +90,7 @@ async function getDeletionImpact(supabaseAdmin: ReturnType<typeof createClient>,
             const { data: homeMembers } = await supabaseAdmin
                 .from('home_memberships')
                 .select('user_id')
-                .eq('home_id', homeId);
+                .eq('home_id', homeId) as { data: { user_id: string }[] | null };
 
             const memberIds = homeMembers?.map(m => m.user_id).filter(id => id !== userId) || [];
 
@@ -134,7 +152,7 @@ async function getDeletionImpact(supabaseAdmin: ReturnType<typeof createClient>,
         const { data: userPetAccess } = await supabaseAdmin
             .from('pet_access')
             .select('pet_id, role_type, pets(id, name)')
-            .eq('user_id', userId);
+            .eq('user_id', userId) as { data: PetAccessWithPet[] | null };
 
         const petsAffected: Array<{ id: string; name: string; willLoseAllGuardians: boolean }> = [];
 
@@ -423,7 +441,7 @@ export async function DELETE(
         const { data: userHomeMemberships } = await supabaseAdmin
             .from('home_memberships')
             .select('home_id')
-            .eq('user_id', id);
+            .eq('user_id', id) as { data: { home_id: string }[] | null };
 
         const homeIds = userHomeMemberships?.map(m => m.home_id) || [];
         const homesToArchive: string[] = [];
@@ -435,7 +453,7 @@ export async function DELETE(
                 .from('home_memberships')
                 .select('user_id')
                 .eq('home_id', homeId)
-                .neq('user_id', id);
+                .neq('user_id', id) as { data: { user_id: string }[] | null };
 
             const otherMemberIds = otherMembers?.map(m => m.user_id) || [];
 
@@ -520,6 +538,49 @@ export async function DELETE(
             }
         }
 
+        // Clear items table references
+        const itemsFields = ['created_by', 'origin_user_id', 'requested_by', 'packed_by'];
+        for (const field of itemsFields) {
+            const { error: itemsError } = await supabaseAdmin
+                .from('items')
+                .update({ [field]: null })
+                .eq(field, id);
+
+            if (itemsError) {
+                console.error(`Error clearing items ${field}:`, itemsError);
+            }
+        }
+
+        // Clear bag_essentials created_by
+        const { error: bagEssentialsError } = await supabaseAdmin
+            .from('bag_essentials')
+            .update({ created_by: null })
+            .eq('created_by', id);
+
+        if (bagEssentialsError) {
+            console.error('Error clearing bag_essentials created_by:', bagEssentialsError);
+        }
+
+        // Delete child_space_access records for this user (if not cascading)
+        const { error: childSpaceAccessError } = await supabaseAdmin
+            .from('child_space_access')
+            .delete()
+            .eq('user_id', id);
+
+        if (childSpaceAccessError) {
+            console.error('Error deleting child_space_access:', childSpaceAccessError);
+        }
+
+        // Delete google_calendar_sources for this user
+        const { error: googleCalSourcesError } = await supabaseAdmin
+            .from('google_calendar_sources')
+            .delete()
+            .eq('user_id', id);
+
+        if (googleCalSourcesError) {
+            console.error('Error deleting google_calendar_sources:', googleCalSourcesError);
+        }
+
         // Step 3: Delete auth user
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
 
@@ -567,7 +628,7 @@ export async function DELETE(
             const { data: childSpaces } = await supabaseAdmin
                 .from('child_spaces')
                 .select('child_id')
-                .eq('home_id', homeId);
+                .eq('home_id', homeId) as { data: { child_id: string }[] | null };
 
             const childIds = childSpaces?.map(cs => cs.child_id) || [];
 
@@ -584,13 +645,13 @@ export async function DELETE(
                 }
             }
 
-            // Get pets in this home
-            const { data: pets } = await supabaseAdmin
-                .from('pets')
-                .select('id')
-                .eq('home_id', homeId);
+            // Get pets in this home via pet_spaces
+            const { data: petSpaces } = await supabaseAdmin
+                .from('pet_spaces')
+                .select('pet_id')
+                .eq('home_id', homeId) as { data: { pet_id: string }[] | null };
 
-            const petIds = pets?.map(p => p.id) || [];
+            const petIds = petSpaces?.map(p => p.pet_id) || [];
 
             // Remove helper access to pets in this home
             if (petIds.length > 0) {
