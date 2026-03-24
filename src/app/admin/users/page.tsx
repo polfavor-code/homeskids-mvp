@@ -4,6 +4,14 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+interface HouseholdRole {
+    householdId: string;
+    householdName: string;
+    role: 'parent' | 'caregiver' | 'member';
+    isHomeAdmin: boolean;
+    helperTypes: string[];
+}
+
 interface User {
     id: string;
     name: string | null;
@@ -17,6 +25,7 @@ interface User {
     manages_pets: boolean;
     is_admin: boolean;
     created_at: string;
+    last_sign_in_at: string | null;
     homeCount: number;
     childCount: number;
     petCount: number;
@@ -24,35 +33,36 @@ interface User {
     isHelper: boolean;
     helperTypes: string[];
     hasAccess: boolean;
+    householdRoles: HouseholdRole[];
 }
 
-function RoleBadge({ user }: { user: User }) {
-    if (user.is_admin) {
+function HouseholdRoleBadge({ role, helperTypes }: { role: string; helperTypes?: string[] }) {
+    if (role === 'parent') {
         return (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                Admin
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+                Parent
             </span>
         );
     }
-    if (user.isGuardian) {
+    if (role === 'caregiver') {
+        const type = helperTypes?.[0]?.replace('_', ' ') || 'caregiver';
         return (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                Guardian
-            </span>
-        );
-    }
-    if (user.isHelper) {
-        const type = user.helperTypes[0] || 'helper';
-        const typeLabel = type.replace('_', ' ');
-        return (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 capitalize">
-                {typeLabel}
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700 capitalize">
+                {type}
             </span>
         );
     }
     return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-            No access
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">
+            Member
+        </span>
+    );
+}
+
+function AdminBadge() {
+    return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+            Admin
         </span>
     );
 }
@@ -80,7 +90,6 @@ export default function AdminUsersPage() {
                 return;
             }
 
-            console.log('Fetching users with token...');
             const params = new URLSearchParams();
             if (search) params.set('search', search);
             if (roleFilter !== 'all') params.set('role', roleFilter);
@@ -128,12 +137,30 @@ export default function AdminUsersPage() {
         });
     };
 
+    const formatRelativeTime = (dateString: string | null) => {
+        if (!dateString) return 'Never';
+
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+        return formatDate(dateString);
+    };
+
     return (
         <div className="p-8">
             {/* Header */}
             <div className="mb-8">
                 <h1 className="font-dmSerif text-3xl text-forest mb-2">Users</h1>
-                <p className="text-textSub">Manage all registered users in the system.</p>
+                <p className="text-textSub">Manage all registered users and their household roles.</p>
             </div>
 
             {/* Filters */}
@@ -164,8 +191,8 @@ export default function AdminUsersPage() {
                     <div className="flex gap-2">
                         {[
                             { value: 'all', label: 'All' },
-                            { value: 'guardians', label: 'Guardians' },
-                            { value: 'helpers', label: 'Helpers' },
+                            { value: 'parents', label: 'Parents' },
+                            { value: 'caregivers', label: 'Caregivers' },
                             { value: 'no-access', label: 'No Access' },
                         ].map(option => (
                             <button
@@ -241,32 +268,51 @@ export default function AdminUsersPage() {
                                             <h3 className="font-semibold text-forest truncate">
                                                 {user.name || 'Unnamed User'}
                                             </h3>
-                                            <RoleBadge user={user} />
+                                            {user.is_admin && <AdminBadge />}
                                         </div>
                                         <p className="text-sm text-textSub truncate">{user.email}</p>
+
+                                        {/* Household Roles */}
+                                        {user.householdRoles && user.householdRoles.length > 0 ? (
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {user.householdRoles.map(hr => (
+                                                    <div
+                                                        key={hr.householdId}
+                                                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-softGreen/50 rounded-lg"
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-teal">
+                                                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                                        </svg>
+                                                        <span className="text-xs text-forest truncate max-w-[100px]">{hr.householdName}</span>
+                                                        <HouseholdRoleBadge role={hr.role} helperTypes={hr.helperTypes} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-textSub mt-1">No household memberships</p>
+                                        )}
                                     </div>
 
                                     {/* Stats */}
-                                    <div className="hidden md:flex items-center gap-6 text-sm text-textSub">
-                                        <div className="text-center">
+                                    <div className="hidden md:flex items-center gap-4 text-sm text-textSub">
+                                        <div className="text-center min-w-[50px]">
+                                            <p className="font-semibold text-forest">{user.householdRoles?.length || 0}</p>
+                                            <p className="text-[10px]">Households</p>
+                                        </div>
+                                        <div className="text-center min-w-[50px]">
                                             <p className="font-semibold text-forest">{user.childCount}</p>
-                                            <p className="text-xs">Children</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="font-semibold text-forest">{user.homeCount}</p>
-                                            <p className="text-xs">Homes</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="font-semibold text-forest">{user.petCount}</p>
-                                            <p className="text-xs">Pets</p>
+                                            <p className="text-[10px]">Children</p>
                                         </div>
                                     </div>
 
-                                    {/* Date & Arrow */}
+                                    {/* Last Login & Arrow */}
                                     <div className="flex items-center gap-4">
-                                        <p className="text-xs text-textSub hidden lg:block">
-                                            Joined {formatDate(user.created_at)}
-                                        </p>
+                                        <div className="hidden lg:block text-right">
+                                            <p className={`text-xs ${user.last_sign_in_at ? 'text-textSub' : 'text-orange-500'}`}>
+                                                {user.last_sign_in_at ? formatRelativeTime(user.last_sign_in_at) : 'Never logged in'}
+                                            </p>
+                                            <p className="text-[10px] text-gray-400">Last login</p>
+                                        </div>
                                         <svg
                                             className="w-5 h-5 text-gray-300 group-hover:text-forest group-hover:translate-x-1 transition-all"
                                             fill="none"

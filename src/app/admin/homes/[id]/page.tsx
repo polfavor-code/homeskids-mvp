@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -32,8 +32,8 @@ interface HomeDetail {
     }>;
 }
 
-export default function HomeDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params);
+export default function HomeDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const [home, setHome] = useState<HomeDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -49,7 +49,7 @@ export default function HomeDetailPage({ params }: { params: Promise<{ id: strin
 
                 // Fetch home data directly using Supabase client
                 const { data: homeData, error: homeError } = await supabase
-                    .from('homes_v2')
+                    .from('homes')
                     .select('*')
                     .eq('id', id)
                     .single();
@@ -77,7 +77,7 @@ export default function HomeDetailPage({ params }: { params: Promise<{ id: strin
                 const { data: childSpaces } = await supabase
                     .from('child_spaces')
                     .select(`
-                        children_v2 (
+                        children (
                             id,
                             name
                         )
@@ -105,7 +105,7 @@ export default function HomeDetailPage({ params }: { params: Promise<{ id: strin
                         profile: m.profiles as any,
                     })) || [],
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    children: childSpaces?.map(cs => cs.children_v2 as any).filter(Boolean) || [],
+                    children: childSpaces?.map(cs => cs.children as any).filter(Boolean) || [],
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     pets: petSpaces?.map(ps => ps.pets as any).filter(Boolean) || [],
                 });

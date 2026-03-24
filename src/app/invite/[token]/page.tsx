@@ -167,7 +167,10 @@ export default function InvitePage() {
         if (acceptError) {
             console.error("Accept invite RPC error:", acceptError);
             // Fall back to direct inserts (may fail due to RLS but worth trying)
-            const isGuardian = invite.invitee_role === "parent" || invite.invitee_role === "step_parent";
+            // Use invite_type to determine guardian vs helper (new model)
+            // Fall back to role check for legacy invites without invite_type
+            const isGuardian = invite.invite_type === "guardian" ||
+                (!invite.invite_type && (invite.invitee_role === "parent" || invite.invitee_role === "step_parent"));
 
             // Map invitee_role to valid helper_type values
             // DB constraint only allows: 'family_member', 'friend', 'nanny'
@@ -182,60 +185,134 @@ export default function InvitePage() {
                 }
             };
 
+            // Get list of children to grant access to
+            // For guardian invites with selected_child_ids, use those
+            // Otherwise fall back to single child_id
+            const childIdsToGrant = invite.selected_child_ids?.length > 0
+                ? invite.selected_child_ids
+                : [invite.child_id];
+
+            // Get list of pets to grant access to (guardians only)
+            const petIdsToGrant = invite.selected_pet_ids || [];
+
             if (isGuardian) {
-                const { error: guardianError } = await supabase.from("child_guardians").insert({
-                    child_id: invite.child_id,
-                    user_id: userId,
-                    guardian_role: invite.invitee_role,
-                });
-                if (guardianError) {
-                    console.error("Guardian fallback error:", guardianError);
+                // Guardian: Create child_guardians records for each child
+                for (const childId of childIdsToGrant) {
+                    const { error: guardianError } = await supabase.from("child_guardians").insert({
+                        child_id: childId,
+                        user_id: userId,
+                        guardian_role: invite.invitee_role,
+                    });
+                    if (guardianError && !guardianError.message?.includes("duplicate")) {
+                        console.error("Guardian fallback error:", guardianError);
+                    }
+                }
+
+                // Guardian: Create pet_access records for each pet
+                for (const petId of petIdsToGrant) {
+                    const { error: petAccessError } = await supabase.from("pet_access").upsert({
+                        pet_id: petId,
+                        user_id: userId,
+                        role_type: "owner", // Guardians get owner access to pets
+                    }, { onConflict: "pet_id,user_id" });
+                    if (petAccessError) {
+                        console.error("Pet access fallback error:", petAccessError);
+                    }
                 }
             }
 
-            const { error: accessError } = await supabase.from("child_access").upsert({
-                child_id: invite.child_id,
-                user_id: userId,
-                role_type: isGuardian ? "guardian" : "helper",
-                helper_type: !isGuardian ? mapRoleToHelperType(invite.invitee_role) : null,
-                access_level: isGuardian ? "manage" : "view",
-            }, { onConflict: "child_id,user_id" });
-            if (accessError) {
-                console.error("Child access fallback error:", accessError);
+            // Create child_access records
+            for (const childId of childIdsToGrant) {
+                const { error: accessError } = await supabase.from("child_access").upsert({
+                    child_id: childId,
+                    user_id: userId,
+                    role_type: isGuardian ? "guardian" : "helper",
+                    helper_type: !isGuardian ? mapRoleToHelperType(invite.invitee_role) : null,
+                    access_level: isGuardian ? "manage" : "view",
+                }, { onConflict: "child_id,user_id" });
+                if (accessError) {
+                    console.error("Child access fallback error:", accessError);
+                }
             }
         } else {
             console.log("Accept invite result:", acceptResult);
         }
 
-        // 4. If there's an existing home to join, add to that home
-        // (This can happen even if has_own_home is true - user gets access to existing homes AND creates their own)
-        if (invite.home_id) {
-            // Add to home_memberships
+        // 4. Handle home access based on invite type
+        // Guardian: Get access to ALL homes linked to their children (with admin rights)
+        // Helper: Get access to ONLY the specific home in the invite (no admin rights)
+        const isGuardianInvite = invite.invite_type === "guardian" ||
+            (!invite.invite_type && (invite.invitee_role === "parent" || invite.invitee_role === "step_parent"));
+
+        if (isGuardianInvite) {
+            // Guardian: Get ALL homes linked to the selected children
+            const childIdsToGrant = invite.selected_child_ids?.length > 0
+                ? invite.selected_child_ids
+                : [invite.child_id];
+
+            // Get all child_spaces for these children to find all homes
+            const { data: childSpaces } = await supabase
+                .from("child_spaces")
+                .select("id, home_id")
+                .in("child_id", childIdsToGrant);
+
+            if (childSpaces && childSpaces.length > 0) {
+                // Get unique home IDs
+                const homeIds = Array.from(new Set(childSpaces.map(cs => cs.home_id)));
+
+                // Add guardian to each home as admin
+                for (const homeId of homeIds) {
+                    await supabase.from("home_memberships").upsert({
+                        home_id: homeId,
+                        user_id: userId,
+                        is_home_admin: true, // Guardians are home admins
+                    }, {
+                        onConflict: "home_id,user_id",
+                    });
+                }
+
+                // Grant child_space_access for all child_spaces
+                for (const childSpace of childSpaces) {
+                    await supabase.from("child_space_access").upsert({
+                        child_space_id: childSpace.id,
+                        user_id: userId,
+                        can_view_address: true,
+                    }, {
+                        onConflict: "child_space_id,user_id",
+                    });
+                }
+            }
+        } else if (invite.home_id) {
+            // Helper: Only add to the specific home in the invite
             await supabase.from("home_memberships").upsert({
                 home_id: invite.home_id,
                 user_id: userId,
-                is_home_admin: false,
+                is_home_admin: false, // Helpers are NOT home admins
             }, {
                 onConflict: "home_id,user_id",
             });
 
-            // Get the child_space for this home and child
-            const { data: childSpace } = await supabase
+            // Get child_spaces for selected children at this specific home only
+            const childIdsToGrant = invite.selected_child_ids?.length > 0
+                ? invite.selected_child_ids
+                : [invite.child_id];
+
+            const { data: childSpaces } = await supabase
                 .from("child_spaces")
                 .select("id")
                 .eq("home_id", invite.home_id)
-                .eq("child_id", invite.child_id)
-                .single();
+                .in("child_id", childIdsToGrant);
 
-            if (childSpace) {
-                // Grant child_space_access
-                await supabase.from("child_space_access").upsert({
-                    child_space_id: childSpace.id,
-                    user_id: userId,
-                    can_view_address: true,
-                }, {
-                    onConflict: "child_space_id,user_id",
-                });
+            if (childSpaces) {
+                for (const childSpace of childSpaces) {
+                    await supabase.from("child_space_access").upsert({
+                        child_space_id: childSpace.id,
+                        user_id: userId,
+                        can_view_address: true,
+                    }, {
+                        onConflict: "child_space_id,user_id",
+                    });
+                }
             }
         }
 
@@ -416,6 +493,7 @@ export default function InvitePage() {
     const getRoleLabel = () => {
         const roleMap: Record<string, string> = {
             parent: "Parent",
+            stepparent: "Step-parent",
             step_parent: "Step-parent",
             family_member: "Family member",
             nanny: "Nanny",
@@ -426,6 +504,12 @@ export default function InvitePage() {
         const role = roleMap[invite?.invitee_role] || "Caregiver";
         const childName = getChildName();
         return `${role} of ${childName}`;
+    };
+
+    // Check if this is a guardian invite
+    const isGuardianInvite = () => {
+        return invite?.invite_type === "guardian" ||
+            (!invite?.invite_type && (invite?.invitee_role === "parent" || invite?.invitee_role === "step_parent" || invite?.invitee_role === "stepparent"));
     };
 
     // Get content for left panel

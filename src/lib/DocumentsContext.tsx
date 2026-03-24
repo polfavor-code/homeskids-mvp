@@ -109,14 +109,15 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
 
     // Fetch documents when child changes or on mount
     useEffect(() => {
-        setIsLoaded(false);
+        // Don't set isLoaded(false) on refetch - causes loader flash
+        // Only initial load starts with isLoaded=false
         fetchData();
     }, [fetchData]);
 
     // Also listen to auth state changes
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-            setIsLoaded(false);
+            // Don't set isLoaded(false) - this causes loader flash on tab switch
             fetchData();
         });
 
@@ -348,7 +349,7 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     };
 
     const refreshData = async () => {
-        setIsLoaded(false);
+        // Don't set isLoaded(false) - causes loader flash on refresh
         await fetchData();
     };
 

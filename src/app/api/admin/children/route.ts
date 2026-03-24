@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     try {
         let query = supabaseAdmin
-            .from('children_v2')
+            .from('children')
             .select(`
                 id,
                 name,

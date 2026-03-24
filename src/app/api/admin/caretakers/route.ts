@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
                     avatar_initials,
                     avatar_color
                 ),
-                children_v2 (
+                children (
                     id,
                     name,
                     avatar_url
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
             .from('home_memberships')
             .select(`
                 user_id,
-                homes_v2 (
+                homes (
                     id,
                     name
                 )
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
             const userHomes = homeMemberships?.filter(hm => hm.user_id === record.user_id) || [];
             return {
                 ...record,
-                homes: userHomes.map(hm => hm.homes_v2),
+                homes: userHomes.map(hm => hm.homes),
             };
         }) || [];
 

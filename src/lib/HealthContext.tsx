@@ -144,6 +144,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     // Refs for realtime channels
     const realtimeChannelRef = useRef<any>(null);
     const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    const healthStatusTableMissing = useRef(false);
 
     // Broadcast health update to other caregivers
     const broadcastHealthUpdate = useCallback(() => {
@@ -177,13 +178,21 @@ export function HealthProvider({ children }: { children: ReactNode }) {
             }
 
             // Fetch health status from child_health_status table for the selected child
-            const { data: healthStatusData, error: healthStatusError } = await supabase
-                .from("child_health_status")
-                .select("*")
-                .eq("child_id", currentChildId)
-                .single();
+            // Skip entirely if a previous attempt returned a non-row error (e.g. table missing / 406)
+            let healthStatusData: any = null;
+            if (!healthStatusTableMissing.current) {
+                const result = await supabase
+                    .from("child_health_status")
+                    .select("*")
+                    .eq("child_id", currentChildId)
+                    .maybeSingle();
+                healthStatusData = result.data;
+                if (result.error) {
+                    healthStatusTableMissing.current = true;
+                }
+            }
 
-            if (healthStatusData && !healthStatusError) {
+            if (healthStatusData) {
                 setHealthStatus({
                     allergiesStatus: healthStatusData.allergies_status || "skipped",
                     allergiesDetails: healthStatusData.allergies_details || null,
@@ -306,14 +315,15 @@ export function HealthProvider({ children }: { children: ReactNode }) {
 
     // Fetch health data when child changes or on mount
     useEffect(() => {
-        setIsLoaded(false);
+        // Don't set isLoaded(false) on refetch - causes loader flash
+        // Only initial load starts with isLoaded=false
         fetchData();
     }, [fetchData]);
 
     // Also listen to auth state changes
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-            setIsLoaded(false);
+            // Don't set isLoaded(false) - this causes loader flash on tab switch
             fetchData();
         });
 
@@ -935,7 +945,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     };
 
     const refreshData = async () => {
-        setIsLoaded(false);
+        // Don't set isLoaded(false) - causes loader flash on refresh
         await fetchData();
     };
 

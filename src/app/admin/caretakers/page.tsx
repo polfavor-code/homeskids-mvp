@@ -19,7 +19,7 @@ interface Caretaker {
         avatar_initials: string | null;
         avatar_color: string | null;
     };
-    children_v2: {
+    children: {
         id: string;
         name: string;
         avatar_url: string | null;
@@ -207,14 +207,14 @@ export default function AdminCaretakersPage() {
 
                                     {/* Child Info */}
                                     <Link
-                                        href={`/admin/children/${caretaker.children_v2.id}`}
+                                        href={`/admin/children/${caretaker.children.id}`}
                                         className="flex items-center gap-3 p-2 rounded-xl hover:bg-softGreen/50 transition-colors"
                                     >
                                         <div className="w-10 h-10 rounded-full bg-terracotta/20 flex items-center justify-center text-terracotta font-semibold">
-                                            {caretaker.children_v2.name?.[0] || '?'}
+                                            {caretaker.children.name?.[0] || '?'}
                                         </div>
                                         <div>
-                                            <p className="font-medium text-forest">{caretaker.children_v2.name}</p>
+                                            <p className="font-medium text-forest">{caretaker.children.name}</p>
                                             <p className="text-xs text-textSub">Child</p>
                                         </div>
                                     </Link>
