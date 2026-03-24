@@ -49,15 +49,7 @@ export async function GET(request: NextRequest) {
     try {
         let query = supabaseAdmin
             .from('homes_v2')
-            .select(`
-                id,
-                name,
-                address,
-                photo_url,
-                notes,
-                created_at,
-                created_by
-            `)
+            .select('*')
             .order('created_at', { ascending: false });
 
         if (search) {
@@ -72,6 +64,13 @@ export async function GET(request: NextRequest) {
 
         // Get member counts and child counts for each home
         const homeIds = homes?.map(h => h.id) || [];
+
+        if (homeIds.length === 0) {
+            return NextResponse.json({
+                homes: [],
+                total: 0,
+            });
+        }
 
         const { data: memberships } = await supabaseAdmin
             .from('home_memberships')
@@ -101,6 +100,7 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching homes:', error);
-        return NextResponse.json({ error: 'Failed to fetch homes' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch homes';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

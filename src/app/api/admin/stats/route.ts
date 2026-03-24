@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching admin stats:', error);
-        return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch stats';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
