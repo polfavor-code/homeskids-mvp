@@ -116,6 +116,8 @@ export interface DayTask {
     postponeReason?: string;
     originalTimeSlot?: TimeSlot;
     notes?: string;
+    // Creator info
+    createdBy?: string;
     // Family member info
     familyMemberName: string;
     familyMemberType: FamilyMemberType;
@@ -232,6 +234,8 @@ export interface RegimenDayTask {
     postponedUntil?: string;
     postponeReason?: string;
     notes?: string;
+    // Creator info
+    createdBy?: string;
     // Family member info
     familyMemberName: string;
     familyMemberType: FamilyMemberType;
@@ -473,7 +477,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                 name: pet?.name || template.familyMemberName || "Unknown",
                 type,
                 avatarUrl: pet?.avatarUrl,
-                avatarEmoji: type === "cat" ? "🐱" : type === "dog" ? "🐕" : type === "bird" ? "🐦" : "🐾",
+                avatarEmoji: pet?.species || "other", // Store species for icon mapping
                 badgeColor: template.familyMemberBadgeColor || "#FFF3E0",
                 badgeTextColor: template.familyMemberBadgeTextColor || "#E65100",
             };
@@ -521,7 +525,7 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                 name: pet?.name || regimen.familyMemberName || "Unknown",
                 type,
                 avatarUrl: pet?.avatarUrl,
-                avatarEmoji: type === "cat" ? "🐱" : type === "dog" ? "🐕" : type === "bird" ? "🐦" : "🐾",
+                avatarEmoji: pet?.species || "other", // Store species for icon mapping
                 badgeColor: "#FFF3E0",
                 badgeTextColor: "#E65100",
             };
@@ -549,10 +553,10 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
     // Convert time string to TimeSlot
     const getTimeSlotFromTime = (time: string): TimeSlot => {
         const hour = parseInt(time.split(":")[0], 10);
-        if (hour < 12) return "morning";
-        if (hour < 17) return "afternoon";
-        if (hour < 21) return "evening";
-        return "night";
+        if (hour < 6) return "night";      // 00:00 - 05:59 (before day starts)
+        if (hour < 12) return "morning";   // 06:00 - 11:59
+        if (hour < 17) return "afternoon"; // 12:00 - 16:59
+        return "evening";                  // 17:00 - 23:59
     };
 
     // Calculate active phase for a regimen on a given date
@@ -868,6 +872,8 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                     postponeReason: completion?.postpone_reason,
                     originalTimeSlot: completion?.original_time_slot,
                     notes: completion?.notes,
+                    // Creator info
+                    createdBy: template.createdBy,
                     // Family member info
                     familyMemberName: familyInfo.name,
                     familyMemberType: familyInfo.type,
@@ -1032,6 +1038,8 @@ export function DayHubProvider({ children }: { children: ReactNode }) {
                             imageUrls: task.imageUrls,
                             // Completion info (will be filled in)
                             status: "pending",
+                            // Creator info
+                            createdBy: regimen.createdBy,
                             // Family member info
                             familyMemberName: familyInfo.name,
                             familyMemberType: familyInfo.type,

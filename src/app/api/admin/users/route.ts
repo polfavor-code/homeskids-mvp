@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
 
     try {
         // Get all profiles with their connections
+        // Use * to avoid errors from missing columns
         let query = supabaseAdmin
             .from('profiles')
             .select(`

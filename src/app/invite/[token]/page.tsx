@@ -140,7 +140,19 @@ export default function InvitePage() {
     const handleJoinV2 = async (userId: string) => {
         if (!invite) return;
 
+        // Check if the home has pets (to set manages_pets for caregiver)
+        let hasPets = false;
+        if (invite.home_id) {
+            const { data: petSpaces } = await supabase
+                .from("pet_spaces")
+                .select("id")
+                .eq("home_id", invite.home_id)
+                .limit(1);
+            hasPets = (petSpaces?.length ?? 0) > 0;
+        }
+
         // 1. Create/update profile
+        // Also set manages_children/manages_pets based on what they're being invited to access
         const { error: profileError } = await supabase.from("profiles").upsert({
             id: userId,
             email,
@@ -149,6 +161,8 @@ export default function InvitePage() {
             relationship: invite.invitee_role || null,
             avatar_initials: invite.invitee_name?.[0]?.toUpperCase() || email[0].toUpperCase(),
             onboarding_completed: !invite.has_own_home, // If they need to create a home, don't mark complete yet
+            manages_children: !!invite.child_id, // If invited for a child, they manage children
+            manages_pets: hasPets, // If the home has pets, they manage pets
         });
 
         if (profileError) {

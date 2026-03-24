@@ -73,6 +73,13 @@ export async function GET(request: NextRequest) {
         // Get guardian and home counts for each child
         const childIds = children?.map(c => c.id) || [];
 
+        if (childIds.length === 0) {
+            return NextResponse.json({
+                children: [],
+                total: 0,
+            });
+        }
+
         const { data: childAccess } = await supabaseAdmin
             .from('child_access')
             .select('child_id, role_type')
@@ -102,7 +109,8 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching children:', error);
-        return NextResponse.json({ error: 'Failed to fetch children' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch children';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 

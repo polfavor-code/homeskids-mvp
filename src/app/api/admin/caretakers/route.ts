@@ -91,6 +91,14 @@ export async function GET(request: NextRequest) {
 
         // Get home memberships for each user
         const userIds = Array.from(new Set(accessRecords?.map(a => a.user_id) || []));
+
+        if (userIds.length === 0) {
+            return NextResponse.json({
+                caretakers: [],
+                total: 0,
+            });
+        }
+
         const { data: homeMemberships } = await supabaseAdmin
             .from('home_memberships')
             .select(`
@@ -102,14 +110,18 @@ export async function GET(request: NextRequest) {
             `)
             .in('user_id', userIds);
 
-        // Enrich access records with home data
-        const enrichedRecords = accessRecords?.map(record => {
+        // Filter out records with null profiles or children, then enrich with home data
+        const validRecords = accessRecords?.filter(record =>
+            record.profiles && record.children
+        ) || [];
+
+        const enrichedRecords = validRecords.map(record => {
             const userHomes = homeMemberships?.filter(hm => hm.user_id === record.user_id) || [];
             return {
                 ...record,
-                homes: userHomes.map(hm => hm.homes),
+                homes: userHomes.map(hm => hm.homes).filter(Boolean),
             };
-        }) || [];
+        });
 
         return NextResponse.json({
             caretakers: enrichedRecords,
@@ -117,6 +129,7 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching caretakers:', error);
-        return NextResponse.json({ error: 'Failed to fetch caretakers' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch caretakers';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

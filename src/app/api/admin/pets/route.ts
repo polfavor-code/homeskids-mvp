@@ -50,19 +50,7 @@ export async function GET(request: NextRequest) {
     try {
         let query = supabaseAdmin
             .from('pets')
-            .select(`
-                id,
-                name,
-                species,
-                breed,
-                dob,
-                avatar_url,
-                avatar_initials,
-                avatar_color,
-                notes,
-                created_at,
-                created_by
-            `)
+            .select('*')
             .order('created_at', { ascending: false });
 
         if (search) {
@@ -81,6 +69,13 @@ export async function GET(request: NextRequest) {
 
         // Get owner counts and home counts for each pet
         const petIds = pets?.map(p => p.id) || [];
+
+        if (petIds.length === 0) {
+            return NextResponse.json({
+                pets: [],
+                total: 0,
+            });
+        }
 
         const { data: petAccess } = await supabaseAdmin
             .from('pet_access')
@@ -108,6 +103,7 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching pets:', error);
-        return NextResponse.json({ error: 'Failed to fetch pets' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch pets';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
