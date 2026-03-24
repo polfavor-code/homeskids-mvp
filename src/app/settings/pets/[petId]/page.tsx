@@ -11,20 +11,30 @@ import { supabase } from "@/lib/supabase";
 import { processImageForUpload } from "@/lib/imageUtils";
 import ImageCropper from "@/components/ImageCropper";
 import Avatar from "@/components/Avatar";
+import {
+    DogIcon,
+    CatIcon,
+    BirdIcon,
+    FishIcon,
+    ReptileIcon,
+    HamsterIcon,
+    PawIcon,
+    LucideIconComponent
+} from "@/components/icons/DuotoneIcons";
 
-const PET_SPECIES_OPTIONS: { value: PetSpecies; label: string; emoji: string }[] = [
-    { value: "dog", label: "Dog", emoji: "🐕" },
-    { value: "cat", label: "Cat", emoji: "🐱" },
-    { value: "bird", label: "Bird", emoji: "🐦" },
-    { value: "fish", label: "Fish", emoji: "🐟" },
-    { value: "reptile", label: "Reptile", emoji: "🦎" },
-    { value: "small_mammal", label: "Small mammal", emoji: "🐹" },
-    { value: "other", label: "Other", emoji: "🐾" },
+const PET_SPECIES_OPTIONS: { value: PetSpecies; label: string; Icon: LucideIconComponent }[] = [
+    { value: "dog", label: "Dog", Icon: DogIcon },
+    { value: "cat", label: "Cat", Icon: CatIcon },
+    { value: "bird", label: "Bird", Icon: BirdIcon },
+    { value: "fish", label: "Fish", Icon: FishIcon },
+    { value: "reptile", label: "Reptile", Icon: ReptileIcon },
+    { value: "small_mammal", label: "Small mammal", Icon: HamsterIcon },
+    { value: "other", label: "Other", Icon: PawIcon },
 ];
 
-function getSpeciesEmoji(species: PetSpecies): string {
+function getSpeciesIcon(species: PetSpecies): LucideIconComponent {
     const found = PET_SPECIES_OPTIONS.find(s => s.value === species);
-    return found?.emoji || "🐾";
+    return found?.Icon || PawIcon;
 }
 
 type PetHomeWithStatus = {
@@ -447,7 +457,7 @@ export default function PetEditPage() {
         );
     }
 
-    const selectedSpeciesEmoji = species ? getSpeciesEmoji(species) : "🐾";
+    const SelectedSpeciesIcon = species ? getSpeciesIcon(species) : PawIcon;
 
     return (
         <AppShell>
@@ -518,8 +528,8 @@ export default function PetEditPage() {
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-full bg-green-100 flex items-center justify-center text-4xl">
-                                        {selectedSpeciesEmoji}
+                                    <div className="w-full h-full bg-green-100 flex items-center justify-center text-forest">
+                                        <SelectedSpeciesIcon size={48} />
                                     </div>
                                 )}
                             </button>
@@ -558,21 +568,24 @@ export default function PetEditPage() {
                                 Pet type
                             </label>
                             <div className="grid grid-cols-2 gap-2">
-                                {PET_SPECIES_OPTIONS.map((option) => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() => setSpecies(option.value)}
-                                        className={`px-4 py-3 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
-                                            species === option.value
-                                                ? "bg-green-50 border-green-300 text-green-700"
-                                                : "border-border bg-white text-textSub hover:border-forest/30"
-                                        }`}
-                                    >
-                                        <span>{option.emoji}</span>
-                                        <span>{option.label}</span>
-                                    </button>
-                                ))}
+                                {PET_SPECIES_OPTIONS.map((option) => {
+                                    const OptionIcon = option.Icon;
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            onClick={() => setSpecies(option.value)}
+                                            className={`px-4 py-3 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2 ${
+                                                species === option.value
+                                                    ? "bg-green-50 border-green-300 text-green-700"
+                                                    : "border-border bg-white text-textSub hover:border-forest/30"
+                                            }`}
+                                        >
+                                            <OptionIcon size={18} />
+                                            <span>{option.label}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 

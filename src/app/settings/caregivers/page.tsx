@@ -143,6 +143,9 @@ export default function CaregiversPage() {
     // Collapsible sections state (collapsed by default)
     const [isInactiveExpanded, setIsInactiveExpanded] = useState(false);
     const [isOtherExpanded, setIsOtherExpanded] = useState(false);
+
+    // Auth info state (last login)
+    const [authInfoByUser, setAuthInfoByUser] = useState<Record<string, { lastSignInAt: string | null }>>({});
     
     // Role picker modal state
     const [rolePickerModal, setRolePickerModal] = useState<{
@@ -348,6 +351,66 @@ export default function CaregiversPage() {
         
         loadOtherCaregivers();
     }, [currentChildId, user, children, caregivers, otherCaregiversRefreshTrigger]);
+
+    // Fetch last login info for caregivers (excluding pending)
+    useEffect(() => {
+        const fetchAuthInfo = async () => {
+            if (caregivers.length === 0) return;
+
+            // Filter out pending caregivers (they have synthetic IDs like "pending-{inviteId}")
+            const nonPendingCaregivers = caregivers.filter(c => c.status !== "pending");
+            if (nonPendingCaregivers.length === 0) return;
+
+            const userIds = nonPendingCaregivers.map(c => c.id);
+
+            try {
+                const { data: sessionData } = await supabase.auth.getSession();
+                if (!sessionData.session) return;
+
+                const response = await fetch('/api/caregivers/auth-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionData.session.access_token}`,
+                    },
+                    body: JSON.stringify({ userIds }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setAuthInfoByUser(data.authInfo || {});
+                }
+            } catch (err) {
+                console.error('Error fetching auth info:', err);
+            }
+        };
+
+        fetchAuthInfo();
+    }, [caregivers]);
+
+    // Helper to format last login time
+    const formatLastLogin = (lastSignInAt: string | null): string => {
+        if (!lastSignInAt) return 'Never';
+
+        const date = new Date(lastSignInAt);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffMins < 60) {
+            return diffMins <= 1 ? 'Just now' : `${diffMins}m ago`;
+        } else if (diffHours < 24) {
+            return `${diffHours}h ago`;
+        } else if (diffDays === 1) {
+            return 'Yesterday';
+        } else if (diffDays < 7) {
+            return `${diffDays}d ago`;
+        } else {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+    };
 
     const resetForm = () => {
         setFormData({ label: "", relationship: "", phone: "" });
@@ -924,7 +987,14 @@ export default function CaregiversPage() {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <CaregiverStatusPill status={caregiver.status} className="hidden sm:inline-flex" />
+                            <div className="hidden sm:flex flex-col items-center gap-0.5">
+                                <CaregiverStatusPill status={caregiver.status} />
+                                {authInfoByUser[caregiver.id] !== undefined && (
+                                    <span className="text-xs text-textSub/70">
+                                        {formatLastLogin(authInfoByUser[caregiver.id]?.lastSignInAt)}
+                                    </span>
+                                )}
+                            </div>
                             <svg
                                 width="20"
                                 height="20"
@@ -999,9 +1069,14 @@ export default function CaregiversPage() {
                         ) : (
                             // View Details
                             <div className="p-4 space-y-4">
-                                {/* Mobile Status Pill */}
-                                <div className="sm:hidden">
+                                {/* Mobile Status Pill + Last Login */}
+                                <div className="sm:hidden flex items-center gap-3">
                                     <CaregiverStatusPill status={caregiver.status} />
+                                    {authInfoByUser[caregiver.id] !== undefined && (
+                                        <span className="text-xs text-textSub/70">
+                                            {formatLastLogin(authInfoByUser[caregiver.id]?.lastSignInAt)}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Contact Info */}

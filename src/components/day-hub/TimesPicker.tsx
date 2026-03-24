@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { FrequencyType } from "@/lib/DayHubContext";
 
 interface TimesPickerProps {
@@ -30,6 +30,36 @@ function formatTime(time: string): string {
     return `${displayHours}:${String(minutes).padStart(2, "0")} ${period}`;
 }
 
+// Helper to get default times for filling in missing slots
+// Exported so it can be used when saving tasks
+// Generates evenly spaced times between 09:00 and 21:00 when index >= predefined defaults
+export function getDefaultTime(index: number): string {
+    const defaults = ["09:00", "12:00", "15:00", "18:00"];
+    if (index < defaults.length) {
+        return defaults[index];
+    }
+    // For indices beyond the defaults, compute evenly spaced times
+    // Calculate a time between 09:00 and 21:00 based on index
+    const startHour = 9;
+    const endHour = 21;
+    const totalSlots = Math.max(index + 1, 4);
+    const interval = (endHour - startHour) / totalSlots;
+    const hour = Math.round(startHour + (index * interval));
+    const clampedHour = Math.min(Math.max(hour, startHour), endHour);
+    return `${String(clampedHour).padStart(2, "0")}:00`;
+}
+
+// Helper to expand times array to required count
+// Exported so it can be used when saving tasks
+export function expandScheduledTimes(times: string[], requiredCount: number): string[] {
+    const result = [...times.slice(0, requiredCount)];
+    while (result.length < requiredCount) {
+        result.push(getDefaultTime(result.length));
+    }
+    result.sort((a, b) => a.localeCompare(b));
+    return result;
+}
+
 export default function TimesPicker({
     times,
     frequencyType,
@@ -37,7 +67,7 @@ export default function TimesPicker({
     onChange,
 }: TimesPickerProps) {
     // Determine how many times we need based on frequency
-    const getRequiredTimesCount = (): number => {
+    const requiredTimes = useMemo((): number => {
         switch (frequencyType) {
             case "daily":
             case "every_x_days":
@@ -50,19 +80,16 @@ export default function TimesPicker({
             default:
                 return 1;
         }
-    };
+    }, [frequencyType, frequencyValue]);
 
-    const requiredTimes = getRequiredTimesCount();
-    const currentTimes = times.slice(0, requiredTimes);
-
-    // Ensure we have enough time slots (in chronological order)
-    while (currentTimes.length < requiredTimes) {
-        // Add default times based on position in chronological order
-        if (currentTimes.length === 0) currentTimes.push("09:00");
-        else if (currentTimes.length === 1) currentTimes.push("12:00");
-        else if (currentTimes.length === 2) currentTimes.push("15:00");
-        else currentTimes.push("18:00");
-    }
+    // Build the current times array, filling in defaults if needed (for display)
+    const currentTimes = useMemo(() => {
+        const result = times.slice(0, requiredTimes);
+        while (result.length < requiredTimes) {
+            result.push(getDefaultTime(result.length));
+        }
+        return result;
+    }, [times, requiredTimes]);
 
     const handleTimeChange = (index: number, newTime: string) => {
         const updated = [...currentTimes];
@@ -72,11 +99,11 @@ export default function TimesPicker({
         onChange(updated);
     };
 
-    const getTimeLabel = (index: number): string => {
+    const getTimeLabel = (index: number, totalTimes: number): string => {
         if (frequencyType === "every_x_hours") {
             return "Starting at";
         }
-        if (requiredTimes === 1) {
+        if (totalTimes === 1) {
             return "Time";
         }
         const labels = ["First dose", "Second dose", "Third dose", "Fourth dose"];
@@ -94,7 +121,7 @@ export default function TimesPicker({
             {currentTimes.map((time, index) => (
                 <div key={index} className="space-y-2">
                     <label className="block text-sm font-medium text-forest">
-                        {getTimeLabel(index)}
+                        {getTimeLabel(index, requiredTimes)}
                     </label>
 
                     {/* Time input */}

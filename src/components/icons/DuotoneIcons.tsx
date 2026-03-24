@@ -1,9 +1,13 @@
 import React from 'react';
+import type { LucideProps } from 'lucide-react';
 
 export interface IconProps {
-    size?: number;
+    size?: number | string;
     className?: string;
 }
+
+// Type for Lucide icon components (used by pet species icons)
+export type LucideIconComponent = React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
 
 /**
  * Base wrapper for duotone icons following the Organic DS
@@ -425,3 +429,14 @@ export function GridIcon(props: IconProps) {
         </DuotoneIcon>
     );
 }
+
+// Pet Species Icons - Re-exported from Lucide for consistent minimal style
+export {
+    Dog as DogIcon,
+    Cat as CatIcon,
+    Bird as BirdIcon,
+    Fish as FishIcon,
+    Turtle as ReptileIcon,
+    Rabbit as HamsterIcon,
+    PawPrint as PawIcon
+} from 'lucide-react';
