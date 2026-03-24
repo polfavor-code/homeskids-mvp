@@ -37,6 +37,12 @@
   --radius-btn: 12px;
 }
 
+html,
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   color: var(--dark);
   background: var(--bg);
