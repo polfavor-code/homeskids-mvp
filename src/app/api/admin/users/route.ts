@@ -49,23 +49,10 @@ export async function GET(request: NextRequest) {
 
     try {
         // Get all profiles with their connections
+        // Use * to avoid errors from missing columns
         let query = supabaseAdmin
             .from('profiles')
-            .select(`
-                id,
-                name,
-                label,
-                email,
-                phone,
-                avatar_url,
-                avatar_initials,
-                avatar_color,
-                manages_children,
-                manages_pets,
-                is_admin,
-                created_at,
-                updated_at
-            `)
+            .select('*')
             .order('created_at', { ascending: false });
 
         // Apply search filter
@@ -81,6 +68,14 @@ export async function GET(request: NextRequest) {
 
         // Get connection counts for each user
         const userIds = profiles?.map(p => p.id) || [];
+
+        // If no users, return early
+        if (userIds.length === 0) {
+            return NextResponse.json({
+                users: [],
+                total: 0,
+            });
+        }
 
         // Get child_access data for role filtering
         const { data: childAccessData } = await supabaseAdmin
@@ -113,7 +108,19 @@ export async function GET(request: NextRequest) {
             const helperTypes = Array.from(new Set(userChildAccess.filter(ca => ca.helper_type).map(ca => ca.helper_type)));
 
             return {
-                ...profile,
+                id: profile.id,
+                name: profile.name || null,
+                label: profile.label || null,
+                email: profile.email || null,
+                phone: profile.phone || null,
+                avatar_url: profile.avatar_url || null,
+                avatar_initials: profile.avatar_initials || null,
+                avatar_color: profile.avatar_color || null,
+                manages_children: profile.manages_children || false,
+                manages_pets: profile.manages_pets || false,
+                is_admin: profile.is_admin || false,
+                created_at: profile.created_at,
+                updated_at: profile.updated_at || null,
                 homeCount,
                 childCount,
                 petCount,
@@ -140,6 +147,7 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error fetching users:', error);
-        return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
