@@ -91,14 +91,18 @@ export async function GET(request: NextRequest) {
             `)
             .in('user_id', userIds);
 
-        // Enrich access records with home data
-        const enrichedRecords = accessRecords?.map(record => {
+        // Filter out records with null profiles or children, then enrich with home data
+        const validRecords = accessRecords?.filter(record =>
+            record.profiles && record.children_v2
+        ) || [];
+
+        const enrichedRecords = validRecords.map(record => {
             const userHomes = homeMemberships?.filter(hm => hm.user_id === record.user_id) || [];
             return {
                 ...record,
-                homes: userHomes.map(hm => hm.homes_v2),
+                homes: userHomes.map(hm => hm.homes_v2).filter(Boolean),
             };
-        }) || [];
+        });
 
         return NextResponse.json({
             caretakers: enrichedRecords,

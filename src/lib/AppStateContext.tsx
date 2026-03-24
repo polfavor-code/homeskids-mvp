@@ -506,12 +506,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             if (childAccessError) {
                 console.error("Error fetching child access:", childAccessError);
                 // Check onboarding status even if no child access
-                const { data: profileData } = await supabase
+                const { data: profileData, error: profileError } = await supabase
                     .from("profiles")
                     .select("onboarding_completed")
                     .eq("id", user.id)
                     .single();
-                setOnboardingCompleted(profileData?.onboarding_completed || false);
+                if (!profileData) {
+                    console.log("Profile not found for user, signing out");
+                    await supabase.auth.signOut();
+                    return;
+                }
+                setOnboardingCompleted(profileData.onboarding_completed || false);
                 setIsLoaded(true);
                 return;
             }
@@ -523,7 +528,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                     .select("onboarding_completed")
                     .eq("id", user.id)
                     .single();
-                setOnboardingCompleted(profileData?.onboarding_completed || false);
+                if (!profileData) {
+                    console.log("Profile not found for user, signing out");
+                    await supabase.auth.signOut();
+                    return;
+                }
+                setOnboardingCompleted(profileData.onboarding_completed || false);
                 setIsLoaded(true);
                 return;
             }
@@ -691,14 +701,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 setHomes(allHomes);
                 setChildSpaces([]);
                 setIsLoaded(true);
-                
+
                 // Check onboarding status
                 const { data: profileData } = await supabase
                     .from("profiles")
                     .select("onboarding_completed")
                     .eq("id", user.id)
                     .single();
-                setOnboardingCompleted(profileData?.onboarding_completed || false);
+                if (!profileData) {
+                    console.log("Profile not found for user, signing out");
+                    await supabase.auth.signOut();
+                    return;
+                }
+                setOnboardingCompleted(profileData.onboarding_completed || false);
                 return;
             }
 
@@ -1140,9 +1155,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 .select("onboarding_completed, manages_children, manages_pets")
                 .eq("id", user.id)
                 .single();
-            setOnboardingCompleted(profileData?.onboarding_completed || false);
-            setManagesChildren(profileData?.manages_children || false);
-            setManagesPets(profileData?.manages_pets || false);
+
+            // If profile doesn't exist (user was deleted), sign them out
+            if (!profileData) {
+                console.log("Profile not found for user, signing out");
+                await supabase.auth.signOut();
+                return;
+            }
+
+            setOnboardingCompleted(profileData.onboarding_completed || false);
+            setManagesChildren(profileData.manages_children || false);
+            setManagesPets(profileData.manages_pets || false);
 
             // 5a. Load pets using RPC function (handles all access paths: direct, home membership, creator)
             const { data: petsData } = await supabase.rpc("get_user_pets");
