@@ -288,10 +288,10 @@ export default function InvitePage() {
 
             // Get list of children to grant access to
             // For guardian invites with selected_child_ids, use those
-            // Otherwise fall back to single child_id
+            // Otherwise fall back to single child_id (if it exists)
             const childIdsToGrant = invite.selected_child_ids?.length > 0
                 ? invite.selected_child_ids
-                : [invite.child_id];
+                : (invite.child_id ? [invite.child_id] : []);
 
             // Get list of pets to grant access to (guardians only)
             const petIdsToGrant = invite.selected_pet_ids || [];
@@ -349,7 +349,7 @@ export default function InvitePage() {
             // Guardian: Get ALL homes linked to the selected children
             const childIdsToGrant = invite.selected_child_ids?.length > 0
                 ? invite.selected_child_ids
-                : [invite.child_id];
+                : (invite.child_id ? [invite.child_id] : []);
 
             // Get all child_spaces for these children to find all homes
             const { data: childSpaces } = await supabase
@@ -396,7 +396,7 @@ export default function InvitePage() {
             // Get child_spaces for selected children at this specific home only
             const childIdsToGrant = invite.selected_child_ids?.length > 0
                 ? invite.selected_child_ids
-                : [invite.child_id];
+                : (invite.child_id ? [invite.child_id] : []);
 
             const { data: childSpaces } = await supabase
                 .from("child_spaces")

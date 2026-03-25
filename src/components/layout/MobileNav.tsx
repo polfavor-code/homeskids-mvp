@@ -294,7 +294,10 @@ export default function MobileNav() {
                     {/* Backdrop */}
                     <div
                         className="lg:hidden fixed inset-0 bg-black/20 z-40"
-                        onClick={() => setShowMoreMenu(false)}
+                        onClick={() => {
+                            setShowMoreMenu(false);
+                            setShowHouseholdPicker(false); // Reset picker when closing menu
+                        }}
                     />
 
                     {/* Menu Panel - positioned above the nav bar, accounting for elevated home button */}
