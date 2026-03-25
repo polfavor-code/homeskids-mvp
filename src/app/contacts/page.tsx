@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, Suspense, useMemo } from "react";
+import React, { useState, Suspense, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import Avatar from "@/components/Avatar";
 import { ContactActions } from "@/components/ContactPreferenceIcons";
 import { useContacts, ContactCategory, Contact } from "@/lib/ContactsContext";
-import { useAppState, CaregiverProfile } from "@/lib/AppStateContext";
+import { useAppState, CaregiverProfile, HouseholdMember } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { MedicalIcon, SchoolIcon, ContactsIcon, FamilyIcon, FriendsIcon, ActivitiesIcon, OtherIcon, GridIcon } from "@/components/icons/DuotoneIcons";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 
 const CATEGORIES: { value: ContactCategory | "all"; label: string; icon?: React.ReactNode }[] = [
     { value: "all", label: "All", icon: <GridIcon size={14} /> },
@@ -25,15 +26,38 @@ function ContactsPageContent() {
     useEnsureOnboarding();
 
     const { contacts, isLoaded, toggleFavorite } = useContacts();
-    const { child, caregivers, currentChild, accessibleHomes } = useAppState();
+    const { child, caregivers, currentChild, accessibleHomes, householdMembers, setCurrentChildId } = useAppState();
     const searchParams = useSearchParams();
     const [filter, setFilter] = useState<ContactCategory | "all">("all");
 
     const activeChild = currentChild || child;
-    
+
     // Check if user has home access - no access means empty list
     const hasHomeAccess = accessibleHomes.length > 0;
     const accessibleContacts = hasHomeAccess ? contacts : [];
+
+    // Get current child's member ID for selection state
+    const currentMemberId = activeChild ? `child-${activeChild.id}` : null;
+
+    // Selected member ID (single-select for Contacts)
+    const selectedMemberIds = useMemo(() => {
+        return new Set(currentMemberId ? [currentMemberId] : []);
+    }, [currentMemberId]);
+
+    // Only children have contacts (pets don't have separate contacts yet)
+    const membersWithContactData = useMemo(() => {
+        return new Set(
+            householdMembers.filter(m => m.isChild).map(m => m.id)
+        );
+    }, [householdMembers]);
+
+    // Handle member selection - switches to viewing that child's contacts
+    const handleMemberToggle = useCallback((memberId: string) => {
+        const member = householdMembers.find(m => m.id === memberId);
+        if (member && member.isChild) {
+            setCurrentChildId(member.entityId);
+        }
+    }, [householdMembers, setCurrentChildId]);
 
     console.log("[ContactsPage] contacts:", contacts.length, "isLoaded:", isLoaded, "hasHomeAccess:", hasHomeAccess);
 
@@ -99,9 +123,7 @@ function ContactsPageContent() {
             <div className="mb-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="font-dmSerif text-2xl text-forest">
-                            {hasHomeAccess ? `${activeChild?.name || "Child"}'s Contacts` : "Contacts"}
-                        </h1>
+                        <h1 className="font-dmSerif text-2xl text-forest">Contacts</h1>
                         <p className="text-sm text-textSub mt-1">
                             Share important contacts.
                         </p>
@@ -114,6 +136,24 @@ function ContactsPageContent() {
                     </Link>
                 </div>
             </div>
+
+            {/* Household Member Filter */}
+            {householdMembers.length > 1 && (
+                <div className="card-organic p-4 mb-4">
+                    <HouseholdMemberFilter
+                        members={householdMembers}
+                        selectedMemberIds={selectedMemberIds}
+                        onToggleMember={handleMemberToggle}
+                        membersWithData={membersWithContactData}
+                        showSelectAllButton={false}
+                    />
+                    {activeChild && (
+                        <p className="text-center text-sm text-textSub mt-3">
+                            Viewing contacts for <span className="font-semibold text-forest">{activeChild.name}</span>
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Filter Pills */}
             <div className="flex gap-2 flex-wrap mb-4">

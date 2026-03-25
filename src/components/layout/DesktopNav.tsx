@@ -7,6 +7,7 @@ import { navItems, accountNavItem, isRouteActive, hasActiveSubItem } from '@/lib
 import { useAppState } from '@/lib/AppStateContext';
 import { useAuth } from '@/lib/AuthContext';
 import Avatar from '@/components/Avatar';
+import HouseholdSwitcher from '@/components/household/HouseholdSwitcher';
 import {
     ItemsIcon,
     TravelBagIcon,
@@ -327,136 +328,10 @@ export default function DesktopNav() {
 
             </div>
 
-            {/* Child Switcher - Footer Card Style */}
-            {/* Only show when user has home access (helpers without homes see blank UI) */}
-            {childrenList.length > 0 && hasHomeAccess && (
-                <div className={`flex-shrink-0 border-t border-border pt-3 pb-3 ${isCollapsed ? 'px-2' : 'px-3'}`}>
-                    {/* VIEWING label - visible in both collapsed and expanded */}
-                    <p className={`text-[10px] text-textSub font-medium uppercase tracking-wide mb-2 ${isCollapsed ? 'text-center' : ''}`}>
-                        Viewing
-                    </p>
-                    
-                    {isCollapsed ? (
-                        /* Collapsed: Show avatar stack */
-                        <div className="flex flex-col items-center gap-2">
-                            {childrenList.map((child) => {
-                                const isActive = child.id === currentChild?.id;
-                                return (
-                                    <button
-                                        key={child.id}
-                                        onClick={() => handleChildSwitch(child.id)}
-                                        className={`relative transition-all ${
-                                            isActive
-                                                ? 'ring-2 ring-forest ring-offset-2 ring-offset-cream rounded-full'
-                                                : 'opacity-50 hover:opacity-100'
-                                        }`}
-                                        title={`${isActive ? 'Viewing' : 'Switch to'} ${child.name}`}
-                                    >
-                                        <Avatar
-                                            src={child.avatarUrl}
-                                            initial={child.avatarInitials}
-                                            size={36}
-                                            bgColor={isActive ? "#4A7C59" : "#9CA3AF"}
-                                        />
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        /* Expanded: Footer Card with dropdown */
-                        <div className="relative">
-                            {/* Main trigger button */}
-                            <button
-                                onClick={() => childrenList.length > 1 && setIsChildSwitcherOpen(!isChildSwitcherOpen)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
-                                    isChildSwitcherOpen 
-                                        ? 'bg-white border-forest/20 shadow-sm' 
-                                        : 'bg-softGreen/50 border-border hover:border-forest/20 hover:bg-white'
-                                }`}
-                            >
-                                <div className="relative">
-                                    <Avatar
-                                        src={currentChild?.avatarUrl}
-                                        initial={currentChild?.avatarInitials || "?"}
-                                        size={36}
-                                        bgColor="#4A7C59"
-                                    />
-                                    {childrenList.length > 1 && (
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-forest rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-cream">
-                                            {childrenList.length}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 text-left min-w-0">
-                                    <p className="text-sm font-semibold text-forest truncate">{currentChild?.name}</p>
-                                </div>
-                                {childrenList.length > 1 && (
-                                    <div className={`flex items-center gap-1 text-teal transition-transform ${isChildSwitcherOpen ? 'rotate-180' : ''}`}>
-                                        <ChevronDownIcon size={16} />
-                                    </div>
-                                )}
-                            </button>
-
-                            {/* Dropdown panel */}
-                            {isChildSwitcherOpen && childrenList.length > 1 && (
-                                <>
-                                    {/* Backdrop */}
-                                    <div 
-                                        className="fixed inset-0 z-40" 
-                                        onClick={() => setIsChildSwitcherOpen(false)}
-                                    />
-                                    
-                                    {/* Dropdown */}
-                                    <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl border border-border shadow-lg overflow-hidden z-50">
-                                        <div className="px-3 py-2 border-b border-border bg-cream/50">
-                                            <p className="text-[10px] font-semibold text-forest/60 uppercase tracking-wide">Switch child</p>
-                                        </div>
-                                        <div className="p-1.5 space-y-1">
-                                            {childrenList.map((child) => {
-                                                const isActive = child.id === currentChild?.id;
-                                                return (
-                                                    <button
-                                                        key={child.id}
-                                                        onClick={() => {
-                                                            handleChildSwitch(child.id);
-                                                            setIsChildSwitcherOpen(false);
-                                                        }}
-                                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                                                            isActive
-                                                                ? 'bg-softGreen border border-forest/20'
-                                                                : 'hover:bg-cream'
-                                                        }`}
-                                                    >
-                                                        <Avatar
-                                                            src={child.avatarUrl}
-                                                            initial={child.avatarInitials}
-                                                            size={32}
-                                                            bgColor={isActive ? "#4A7C59" : "#9CA3AF"}
-                                                        />
-                                                        <div className="flex-1 text-left min-w-0">
-                                                            <span className={`block text-sm truncate ${
-                                                                isActive ? 'font-semibold text-forest' : 'font-medium text-forest'
-                                                            }`}>
-                                                                {child.name}
-                                                            </span>
-                                                        </div>
-                                                        {isActive && (
-                                                            <div className="w-5 h-5 rounded-full bg-forest flex items-center justify-center flex-shrink-0">
-                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                                                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                                                </svg>
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-                </div>
+            {/* Household Switcher - Footer Card Style */}
+            {/* Shows household with member avatars and role, allows switching between households */}
+            {hasHomeAccess && (
+                <HouseholdSwitcher isCollapsed={isCollapsed} />
             )}
 
             {/* User Profile - Fixed at bottom, matching child switcher style */}

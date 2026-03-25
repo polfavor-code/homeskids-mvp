@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./AuthContext";
 
@@ -8,6 +8,7 @@ import { useAuth } from "./AuthContext";
 const STORAGE_PREFIX = "homeskids";
 const STORAGE_KEY_CHILD_SUFFIX = "active_child_id";
 const STORAGE_KEY_HOME_SUFFIX = "active_home_id";
+const STORAGE_KEY_HOUSEHOLD_SUFFIX = "active_household_id";
 const STORAGE_KEY_LAST_USER = "homeskids_last_user_id";
 
 // Helper to get user-specific storage keys
@@ -44,6 +45,47 @@ export type PetProfile = {
     avatarInitials: string;
     avatarColor?: string;
     notes?: string;
+};
+
+// ==============================================
+// HOUSEHOLD TYPES - Household-First Architecture
+// ==============================================
+
+// Family member types (for multi-member filtering)
+export type FamilyMemberType = "child" | "cat" | "dog" | "bird" | "fish" | "reptile" | "small_mammal" | "other";
+
+// Combined household member (child or pet) for unified member filtering
+export type HouseholdMember = {
+    id: string;              // "child-{id}" or "pet-{id}"
+    entityId: string;        // Actual child/pet ID
+    name: string;
+    type: FamilyMemberType;
+    avatarUrl?: string;
+    avatarInitials: string;
+    avatarColor?: string;
+    isChild: boolean;
+    isPet: boolean;
+    species?: PetSpecies;    // For pets only
+};
+
+// User's role in a household
+export type HouseholdRole = "owner" | "caregiver" | "helper";
+
+// Household - a logical grouping of homes sharing the same children
+export type Household = {
+    id: string;              // First home's ID or hash of household_name
+    name: string;            // From homes.household_name
+    homes: HomeProfile[];
+    children: ChildProfile[];
+    pets: PetProfile[];
+    caregivers: CaregiverProfile[];
+    userRole: HouseholdRole;
+    userPermissions: {
+        canRename: boolean;
+        canDelete: boolean;
+        canInvite: boolean;
+        canEditMembers: boolean;
+    };
 };
 
 // Role types for guardians and helpers
@@ -293,6 +335,23 @@ interface AppStateContextType {
     getArchivedHomes: () => Promise<ArchivedHome[]>;
     permanentlyDeleteHome: (homeId: string) => Promise<{ success: boolean; error?: string }>;
     getItemsInArchivedHomes: () => Promise<{ totalCount: number; homes: { homeId: string; homeName: string; itemCount: number }[] }>;
+
+    // ==============================================
+    // HOUSEHOLD-FIRST ARCHITECTURE
+    // ==============================================
+
+    // Households derived from homes grouped by household_name
+    households: Household[];
+    currentHouseholdId: string;
+    currentHousehold: Household | null;
+    setCurrentHouseholdId: (householdId: string) => void;
+
+    // Household members (children + pets combined for the current household)
+    householdMembers: HouseholdMember[];
+
+    // Helper to get all children in a household
+    getHouseholdChildren: (householdId: string) => ChildProfile[];
+    getHouseholdPets: (householdId: string) => PetProfile[];
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -341,7 +400,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     
     // Info about the invite the current user accepted (null if created own account)
     const [inviteInfo, setInviteInfo] = useState<InviteInfo>(null);
-    
+
+    // Household state - for household-first architecture
+    const [currentHouseholdId, setCurrentHouseholdIdState] = useState<string>("");
+
     // Clear all state when user changes (prevents data leakage between users)
     useEffect(() => {
         const currentUserId = user?.id || null;
@@ -366,8 +428,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setPetsList([]);
             setManagesChildren(false);
             setManagesPets(false);
+            setCurrentHouseholdIdState("");
         }
-        
+
         prevUserIdRef.current = currentUserId;
     }, [user?.id]);
 
@@ -419,6 +482,179 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // Derived: needs home selection (user has access to multiple homes for this child, none selected)
     // IMPORTANT: Use accessibleHomes.length, not homes.length
     const needsHomeSelection = !!currentChildId && accessibleHomes.length > 1 && !currentHomeId;
+
+    // ==============================================
+    // HOUSEHOLD DERIVATION
+    // ==============================================
+
+    // Derive households from homes grouped by household_name
+    // A household is a logical grouping of homes that share the same children
+    const households = useMemo((): Household[] => {
+        if (homes.length === 0) return [];
+
+        // Group homes by household_name (homes with same name = same household)
+        const homesByHouseholdName = new Map<string, HomeProfile[]>();
+
+        for (const home of homes) {
+            // Use household_name if available, otherwise use home name or "My Household"
+            const householdName = (home as any).householdName || home.name || "My Household";
+            if (!homesByHouseholdName.has(householdName)) {
+                homesByHouseholdName.set(householdName, []);
+            }
+            homesByHouseholdName.get(householdName)!.push(home);
+        }
+
+        // Build household objects
+        const result: Household[] = [];
+
+        for (const [householdName, householdHomes] of Array.from(homesByHouseholdName.entries())) {
+            // Get unique child IDs from all homes in this household via childSpaces
+            const householdHomeIds = householdHomes.map((h: HomeProfile) => h.id);
+            const householdChildIds = new Set<string>();
+            for (const cs of allChildSpaces) {
+                if (householdHomeIds.includes(cs.homeId)) {
+                    householdChildIds.add(cs.childId);
+                }
+            }
+
+            // Get children in this household
+            const householdChildren = childrenList.filter(c => householdChildIds.has(c.id));
+
+            // Get pets (for now, pets are shared across all households)
+            // TODO: When pet_spaces is fully implemented, filter by household
+            const householdPets = petsList;
+
+            // Get caregivers for this household (those with access to any home in the household)
+            const householdCaregivers = caregivers.filter(cg =>
+                cg.accessibleHomeIds.some(hid => householdHomeIds.includes(hid))
+            );
+
+            // Determine user role in this household
+            const userRole: HouseholdRole = isGuardian
+                ? "owner"
+                : currentUserCaregiver?.canEditItems
+                    ? "caregiver"
+                    : "helper";
+
+            // Create household ID (use first home's ID)
+            const householdId = householdHomes[0]?.id || `household-${householdName}`;
+
+            result.push({
+                id: householdId,
+                name: householdName,
+                homes: householdHomes,
+                children: householdChildren,
+                pets: householdPets,
+                caregivers: householdCaregivers,
+                userRole,
+                userPermissions: {
+                    canRename: isGuardian,
+                    canDelete: isGuardian,
+                    canInvite: isGuardian || (currentUserCaregiver?.canManageHelpers || false),
+                    canEditMembers: isGuardian,
+                },
+            });
+        }
+
+        return result;
+    }, [homes, allChildSpaces, childrenList, petsList, caregivers, isGuardian, currentUserCaregiver]);
+
+    // Current household (derive from currentHouseholdId or default to first)
+    const currentHousehold = useMemo((): Household | null => {
+        if (households.length === 0) return null;
+        if (currentHouseholdId) {
+            return households.find(h => h.id === currentHouseholdId) || households[0];
+        }
+        return households[0];
+    }, [households, currentHouseholdId]);
+
+    // Household members: combine children + pets for the current household
+    const householdMembers = useMemo((): HouseholdMember[] => {
+        const members: HouseholdMember[] = [];
+
+        // Use current household's children and pets if available, otherwise use all
+        const relevantChildren = currentHousehold?.children || childrenList;
+        const relevantPets = currentHousehold?.pets || petsList;
+
+        // Add children
+        for (const child of relevantChildren) {
+            members.push({
+                id: `child-${child.id}`,
+                entityId: child.id,
+                name: child.name,
+                type: "child",
+                avatarUrl: child.avatarUrl,
+                avatarInitials: child.avatarInitials,
+                isChild: true,
+                isPet: false,
+            });
+        }
+
+        // Add pets
+        for (const pet of relevantPets) {
+            const petType: FamilyMemberType = ["cat", "dog", "bird", "fish", "reptile", "small_mammal"].includes(pet.species || "")
+                ? (pet.species as FamilyMemberType)
+                : "other";
+            members.push({
+                id: `pet-${pet.id}`,
+                entityId: pet.id,
+                name: pet.name,
+                type: petType,
+                avatarUrl: pet.avatarUrl,
+                avatarInitials: pet.avatarInitials,
+                avatarColor: pet.avatarColor,
+                isChild: false,
+                isPet: true,
+                species: pet.species,
+            });
+        }
+
+        return members;
+    }, [currentHousehold, childrenList, petsList]);
+
+    // Setter for current household ID with localStorage persistence
+    const setCurrentHouseholdId = useCallback((householdId: string) => {
+        setCurrentHouseholdIdState(householdId);
+        // Persist to localStorage
+        if (typeof window !== "undefined" && user?.id) {
+            const key = getStorageKey(user.id, STORAGE_KEY_HOUSEHOLD_SUFFIX);
+            if (key) localStorage.setItem(key, householdId);
+        }
+
+        // When switching households, also update child/home to match
+        const targetHousehold = households.find(h => h.id === householdId);
+        if (targetHousehold && targetHousehold.children.length > 0) {
+            // Select first child in the new household
+            const firstChild = targetHousehold.children[0];
+            setCurrentChildIdState(firstChild.id);
+            if (typeof window !== "undefined" && user?.id) {
+                const childKey = getStorageKey(user.id, STORAGE_KEY_CHILD_SUFFIX);
+                if (childKey) localStorage.setItem(childKey, firstChild.id);
+            }
+
+            // Select first home in the new household
+            if (targetHousehold.homes.length > 0) {
+                const firstHome = targetHousehold.homes[0];
+                setCurrentHomeIdState(firstHome.id);
+                if (typeof window !== "undefined" && user?.id) {
+                    const homeKey = getStorageKey(user.id, STORAGE_KEY_HOME_SUFFIX);
+                    if (homeKey) localStorage.setItem(homeKey, firstHome.id);
+                }
+            }
+        }
+    }, [user?.id, households]);
+
+    // Helper to get children in a specific household
+    const getHouseholdChildren = useCallback((householdId: string): ChildProfile[] => {
+        const household = households.find(h => h.id === householdId);
+        return household?.children || [];
+    }, [households]);
+
+    // Helper to get pets in a specific household
+    const getHouseholdPets = useCallback((householdId: string): PetProfile[] => {
+        const household = households.find(h => h.id === householdId);
+        return household?.pets || [];
+    }, [households]);
 
     // Get ALL homes for a specific child (using allChildSpaces)
     const getHomesForChild = useCallback((childId: string): HomeProfile[] => {
@@ -2028,6 +2264,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 getArchivedHomes,
                 permanentlyDeleteHome,
                 getItemsInArchivedHomes,
+                // Household-first architecture
+                households,
+                currentHouseholdId,
+                currentHousehold,
+                setCurrentHouseholdId,
+                householdMembers,
+                getHouseholdChildren,
+                getHouseholdPets,
             }}
         >
             {children}

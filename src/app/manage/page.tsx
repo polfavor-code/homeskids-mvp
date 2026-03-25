@@ -1,99 +1,54 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
+import React, { useState } from "react";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState } from "@/lib/AppStateContext";
-import {
-    HomesIcon,
-    ChildrenIcon,
-    CaregiversIcon,
-} from "@/components/icons/DuotoneIcons";
-
-// Pets icon (paw print)
-function PetsIcon({ size = 24 }: { size?: number }) {
-    return (
-        <svg
-            width={size}
-            height={size}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <circle cx="11" cy="4" r="2" fill="currentColor" fillOpacity="0.2" />
-            <circle cx="18" cy="8" r="2" fill="currentColor" fillOpacity="0.2" />
-            <circle cx="4" cy="8" r="2" fill="currentColor" fillOpacity="0.2" />
-            <circle cx="8" cy="8" r="2" fill="currentColor" fillOpacity="0.2" />
-            <path d="M12 14c-2.5 0-4.5 2-4.5 4.5 0 1.5 1 2.5 2.5 2.5h4c1.5 0 2.5-1 2.5-2.5 0-2.5-2-4.5-4.5-4.5z" fill="currentColor" fillOpacity="0.2" />
-        </svg>
-    );
-}
-
-interface ManageCard {
-    title: string;
-    description: string;
-    href: string;
-    icon: React.ReactNode;
-    color: string;
-    bgColor: string;
-    borderColor: string;
-    count?: number;
-}
+import { useAppState, Household } from "@/lib/AppStateContext";
+import HouseholdCard from "@/components/household/HouseholdCard";
 
 export default function ManagePage() {
-    const { children, caregivers, homes, pets } = useAppState();
+    const { households, currentHousehold } = useAppState();
 
-    // Count active items
-    const homesCount = homes?.length || 0;
-    const childrenCount = children?.length || 0;
-    const caregiversCount = caregivers?.length || 0;
-    const petsCount = pets?.length || 0;
+    // Modal state for actions
+    const [actionModal, setActionModal] = useState<{
+        type: "edit" | "delete" | "leave" | null;
+        household: Household | null;
+    }>({ type: null, household: null });
 
-    const manageCards: ManageCard[] = [
-        {
-            title: "Children",
-            description: "Manage children profiles and information",
-            href: "/settings/children",
-            icon: <ChildrenIcon size={28} />,
-            color: "text-orange-600",
-            bgColor: "bg-orange-50",
-            borderColor: "border-orange-100 hover:border-orange-200",
-            count: childrenCount,
-        },
-        {
-            title: "Pets",
-            description: "Manage your pets and their care routines",
-            href: "/settings/pets",
-            icon: <PetsIcon size={28} />,
-            color: "text-green-600",
-            bgColor: "bg-green-50",
-            borderColor: "border-green-100 hover:border-green-200",
-            count: petsCount,
-        },
-        {
-            title: "Homes",
-            description: "Manage the places where your family stays",
-            href: "/settings/homes",
-            icon: <HomesIcon size={28} />,
-            color: "text-blue-600",
-            bgColor: "bg-blue-50",
-            borderColor: "border-blue-100 hover:border-blue-200",
-            count: homesCount,
-        },
-        {
-            title: "Caregivers",
-            description: "Manage who has access to your family's information",
-            href: "/settings/caregivers",
-            icon: <CaregiversIcon size={28} />,
-            color: "text-purple-600",
-            bgColor: "bg-purple-50",
-            borderColor: "border-purple-100 hover:border-purple-200",
-            count: caregiversCount,
-        },
-    ];
+    // Handlers for household actions
+    const handleEdit = (household: Household) => {
+        setActionModal({ type: "edit", household });
+    };
+
+    const handleDelete = (household: Household) => {
+        setActionModal({ type: "delete", household });
+    };
+
+    const handleLeave = (household: Household) => {
+        setActionModal({ type: "leave", household });
+    };
+
+    const closeModal = () => {
+        setActionModal({ type: null, household: null });
+    };
+
+    // If no households, show empty state
+    if (!households || households.length === 0) {
+        return (
+            <AppShell>
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-2xl font-dmSerif text-forest">Manage household</h1>
+                        <p className="text-sm text-textSub">
+                            Organize your homes, family members, and caregivers
+                        </p>
+                    </div>
+                    <div className="card-organic p-8 text-center">
+                        <p className="text-textSub">No households found. Create a home to get started.</p>
+                    </div>
+                </div>
+            </AppShell>
+        );
+    }
 
     return (
         <AppShell>
@@ -106,44 +61,120 @@ export default function ManagePage() {
                     </p>
                 </div>
 
-                {/* Management Cards */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                    {manageCards.map((card) => (
-                        <Link
-                            key={card.title}
-                            href={card.href}
-                            className={`group flex items-start gap-4 p-5 rounded-2xl border-2 transition-all ${card.borderColor} ${card.bgColor}/50`}
-                        >
-                            <div className={`w-14 h-14 rounded-xl ${card.bgColor} flex items-center justify-center ${card.color} group-hover:scale-105 transition-transform`}>
-                                {card.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="font-semibold text-forest text-lg">{card.title}</h3>
-                                    {card.count !== undefined && card.count > 0 && (
-                                        <span className={`text-sm font-medium ${card.color} ${card.bgColor} px-2.5 py-0.5 rounded-full`}>
-                                            {card.count}
-                                        </span>
-                                    )}
-                                </div>
-                                <p className="text-sm text-textSub mt-1">
-                                    {card.description}
-                                </p>
-                            </div>
-                            <svg
-                                className="w-5 h-5 text-textSub/40 group-hover:text-forest group-hover:translate-x-1 transition-all mt-1"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                        </Link>
+                {/* Household Cards */}
+                <div className="space-y-4">
+                    {households.map((household) => (
+                        <HouseholdCard
+                            key={household.id}
+                            household={household}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onLeave={handleLeave}
+                        />
                     ))}
                 </div>
-
             </div>
+
+            {/* Action Modals */}
+            {actionModal.type && actionModal.household && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/50"
+                        onClick={closeModal}
+                    />
+
+                    {/* Modal content */}
+                    <div className="relative bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+                        {actionModal.type === "edit" && (
+                            <>
+                                <h3 className="text-lg font-semibold text-forest mb-2">
+                                    Edit household
+                                </h3>
+                                <p className="text-sm text-textSub mb-6">
+                                    Edit settings for "{actionModal.household.name}".
+                                </p>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-forest mb-1">
+                                            Household name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            defaultValue={actionModal.household.name}
+                                            className="w-full px-4 py-3 rounded-xl border border-border focus:border-forest focus:ring-1 focus:ring-forest outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        onClick={closeModal}
+                                        className="flex-1 px-4 py-3 rounded-xl border border-border text-forest font-medium hover:bg-cream transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={closeModal}
+                                        className="flex-1 px-4 py-3 rounded-xl bg-forest text-white font-medium hover:bg-forest/90 transition-colors"
+                                    >
+                                        Save changes
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {actionModal.type === "delete" && (
+                            <>
+                                <h3 className="text-lg font-semibold text-red-600 mb-2">
+                                    Delete household
+                                </h3>
+                                <p className="text-sm text-textSub mb-6">
+                                    Are you sure you want to delete "{actionModal.household.name}"? This action cannot be undone. All homes, children, pets, and caregivers associated with this household will be removed.
+                                </p>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={closeModal}
+                                        className="flex-1 px-4 py-3 rounded-xl border border-border text-forest font-medium hover:bg-cream transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={closeModal}
+                                        className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {actionModal.type === "leave" && (
+                            <>
+                                <h3 className="text-lg font-semibold text-red-600 mb-2">
+                                    Leave household
+                                </h3>
+                                <p className="text-sm text-textSub mb-6">
+                                    Are you sure you want to leave "{actionModal.household.name}"? You will lose access to all homes, children, and pets in this household. An owner can re-invite you later.
+                                </p>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={closeModal}
+                                        className="flex-1 px-4 py-3 rounded-xl border border-border text-forest font-medium hover:bg-cream transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={closeModal}
+                                        className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors"
+                                    >
+                                        Leave
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </AppShell>
     );
 }

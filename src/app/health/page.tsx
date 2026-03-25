@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState, HouseholdMember } from "@/lib/AppStateContext";
 import { useHealth, DietType, HealthStatusValue } from "@/lib/HealthContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { HealthIcon, AllergyIcon, MedicationIcon } from "@/components/icons/DuotoneIcons";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 import { getStatusSummaryText, HealthCategory } from "@/components/health/HealthStatusCard";
 
 // Emoji map for allergy categories
@@ -32,7 +33,7 @@ const dietTypeLabels: Record<DietType, string> = {
 
 export default function HealthPage() {
     useEnsureOnboarding();
-    const { child, accessibleHomes } = useAppState();
+    const { child, accessibleHomes, householdMembers, currentChild, setCurrentChildId } = useAppState();
     const {
         healthStatus,
         allergies,
@@ -43,10 +44,33 @@ export default function HealthPage() {
         updateHealthStatus,
     } = useHealth();
     const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
-    
+
     // Check if user has home access
     const hasHomeAccess = accessibleHomes.length > 0;
-    
+
+    // Get current child's member ID for selection state
+    const currentMemberId = currentChild ? `child-${currentChild.id}` : null;
+
+    // Selected member ID (single-select for Health - only one child's health shown at a time)
+    const selectedMemberIds = useMemo(() => {
+        return new Set(currentMemberId ? [currentMemberId] : []);
+    }, [currentMemberId]);
+
+    // Only children have health data (pets don't)
+    const membersWithHealthData = useMemo(() => {
+        return new Set(
+            householdMembers.filter(m => m.isChild).map(m => m.id)
+        );
+    }, [householdMembers]);
+
+    // Handle member selection - switches to viewing that child's health
+    const handleMemberToggle = useCallback((memberId: string) => {
+        const member = householdMembers.find(m => m.id === memberId);
+        if (member && member.isChild) {
+            setCurrentChildId(member.entityId);
+        }
+    }, [householdMembers, setCurrentChildId]);
+
     // Only show child name if user has home access
     const childName = hasHomeAccess ? (child?.name || "your child") : "your child";
 
@@ -131,11 +155,29 @@ export default function HealthPage() {
                 <div className="space-y-6">
                     {/* Page Header */}
                     <div>
-                        <h1 className="font-dmSerif text-2xl text-forest mt-2">{childName}&apos;s Health</h1>
+                        <h1 className="font-dmSerif text-2xl text-forest mt-2">Health</h1>
                         <p className="text-sm text-textSub mt-1">
-                            No information provided yet for {childName}.
+                            No information provided yet{currentChild ? ` for ${currentChild.name}` : ""}.
                         </p>
                     </div>
+
+                    {/* Household Member Filter */}
+                    {householdMembers.length > 1 && (
+                        <div className="card-organic p-4">
+                            <HouseholdMemberFilter
+                                members={householdMembers}
+                                selectedMemberIds={selectedMemberIds}
+                                onToggleMember={handleMemberToggle}
+                                membersWithData={membersWithHealthData}
+                                showSelectAllButton={false}
+                            />
+                            {currentChild && (
+                                <p className="text-center text-sm text-textSub mt-3">
+                                    Viewing health info for <span className="font-semibold text-forest">{currentChild.name}</span>
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Intro text */}
                     <div className="card-organic p-5 bg-softGreen/30">
@@ -299,11 +341,29 @@ export default function HealthPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="font-dmSerif text-2xl text-forest mt-2">{childName}&apos;s Health</h1>
+                    <h1 className="font-dmSerif text-2xl text-forest mt-2">Health</h1>
                     <p className="text-sm text-textSub mt-1">
-                        Quickly see allergies, medication, and key health notes for {childName}.
+                        Allergies, medication, and key health notes.
                     </p>
                 </div>
+
+                {/* Household Member Filter */}
+                {householdMembers.length > 1 && (
+                    <div className="card-organic p-4">
+                        <HouseholdMemberFilter
+                            members={householdMembers}
+                            selectedMemberIds={selectedMemberIds}
+                            onToggleMember={handleMemberToggle}
+                            membersWithData={membersWithHealthData}
+                            showSelectAllButton={false}
+                        />
+                        {currentChild && (
+                            <p className="text-center text-sm text-textSub mt-3">
+                                Viewing health info for <span className="font-semibold text-forest">{currentChild.name}</span>
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* Allergies Snapshot Card */}
                 <div className="card-organic p-5">

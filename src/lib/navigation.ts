@@ -24,7 +24,7 @@ export const navItems: NavItem[] = [
         route: '/day-hub',
     },
     {
-        label: "{childName}'s Items",
+        label: "Items",
         icon: 'ItemsIcon',
         route: '/items',
     },
