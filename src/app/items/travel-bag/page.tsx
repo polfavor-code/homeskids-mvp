@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
@@ -12,10 +12,11 @@ import PreviousTripTab from "@/components/travel-bag/PreviousTripTab";
 import BagHistoryTab from "@/components/travel-bag/BagHistoryTab";
 import TransferDetailModal from "@/components/travel-bag/TransferDetailModal";
 import { useItems, Item } from "@/lib/ItemsContext";
-import { useAppState, ChildProfile } from "@/lib/AppStateContext";
+import { useAppState, ChildProfile, HouseholdMember } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useBagTransfers, BagTransfer } from "@/lib/useBagTransfers";
 import { ItemsIcon, TravelBagIcon, SearchIcon } from "@/components/icons/DuotoneIcons";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 
 // Shared tab type for the items section
 type ItemsTab = "all" | "travel-bag" | "missing";
@@ -25,7 +26,39 @@ function TravelBagCheckPageContent() {
     const searchParams = useSearchParams();
 
     const { items, updateItemRequested, updateItemPacked, cancelItemRequest, confirmRemoveFromBag, keepInBag } = useItems();
-    const { child, caregivers, activeHomes, currentJuneCaregiverId, currentHomeId } = useAppState();
+    const { child, caregivers, activeHomes, currentJuneCaregiverId, currentHomeId, householdMembers, currentChild, setCurrentChildId, childSpaces } = useAppState();
+
+    // Get current child's member ID for selection state (single-select like other pages)
+    const currentMemberId = currentChild ? `child-${currentChild.id}` : null;
+
+    // Selected member ID (single-select for Travel Bag - matches Items page)
+    const selectedMemberIds = useMemo(() => {
+        return new Set(currentMemberId ? [currentMemberId] : []);
+    }, [currentMemberId]);
+
+    // Calculate which members have items (for greying out members without data)
+    const membersWithItemData = useMemo(() => {
+        const memberIdsWithItems = new Set<string>();
+
+        items.forEach(item => {
+            if (item.childSpaceId && childSpaces) {
+                const childSpace = childSpaces.find((cs: any) => cs.id === item.childSpaceId);
+                if (childSpace) {
+                    memberIdsWithItems.add(`child-${childSpace.childId}`);
+                }
+            }
+        });
+
+        return memberIdsWithItems;
+    }, [items, childSpaces]);
+
+    // Handle member selection - switches to viewing that child's travel bag
+    const handleMemberToggle = useCallback((memberId: string) => {
+        const member = householdMembers.find(m => m.id === memberId);
+        if (member && member.isChild) {
+            setCurrentChildId(member.entityId);
+        }
+    }, [householdMembers, setCurrentChildId]);
 
     // Get current home (where child is now = origin/packer)
     // and destination home (where child is going = requester)
@@ -199,8 +232,8 @@ function TravelBagCheckPageContent() {
             {/* Header - Same as Items page */}
             <div className="flex justify-between items-start mb-6">
                 <div>
-                    <h1 className="font-dmSerif text-2xl text-forest mt-2">{child?.name || "Child"}&apos;s Things</h1>
-                    <p className="text-sm text-textSub mt-1">All items across every home.</p>
+                    <h1 className="font-dmSerif text-2xl text-forest mt-2">Items</h1>
+                    <p className="text-sm text-textSub mt-1">All items across your household.</p>
                 </div>
                 <Link
                     href="/items/new"
@@ -209,6 +242,24 @@ function TravelBagCheckPageContent() {
                     + New item
                 </Link>
             </div>
+
+            {/* Household Member Filter */}
+            {householdMembers.length > 1 && (
+                <div className="card-organic p-4 mb-4">
+                    <HouseholdMemberFilter
+                        members={householdMembers}
+                        selectedMemberIds={selectedMemberIds}
+                        onToggleMember={handleMemberToggle}
+                        membersWithData={membersWithItemData}
+                        showSelectAllButton={false}
+                    />
+                    {currentChild && (
+                        <p className="text-center text-sm text-textSub mt-3">
+                            Viewing travel bag for <span className="font-semibold text-forest">{currentChild.name}</span>
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Items Section Tabs (shared across Items pages) - Matching Dashboard Button Style */}
             <div className="flex flex-wrap gap-2 mb-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { nanoid } from "nanoid";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
@@ -92,8 +93,8 @@ export default function InviteGuardianPanel({ onClose, onSuccess }: InviteGuardi
             setGeneratingInvite(true);
             setError("");
 
-            // Generate new invite token
-            const newToken = crypto.randomUUID();
+            // Generate short invite token (8 chars, ~218 trillion combinations)
+            const newToken = nanoid(8);
 
             // Build invite data for guardian (child/pet-centric, follows globally)
             const inviteData: Record<string, unknown> = {

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { isRouteActive } from '@/lib/navigation';
-import { useAppState } from '@/lib/AppStateContext';
+import { useAppState, Household, HouseholdRole } from '@/lib/AppStateContext';
 import { useAuth } from '@/lib/AuthContext';
 import Avatar from '@/components/Avatar';
 import {
@@ -16,7 +16,79 @@ import {
     SettingsIcon,
     ManageIcon,
     DayHubIcon,
+    ChevronDownIcon,
 } from '@/components/icons/DuotoneIcons';
+
+// Role badge component
+function RoleBadge({ role }: { role: HouseholdRole }) {
+    const styles: Record<HouseholdRole, string> = {
+        owner: "bg-teal/10 text-teal",
+        caregiver: "bg-orange-100 text-orange-600",
+        helper: "bg-gray-100 text-gray-600",
+    };
+    const labels: Record<HouseholdRole, string> = {
+        owner: "Owner",
+        caregiver: "Caregiver",
+        helper: "View only",
+    };
+    return (
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${styles[role]}`}>
+            {labels[role]}
+        </span>
+    );
+}
+
+// Stacked avatars for household members
+function MemberAvatarStack({
+    members,
+    maxDisplay = 4,
+    size = 28,
+}: {
+    members: Array<{ name: string; avatarUrl?: string; avatarInitials?: string; avatarColor?: string; isChild?: boolean }>;
+    maxDisplay?: number;
+    size?: number;
+}) {
+    const displayed = members.slice(0, maxDisplay);
+    const overflow = members.length - maxDisplay;
+
+    if (members.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="flex items-center" style={{ marginLeft: size * 0.3 }}>
+            {displayed.map((member, idx) => (
+                <div
+                    key={idx}
+                    style={{
+                        marginLeft: idx === 0 ? 0 : -(size * 0.3),
+                        zIndex: maxDisplay - idx,
+                    }}
+                >
+                    <Avatar
+                        src={member.avatarUrl}
+                        initial={member.avatarInitials || member.name[0]}
+                        size={size}
+                        bgColor={member.avatarColor || (member.isChild ? "#4A7C59" : "#22C55E")}
+                    />
+                </div>
+            ))}
+            {overflow > 0 && (
+                <div
+                    className="flex items-center justify-center bg-gray-200 text-gray-600 text-[10px] font-bold rounded-full border-2 border-white"
+                    style={{
+                        width: size,
+                        height: size,
+                        marginLeft: -(size * 0.3),
+                        zIndex: 0,
+                    }}
+                >
+                    +{overflow}
+                </div>
+            )}
+        </div>
+    );
+}
 
 // Logo icon for center home button - matches Logo.tsx exactly
 function LogoIcon({ size = 24, isActive = false }: { size?: number; isActive?: boolean }) {
@@ -79,9 +151,10 @@ function LogoIcon({ size = 24, isActive = false }: { size?: number; isActive?: b
 
 export default function MobileNav() {
     const pathname = usePathname();
-    const { caregivers } = useAppState();
+    const { caregivers, households, currentHousehold, setCurrentHouseholdId } = useAppState();
     const { user } = useAuth();
     const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [showHouseholdPicker, setShowHouseholdPicker] = useState(false);
 
     // Get current user from caregivers
     const currentUser = caregivers.find(c => c.isCurrentUser);
@@ -97,6 +170,46 @@ export default function MobileNav() {
         isRouteActive(pathname, '/health') ||
         isRouteActive(pathname, '/manage') ||
         isRouteActive(pathname, '/settings');
+
+    // Build member list for current household avatar stack
+    const currentHouseholdMembers = currentHousehold ? [
+        ...currentHousehold.children.map((c) => ({
+            name: c.name,
+            avatarUrl: c.avatarUrl,
+            avatarInitials: c.avatarInitials,
+            avatarColor: "#4A7C59",
+            isChild: true,
+        })),
+        ...currentHousehold.pets.map((p) => ({
+            name: p.name,
+            avatarUrl: p.avatarUrl,
+            avatarInitials: p.avatarInitials,
+            avatarColor: p.avatarColor || "#22C55E",
+            isChild: false,
+        })),
+    ] : [];
+
+    const hasMultipleHouseholds = households.length > 1;
+
+    const handleHouseholdSelect = (householdId: string) => {
+        setCurrentHouseholdId(householdId);
+        setShowHouseholdPicker(false);
+    };
+
+    // Build stats string for a household
+    const getStats = (household: Household) => {
+        const stats: string[] = [];
+        if (household.children.length > 0) {
+            stats.push(`${household.children.length} ${household.children.length === 1 ? "child" : "children"}`);
+        }
+        if (household.pets.length > 0) {
+            stats.push(`${household.pets.length} ${household.pets.length === 1 ? "pet" : "pets"}`);
+        }
+        if (household.homes.length > 0) {
+            stats.push(`${household.homes.length} ${household.homes.length === 1 ? "home" : "homes"}`);
+        }
+        return stats.join(" · ");
+    };
 
     return (
         <>
@@ -187,6 +300,114 @@ export default function MobileNav() {
                     {/* Menu Panel - positioned above the nav bar, accounting for elevated home button */}
                     <div className="lg:hidden fixed left-0 right-0 bottom-[82px] z-40 animate-slide-up">
                         <div className="mx-3 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                            {/* Household Switcher at top */}
+                            {currentHousehold && (
+                                <div className="p-2 border-b border-gray-100">
+                                    <p className="text-[11px] text-textSub font-medium uppercase tracking-wide px-4 mb-1">
+                                        Active household
+                                    </p>
+                                    <button
+                                        onClick={() => hasMultipleHouseholds && setShowHouseholdPicker(!showHouseholdPicker)}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                            showHouseholdPicker ? 'bg-softGreen' : 'bg-cream/50 hover:bg-cream'
+                                        }`}
+                                        disabled={!hasMultipleHouseholds}
+                                    >
+                                        {/* Name + role badge */}
+                                        <div className="flex-1 text-left min-w-0">
+                                            <p className="text-[15px] font-semibold text-forest leading-tight truncate">
+                                                {currentHousehold.name}
+                                            </p>
+                                            <RoleBadge role={currentHousehold.userRole} />
+                                        </div>
+
+                                        {/* Avatar stack */}
+                                        <MemberAvatarStack
+                                            members={currentHouseholdMembers}
+                                            maxDisplay={3}
+                                            size={28}
+                                        />
+
+                                        {/* Chevron */}
+                                        {hasMultipleHouseholds && (
+                                            <ChevronDownIcon
+                                                size={18}
+                                                className={`text-textSub flex-shrink-0 transition-transform ${showHouseholdPicker ? 'rotate-180' : ''}`}
+                                            />
+                                        )}
+                                    </button>
+
+                                    {/* Household picker dropdown */}
+                                    {showHouseholdPicker && hasMultipleHouseholds && (
+                                        <div className="mt-2 space-y-1">
+                                            {households.map((household) => {
+                                                const isActive = household.id === currentHousehold.id;
+                                                const hMembers = [
+                                                    ...household.children.map((c) => ({
+                                                        name: c.name,
+                                                        avatarUrl: c.avatarUrl,
+                                                        avatarInitials: c.avatarInitials,
+                                                        avatarColor: "#4A7C59",
+                                                        isChild: true,
+                                                    })),
+                                                    ...household.pets.map((p) => ({
+                                                        name: p.name,
+                                                        avatarUrl: p.avatarUrl,
+                                                        avatarInitials: p.avatarInitials,
+                                                        avatarColor: p.avatarColor || "#22C55E",
+                                                        isChild: false,
+                                                    })),
+                                                ];
+
+                                                return (
+                                                    <button
+                                                        key={household.id}
+                                                        onClick={() => handleHouseholdSelect(household.id)}
+                                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                                                            isActive
+                                                                ? 'bg-softGreen'
+                                                                : 'bg-white hover:bg-cream'
+                                                        }`}
+                                                    >
+                                                        {/* Checkmark first (or placeholder for alignment) */}
+                                                        <div className="w-5 h-5 flex-shrink-0">
+                                                            {isActive && (
+                                                                <div className="w-5 h-5 rounded-full bg-forest flex items-center justify-center">
+                                                                    <svg
+                                                                        width="10"
+                                                                        height="10"
+                                                                        viewBox="0 0 24 24"
+                                                                        fill="none"
+                                                                        stroke="white"
+                                                                        strokeWidth="3"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                    >
+                                                                        <polyline points="20 6 9 17 4 12" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Name */}
+                                                        <span className={`flex-1 text-sm text-left ${isActive ? 'font-semibold text-forest' : 'text-forest'}`}>
+                                                            {household.name}
+                                                        </span>
+
+                                                        {/* Avatar stack */}
+                                                        <MemberAvatarStack
+                                                            members={hMembers}
+                                                            maxDisplay={3}
+                                                            size={28}
+                                                        />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Menu Items */}
                             <div className="p-2">
                                 {/* Day Hub */}

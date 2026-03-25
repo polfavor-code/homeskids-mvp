@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
@@ -11,13 +11,14 @@ import SetupSteps from "@/components/home/SetupSteps";
 import NoHomeAccessEmptyState from "@/components/NoHomeAccessEmptyState";
 import { ToastContainer, ToastData } from "@/components/Toast";
 import { useItems } from "@/lib/ItemsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState, HouseholdMember } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useHealth } from "@/lib/HealthContext";
 import { useContacts } from "@/lib/ContactsContext";
 import { useDocuments } from "@/lib/DocumentsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useHomeSwitchAlert } from "@/lib/HomeSwitchAlertContext";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 
 export default function Home() {
     useEnsureOnboarding();
@@ -37,8 +38,34 @@ export default function Home() {
         inviteInfo, // Info about who invited this user (for no-home-access state)
         isLoaded: appStateLoaded,
         currentChildId,
-        childSpaces
+        childSpaces,
+        householdMembers,
+        currentChild,
+        setCurrentChildId,
     } = useAppState();
+
+    // Get current child's member ID for selection state
+    const currentMemberId = currentChild ? `child-${currentChild.id}` : null;
+
+    // Selected member ID (single-select for Dashboard)
+    const selectedMemberIds = useMemo(() => {
+        return new Set(currentMemberId ? [currentMemberId] : []);
+    }, [currentMemberId]);
+
+    // All children have dashboard data
+    const membersWithDashboardData = useMemo(() => {
+        return new Set(
+            householdMembers.filter(m => m.isChild).map(m => m.id)
+        );
+    }, [householdMembers]);
+
+    // Handle member selection - switches to viewing that child's dashboard
+    const handleMemberToggle = useCallback((memberId: string) => {
+        const member = householdMembers.find(m => m.id === memberId);
+        if (member && member.isChild) {
+            setCurrentChildId(member.entityId);
+        }
+    }, [householdMembers, setCurrentChildId]);
 
     // #region agent log
     // Get child_space IDs for the current child to filter items
@@ -343,29 +370,32 @@ export default function Home() {
             {/* Dashboard Content */}
             <div>
                 {/* Header Section - V6 Style */}
-                <div className="grid grid-cols-[1fr_auto] gap-5 mb-3 items-start mt-3">
-                    <div className="greeting-col">
-                        <h1 className="font-dmSerif text-4xl text-forest leading-none mb-2">
-                            Hi {userName},
-                        </h1>
-                        <p className="text-sm text-forest/60 leading-relaxed">
-                            {getDynamicSubtitle()}
-                        </p>
-                    </div>
-
-                    {/* Stats Box - Links to all items */}
-                    <Link
-                        href="/items"
-                        className="bg-white p-4 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-right min-w-[100px] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-shadow"
-                    >
-                        <span className="block text-2xl font-bold text-forest leading-none mb-1">
-                            {currentChildItems.length}
-                        </span>
-                        <span className="text-[11px] text-forest/60 uppercase font-bold tracking-wide">
-                            ITEMS TOTAL
-                        </span>
-                    </Link>
+                <div className="mb-3 mt-3">
+                    <h1 className="font-dmSerif text-4xl text-forest leading-none mb-2">
+                        Hi {userName},
+                    </h1>
+                    <p className="text-sm text-forest/60 leading-relaxed">
+                        {getDynamicSubtitle()}
+                    </p>
                 </div>
+
+                {/* Household Member Filter */}
+                {householdMembers.length > 1 && (
+                    <div className="card-organic p-4 mb-4">
+                        <HouseholdMemberFilter
+                            members={householdMembers}
+                            selectedMemberIds={selectedMemberIds}
+                            onToggleMember={handleMemberToggle}
+                            membersWithData={membersWithDashboardData}
+                            showSelectAllButton={false}
+                        />
+                        {currentChild && (
+                            <p className="text-center text-sm text-textSub mt-3">
+                                Viewing dashboard for <span className="font-semibold text-forest">{currentChild.name}</span>
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* Action Buttons Row - Tighter spacing to divider */}
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -500,7 +530,7 @@ export default function Home() {
                     <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10 -translate-y-1/2 z-0" />
                     {/* Title on top of line */}
                     <h2 className="font-dmSerif text-xl text-forest bg-cream inline-block px-4 relative z-10">
-                        Homes for {child?.name || "Child"}
+                        Homes
                     </h2>
                 </div>
 

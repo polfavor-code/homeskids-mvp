@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import { CalendarProvider, useCalendar } from "@/lib/calendar/CalendarContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState, HouseholdMember } from "@/lib/AppStateContext";
 import { FEATURES } from "@/lib/supabase";
 import {
     CalendarHeader,
@@ -17,6 +17,7 @@ import PlaceholderPage from "@/components/PlaceholderPage";
 import { CalendarIcon } from "@/components/icons/DuotoneIcons";
 import { getGoogleCalendarConnectionStatus } from "@/lib/google-calendar";
 import { hasAppleCalendarConnected } from "@/lib/apple-calendar";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 
 // Google Calendar Icon
 function GoogleCalendarIcon({ size = 14 }: { size?: number }) {
@@ -44,21 +45,44 @@ function AppleCalendarIcon({ size = 14 }: { size?: number }) {
 
 function CalendarContent() {
     const { view, error, isLoading } = useCalendar();
-    const { currentChild, isLoaded: appLoaded, accessibleHomes } = useAppState();
+    const { currentChild, isLoaded: appLoaded, accessibleHomes, householdMembers, setCurrentChildId } = useAppState();
     const [showAddModal, setShowAddModal] = useState(false);
-    
+
     // Check if user has home access
     const hasHomeAccess = accessibleHomes.length > 0;
-    
+
     // Calendar sync status
     const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
     const [appleConnected, setAppleConnected] = useState<boolean | null>(null);
-    
+
+    // Get current child's member ID for selection state
+    const currentMemberId = currentChild ? `child-${currentChild.id}` : null;
+
+    // Selected member ID (single-select for Calendar)
+    const selectedMemberIds = useMemo(() => {
+        return new Set(currentMemberId ? [currentMemberId] : []);
+    }, [currentMemberId]);
+
+    // Only children have calendar events (pets don't)
+    const membersWithCalendarData = useMemo(() => {
+        return new Set(
+            householdMembers.filter(m => m.isChild).map(m => m.id)
+        );
+    }, [householdMembers]);
+
+    // Handle member selection - switches to viewing that child's calendar
+    const handleMemberToggle = useCallback((memberId: string) => {
+        const member = householdMembers.find(m => m.id === memberId);
+        if (member && member.isChild) {
+            setCurrentChildId(member.entityId);
+        }
+    }, [householdMembers, setCurrentChildId]);
+
     useEffect(() => {
         async function checkConnections() {
             const googleResult = await getGoogleCalendarConnectionStatus();
             setGoogleConnected(googleResult.connected);
-            
+
             const appleResult = await hasAppleCalendarConnected();
             setAppleConnected(appleResult.connected);
         }
@@ -104,14 +128,34 @@ function CalendarContent() {
     if (!currentChild) {
         return (
             <AppShell>
-                <div className="card-organic p-8 text-center">
-                    <div className="w-16 h-16 bg-softGreen rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CalendarIcon size={32} className="text-forest" />
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="font-dmSerif text-2xl text-forest mt-2">Calendar</h1>
+                        <p className="text-sm text-textSub mt-1">Events and schedules.</p>
                     </div>
-                    <h2 className="font-dmSerif text-xl text-forest mb-2">No Child Selected</h2>
-                    <p className="text-textSub">
-                        Please select a child to view their calendar.
-                    </p>
+
+                    {/* Household Member Filter - allow selecting a child */}
+                    {householdMembers.length > 0 && (
+                        <div className="card-organic p-4">
+                            <HouseholdMemberFilter
+                                members={householdMembers}
+                                selectedMemberIds={selectedMemberIds}
+                                onToggleMember={handleMemberToggle}
+                                membersWithData={membersWithCalendarData}
+                                showSelectAllButton={false}
+                            />
+                        </div>
+                    )}
+
+                    <div className="card-organic p-8 text-center">
+                        <div className="w-16 h-16 bg-softGreen rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CalendarIcon size={32} className="text-forest" />
+                        </div>
+                        <h2 className="font-dmSerif text-xl text-forest mb-2">Select a Child</h2>
+                        <p className="text-textSub">
+                            Select a household member above to view their calendar.
+                        </p>
+                    </div>
                 </div>
             </AppShell>
         );
@@ -122,7 +166,25 @@ function CalendarContent() {
             <div className="space-y-6">
                 {/* Header with controls */}
                 <CalendarHeader onAddClick={() => setShowAddModal(true)} />
-                
+
+                {/* Household Member Filter */}
+                {householdMembers.length > 1 && (
+                    <div className="card-organic p-4">
+                        <HouseholdMemberFilter
+                            members={householdMembers}
+                            selectedMemberIds={selectedMemberIds}
+                            onToggleMember={handleMemberToggle}
+                            membersWithData={membersWithCalendarData}
+                            showSelectAllButton={false}
+                        />
+                        {currentChild && (
+                            <p className="text-center text-sm text-textSub mt-3">
+                                Viewing calendar for <span className="font-semibold text-forest">{currentChild.name}</span>
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 {/* Error message */}
                 {error && (
                     <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">

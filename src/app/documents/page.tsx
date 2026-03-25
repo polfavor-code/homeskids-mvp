@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import MobileSelect from "@/components/MobileSelect";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState, HouseholdMember } from "@/lib/AppStateContext";
 import { useDocuments, Document } from "@/lib/DocumentsContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { DocumentsIcon, IdDocIcon, SchoolIcon, HealthIcon } from "@/components/icons/DuotoneIcons";
 import FileUploader from "@/components/FileUploader";
 import FileViewerModal from "@/components/FileViewerModal";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 
 const categoryColors: Record<string, { bg: string; text: string; badge: string }> = {
     id: { bg: "bg-blue-50", text: "text-blue-600", badge: "bg-blue-100 text-blue-700" },
@@ -31,17 +32,40 @@ const categoryLabels: Record<string, string> = {
 
 export default function DocumentsPage() {
     useEnsureOnboarding();
-    const { child, currentChild, accessibleHomes } = useAppState();
+    const { child, currentChild, accessibleHomes, householdMembers, setCurrentChildId } = useAppState();
     const { documents, isLoaded, addDocument, deleteDocument, updateDocument, uploadFile, getFileUrl, getPinnedDocuments } = useDocuments();
 
     const activeChild = currentChild || child;
-    
+
     // Check if user has home access - no access means empty list
     const hasHomeAccess = accessibleHomes.length > 0;
-    
+
     // Only show child name if user has home access
     const childName = hasHomeAccess ? (activeChild?.name || "your child") : "your child";
     const accessibleDocuments = hasHomeAccess ? documents : [];
+
+    // Get current child's member ID for selection state
+    const currentMemberId = activeChild ? `child-${activeChild.id}` : null;
+
+    // Selected member ID (single-select for Documents)
+    const selectedMemberIds = useMemo(() => {
+        return new Set(currentMemberId ? [currentMemberId] : []);
+    }, [currentMemberId]);
+
+    // Only children have documents (pets don't)
+    const membersWithDocumentData = useMemo(() => {
+        return new Set(
+            householdMembers.filter(m => m.isChild).map(m => m.id)
+        );
+    }, [householdMembers]);
+
+    // Handle member selection - switches to viewing that child's documents
+    const handleMemberToggle = useCallback((memberId: string) => {
+        const member = householdMembers.find(m => m.id === memberId);
+        if (member && member.isChild) {
+            setCurrentChildId(member.entityId);
+        }
+    }, [householdMembers, setCurrentChildId]);
 
     const [showAddForm, setShowAddForm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -182,16 +206,29 @@ export default function DocumentsPage() {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="font-dmSerif text-2xl text-forest">
-                        {hasHomeAccess ? `${childName}'s Documents` : "Documents"}
-                    </h1>
+                    <h1 className="font-dmSerif text-2xl text-forest">Documents</h1>
                     <p className="text-sm text-textSub mt-1">
-                        {hasHomeAccess 
-                            ? `A shared place for everything important for ${childName}.`
-                            : "A shared place for important documents."
-                        }
+                        A shared place for important documents.
                     </p>
                 </div>
+
+                {/* Household Member Filter */}
+                {householdMembers.length > 1 && (
+                    <div className="card-organic p-4">
+                        <HouseholdMemberFilter
+                            members={householdMembers}
+                            selectedMemberIds={selectedMemberIds}
+                            onToggleMember={handleMemberToggle}
+                            membersWithData={membersWithDocumentData}
+                            showSelectAllButton={false}
+                        />
+                        {activeChild && (
+                            <p className="text-center text-sm text-textSub mt-3">
+                                Viewing documents for <span className="font-semibold text-forest">{activeChild.name}</span>
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* Info Card */}
                 <div className="card-organic p-5 bg-softGreen/30">

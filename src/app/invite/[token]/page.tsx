@@ -14,6 +14,59 @@ import { UserIcon } from "@/components/icons/DuotoneIcons";
 const STORAGE_KEY_CHILD = "homeskids_active_child_id";
 const STORAGE_KEY_HOME = "homeskids_active_home_id";
 
+// Stacked avatars for selected members
+function MemberAvatarStack({
+    members,
+    maxDisplay = 4,
+    size = 36,
+}: {
+    members: Array<{ name: string; avatarUrl?: string | null; isChild?: boolean }>;
+    maxDisplay?: number;
+    size?: number;
+}) {
+    const displayed = members.slice(0, maxDisplay);
+    const overflow = members.length - maxDisplay;
+
+    if (members.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="flex items-center" style={{ marginLeft: size * 0.3 }}>
+            {displayed.map((member, idx) => (
+                <div
+                    key={idx}
+                    style={{
+                        marginLeft: idx === 0 ? 0 : -(size * 0.3),
+                        zIndex: maxDisplay - idx,
+                    }}
+                >
+                    <Avatar
+                        src={member.avatarUrl || undefined}
+                        initial={member.name[0]}
+                        size={size}
+                        bgColor={member.isChild ? "#4A7C59" : "#22C55E"}
+                    />
+                </div>
+            ))}
+            {overflow > 0 && (
+                <div
+                    className="flex items-center justify-center bg-gray-200 text-gray-600 font-bold rounded-full border-2 border-white"
+                    style={{
+                        width: size,
+                        height: size,
+                        marginLeft: -(size * 0.3),
+                        zIndex: 0,
+                        fontSize: size * 0.3,
+                    }}
+                >
+                    +{overflow}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function InvitePage() {
     const params = useParams();
     const router = useRouter();
@@ -42,6 +95,10 @@ export default function InvitePage() {
                         id,
                         name,
                         avatar_url
+                    ),
+                    home:homes!home_id (
+                        id,
+                        name
                     )
                 `)
                 .eq("token", token)
@@ -51,44 +108,74 @@ export default function InvitePage() {
             console.log("V2 invite fetch result:", { v2Data, v2Error });
 
             if (v2Data) {
-                console.log("📸 V2 invite child data:", v2Data.child);
-                
-                // Get child avatar URL if exists (use signed URL for private bucket)
-                let childAvatarUrl = null;
-                if (v2Data.child?.avatar_url) {
-                    console.log("📸 Child has avatar_url:", v2Data.child.avatar_url);
-                    const { data: urlData, error: urlError } = await supabase.storage
+                console.log("📸 V2 invite data:", { child: v2Data.child, home: v2Data.home });
+
+                // Helper function to get signed URL for avatar
+                const getSignedAvatarUrl = async (avatarPath: string | null): Promise<string | null> => {
+                    if (!avatarPath) return null;
+                    const { data: urlData } = await supabase.storage
                         .from("avatars")
-                        .createSignedUrl(v2Data.child.avatar_url, 3600); // 1 hour expiry
-                    console.log("📸 Signed URL result:", { urlData, urlError });
-                    if (!urlError && urlData?.signedUrl) {
-                        childAvatarUrl = urlData.signedUrl;
-                    }
-                } else {
-                    console.log("📸 No avatar_url on child - RLS may be blocking child data");
-                    // If child join failed due to RLS, try fetching child directly
-                    if (v2Data.child_id) {
-                        const { data: directChild, error: directError } = await supabase
-                            .from("children")
-                            .select("name, avatar_url")
-                            .eq("id", v2Data.child_id)
-                            .single();
-                        console.log("📸 Direct child fetch:", { directChild, directError });
-                        if (directChild?.avatar_url) {
-                            const { data: urlData } = await supabase.storage
-                                .from("avatars")
-                                .createSignedUrl(directChild.avatar_url, 3600);
-                            if (urlData?.signedUrl) {
-                                childAvatarUrl = urlData.signedUrl;
-                            }
-                        }
+                        .createSignedUrl(avatarPath, 3600);
+                    return urlData?.signedUrl || null;
+                };
+
+                // Fetch selected children (use selected_child_ids if it exists, even if empty)
+                // Only fall back to child_id for old invites that don't have selected_child_ids
+                let selectedChildren: Array<{ id: string; name: string; avatarUrl: string | null }> = [];
+                const hasSelectedChildIds = Array.isArray(v2Data.selected_child_ids);
+                const childIds = hasSelectedChildIds
+                    ? v2Data.selected_child_ids
+                    : (v2Data.child_id ? [v2Data.child_id] : []);
+
+                if (childIds.length > 0) {
+                    const { data: childrenData } = await supabase
+                        .from("children")
+                        .select("id, name, avatar_url")
+                        .in("id", childIds);
+
+                    if (childrenData) {
+                        selectedChildren = await Promise.all(
+                            childrenData.map(async (child) => ({
+                                id: child.id,
+                                name: child.name,
+                                avatarUrl: await getSignedAvatarUrl(child.avatar_url),
+                            }))
+                        );
                     }
                 }
+
+                // Fetch selected pets
+                let selectedPets: Array<{ id: string; name: string; avatarUrl: string | null }> = [];
+                if (v2Data.selected_pet_ids?.length > 0) {
+                    const { data: petsData } = await supabase
+                        .from("pets")
+                        .select("id, name, avatar_url")
+                        .in("id", v2Data.selected_pet_ids);
+
+                    if (petsData) {
+                        selectedPets = await Promise.all(
+                            petsData.map(async (pet) => ({
+                                id: pet.id,
+                                name: pet.name,
+                                avatarUrl: await getSignedAvatarUrl(pet.avatar_url),
+                            }))
+                        );
+                    }
+                }
+
+                // Combine all selected members for avatar display
+                const selectedMembers = [
+                    ...selectedChildren.map(c => ({ ...c, isChild: true })),
+                    ...selectedPets.map(p => ({ ...p, isChild: false })),
+                ];
 
                 setInvite({
                     ...v2Data,
                     child_name: v2Data.child?.name,
-                    child_avatar_url: childAvatarUrl,
+                    home_name: v2Data.home?.name,
+                    selectedChildren,
+                    selectedPets,
+                    selectedMembers,
                     isV2: true,
                 });
                 setLoading(false);
@@ -492,7 +579,12 @@ export default function InvitePage() {
         }
     };
 
-    // Get display name for child
+    // Get display name for the household (home name)
+    const getHouseholdName = () => {
+        return invite?.home_name || "this household";
+    };
+
+    // Get display name for child (legacy, used as fallback)
     const getChildName = () => {
         return invite?.child_name || "your child";
     };
@@ -503,7 +595,7 @@ export default function InvitePage() {
         return name.split(" ")[0] || "there";
     };
 
-    // Get display label for role (e.g., "Parent of June")
+    // Get display label for role(s) (e.g., "Babysitter & Pet sitter")
     const getRoleLabel = () => {
         const roleMap: Record<string, string> = {
             parent: "Parent",
@@ -512,12 +604,29 @@ export default function InvitePage() {
             family_member: "Family member",
             nanny: "Nanny",
             babysitter: "Babysitter",
+            pet_sitter: "Pet sitter",
             family_friend: "Family friend",
             other: "Caregiver",
         };
-        const role = roleMap[invite?.invitee_role] || "Caregiver";
-        const childName = getChildName();
-        return `${role} of ${childName}`;
+
+        // Use invitee_roles array if available, otherwise fall back to single invitee_role
+        const roles: string[] = invite?.invitee_roles?.length > 0
+            ? invite.invitee_roles
+            : (invite?.invitee_role ? [invite.invitee_role] : []);
+
+        if (roles.length === 0) {
+            // Fallback: if only pets selected, show as pet sitter
+            const hasChildren = (invite?.selectedChildren?.length || 0) > 0;
+            const hasPets = (invite?.selectedPets?.length || 0) > 0;
+            if (!hasChildren && hasPets) {
+                return "Pet sitter";
+            }
+            return "Caregiver";
+        }
+
+        // Map role values to labels and join with " & "
+        const roleLabels = roles.map(r => roleMap[r] || r).filter(Boolean);
+        return roleLabels.join(" & ");
     };
 
     // Check if this is a guardian invite
@@ -528,9 +637,10 @@ export default function InvitePage() {
 
     // Get content for left panel
     const getLeftPanelContent = () => {
+        const homeName = getHouseholdName();
         if (view === "landing") {
             return {
-                description: `You've been invited to join ${getChildName()}'s homes on Homes.kids.`,
+                description: `Join ${homeName} household`,
                 bullets: [
                     "One shared place for everything your child needs between homes.",
                     "Plan what moves in the bag between homes.",
@@ -540,7 +650,7 @@ export default function InvitePage() {
         }
         if (view === "login") {
             return {
-                description: "Welcome back! Log in to join.",
+                description: "Welcome back!",
                 bullets: [
                     "Access shared items and schedules.",
                     "Stay in sync with your family.",
@@ -549,7 +659,7 @@ export default function InvitePage() {
             };
         }
         return {
-            description: "Create your account to get started.",
+            description: "Create your account",
             bullets: [
                 "Set up your profile in seconds.",
                 "Start tracking items right away.",
@@ -632,33 +742,26 @@ export default function InvitePage() {
                         </div>
 
                         {/* Title & Subtitle */}
-                        <div className="text-center mb-8">
+                        <div className="text-center mb-10">
+                            <p className="text-base text-textSub mb-2"><span className="font-semibold text-forest">{getFirstName()}</span>, you've been invited</p>
                             <h1 className="font-dmSerif text-3xl text-forest mb-2">
-                                You're invited, {getFirstName()}
+                                Join {getHouseholdName()}
                             </h1>
                             <p className="text-textSub">
-                                Join {getChildName()}'s homes on Homes.kids
+                                as <span className="font-medium text-forest">{getRoleLabel()}</span>
                             </p>
                         </div>
 
-                        {/* Context */}
-                        <div className="text-center mb-8">
-                            <p className="text-sm text-textSub mb-3">You'll be joining as</p>
-                            <div className="inline-flex items-center gap-3 bg-white border border-border rounded-full px-4 py-2">
-                                <Avatar
-                                    src={invite?.child_avatar_url}
-                                    initial={getChildName()?.[0]?.toUpperCase() || "?"}
-                                    size={36}
-                                    bgColor="#4A7C59"
+                        {/* Members you'll care for */}
+                        {invite?.selectedMembers?.length > 0 && (
+                            <div className="flex justify-center mb-10">
+                                <MemberAvatarStack
+                                    members={invite.selectedMembers}
+                                    maxDisplay={6}
+                                    size={56}
                                 />
-                                <span className="font-semibold text-forest">
-                                    {getRoleLabel()}
-                                </span>
                             </div>
-                            <p className="text-xs text-textSub mt-2">
-                                (You can change this later)
-                            </p>
-                        </div>
+                        )}
 
                         {/* Primary Action */}
                         <button
@@ -715,7 +818,7 @@ export default function InvitePage() {
                         </div>
 
                         <h2 className="font-dmSerif text-2xl text-forest mb-2 text-center">Welcome back</h2>
-                        <p className="text-textSub text-sm mb-6 text-center">Log in to join {getChildName()}'s homes</p>
+                        <p className="text-textSub text-sm mb-6 text-center">Log in to join {getHouseholdName()}</p>
 
                         <form onSubmit={handleJoin} className="space-y-4">
                             <div>
@@ -800,7 +903,7 @@ export default function InvitePage() {
                     </div>
 
                     <h2 className="font-dmSerif text-2xl text-forest mb-2 text-center">Create account</h2>
-                    <p className="text-textSub text-sm mb-6 text-center">Create an account to join {getChildName()}'s homes</p>
+                    <p className="text-textSub text-sm mb-6 text-center">Create an account to join {getHouseholdName()}</p>
 
                     <form onSubmit={handleJoin} className="space-y-4">
                         <div>

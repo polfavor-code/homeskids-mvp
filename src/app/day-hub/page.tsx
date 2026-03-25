@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { useAppState, ChildProfile, PetProfile, PetSpecies } from "@/lib/AppStateContext";
+import { useAppState, ChildProfile, PetProfile, PetSpecies, HouseholdMember } from "@/lib/AppStateContext";
 import { useDayHub, TimeSlot, DayTask, PostponeOption, TimelineTask, RegimenDayTask, FamilyMemberType } from "@/lib/DayHubContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { useAuth } from "@/lib/AuthContext";
@@ -18,6 +18,7 @@ import {
     LucideIconComponent
 } from "@/components/icons/DuotoneIcons";
 import { CircleCheckbox } from "@/components/ui/CircleCheckbox";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 
 // All pet family member types for type checking
 const PET_FAMILY_MEMBER_TYPES = ["cat", "dog", "bird", "fish", "reptile", "small_mammal", "other"] as const;
@@ -599,7 +600,7 @@ interface FilterableMember {
 export default function DayHubPage() {
     useEnsureOnboarding();
     const { user } = useAuth();
-    const { managesChildren, managesPets, caregivers, children: childrenList, pets } = useAppState();
+    const { managesChildren, managesPets, caregivers, children: childrenList, pets, householdMembers } = useAppState();
     const {
         currentDate,
         setCurrentDate,
@@ -623,10 +624,11 @@ export default function DayHubPage() {
 
     const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
 
-    // Track which family members are selected for filtering
+    // Track which family members are selected for filtering (multi-select for Day Hub)
     const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
 
     // Build list of all family members (children + pets) with info about whether they have tasks today
+    // Keep this for filtering logic compatibility
     const allFamilyMembers = useMemo((): FilterableMember[] => {
         // Get unique members from tasks to know who has tasks today
         const membersWithTasks = new Set<string>();
@@ -672,6 +674,11 @@ export default function DayHubPage() {
         return members;
     }, [childrenList, pets, timelineTasks]);
 
+    // Calculate which members have tasks today (for HouseholdMemberFilter)
+    const membersWithTasksToday = useMemo(() => {
+        return new Set(allFamilyMembers.filter(m => m.hasTasksToday).map(m => m.id));
+    }, [allFamilyMembers]);
+
     // Create a stable key for detecting changes to family members with tasks
     const membersWithTasksKey = useMemo(() =>
         allFamilyMembers.map(m => `${m.id}-${m.hasTasksToday}`).join(','),
@@ -684,7 +691,7 @@ export default function DayHubPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [membersWithTasksKey]);
 
-    // Toggle member selection
+    // Toggle member selection (multi-select for Day Hub)
     const toggleMemberSelection = (memberId: string) => {
         setSelectedMemberIds(prev => {
             const newSet = new Set(prev);
@@ -702,6 +709,17 @@ export default function DayHubPage() {
         const membersWithTasks = allFamilyMembers.filter(m => m.hasTasksToday).map(m => m.id);
         setSelectedMemberIds(new Set(membersWithTasks));
     };
+
+    // Get selected member names for display text
+    const selectedMemberNames = useMemo(() => {
+        const names = householdMembers
+            .filter(m => selectedMemberIds.has(m.id))
+            .map(m => m.name);
+        if (names.length === 0) return null;
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return `${names[0]} & ${names[1]}`;
+        return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+    }, [householdMembers, selectedMemberIds]);
 
     // Filter timeline tasks based on selected members
     const filteredTimelineTasks = useMemo(() => {
@@ -929,69 +947,22 @@ export default function DayHubPage() {
                     <p className="text-[14px] text-[#8BA18D] mt-1">{formatDateDisplay(currentDate)}</p>
                 </header>
 
-                {/* Family Member Filter Row */}
-                {allFamilyMembers.length > 0 && (
-                    <div className="flex flex-wrap items-center justify-center gap-3">
-                        {allFamilyMembers.map((member) => {
-                            const isSelected = selectedMemberIds.has(member.id);
-                            const hasTasksToday = member.hasTasksToday;
-                            const isClickable = hasTasksToday;
-
-                            return (
-                                <button
-                                    key={member.id}
-                                    onClick={() => isClickable && toggleMemberSelection(member.id)}
-                                    disabled={!isClickable}
-                                    className={`flex flex-col items-center gap-1.5 transition-all ${
-                                        !isClickable ? 'cursor-not-allowed' : 'cursor-pointer'
-                                    }`}
-                                >
-                                    {/* Avatar with selection ring */}
-                                    <div
-                                        className={`relative transition-all ${
-                                            isSelected && hasTasksToday
-                                                ? 'ring-2 ring-forest ring-offset-2 ring-offset-cream rounded-full'
-                                                : ''
-                                        } ${
-                                            !hasTasksToday
-                                                ? 'opacity-30 grayscale'
-                                                : isSelected
-                                                    ? ''
-                                                    : 'opacity-100'
-                                        }`}
-                                    >
-                                        <div
-                                            className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden"
-                                            style={{
-                                                backgroundColor: member.avatarUrl ? "#f3f4f6" : member.badgeColor,
-                                            }}
-                                        >
-                                            {member.avatarUrl ? (
-                                                <img
-                                                    src={member.avatarUrl}
-                                                    alt={member.name}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : member.AvatarIcon ? (
-                                                <member.AvatarIcon size={24} className="text-forest" />
-                                            ) : (
-                                                <span className="text-lg font-semibold text-forest">{member.name[0]}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {/* Name label */}
-                                    <span className={`text-[11px] font-medium max-w-[60px] truncate ${
-                                        !hasTasksToday
-                                            ? 'text-textSub/50'
-                                            : isSelected
-                                                ? 'text-forest'
-                                                : 'text-textSub'
-                                    }`}>
-                                        {member.name}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                {/* Household Member Filter */}
+                {householdMembers.length > 1 && (
+                    <div className="card-organic p-4">
+                        <HouseholdMemberFilter
+                            members={householdMembers}
+                            selectedMemberIds={selectedMemberIds}
+                            onToggleMember={toggleMemberSelection}
+                            membersWithData={membersWithTasksToday}
+                            onSelectAllWithData={selectAllMembersWithTasks}
+                            showSelectAllButton={true}
+                        />
+                        {selectedMemberNames && (
+                            <p className="text-center text-sm text-textSub mt-3">
+                                Viewing tasks for <span className="font-semibold text-forest">{selectedMemberNames}</span>
+                            </p>
+                        )}
                     </div>
                 )}
 

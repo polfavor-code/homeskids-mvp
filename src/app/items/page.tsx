@@ -7,10 +7,11 @@ import AppShell from "@/components/layout/AppShell";
 import ItemPhoto from "@/components/ItemPhoto";
 import FirstHomeAssignmentPrompt from "@/components/FirstHomeAssignmentPrompt";
 import { useItems } from "@/lib/ItemsContext";
-import { useAppState } from "@/lib/AppStateContext";
+import { useAppState, HouseholdMember } from "@/lib/AppStateContext";
 import { useEnsureOnboarding } from "@/lib/useEnsureOnboarding";
 import { supabase } from "@/lib/supabase";
 import { ChevronDownIcon, ItemsIcon, TravelBagIcon, SearchIcon, HomeIcon } from "@/components/icons/DuotoneIcons";
+import HouseholdMemberFilter from "@/components/household/HouseholdMemberFilter";
 
 function ItemsPageContent() {
     useEnsureOnboarding();
@@ -19,7 +20,41 @@ function ItemsPageContent() {
     const pathname = usePathname();
 
     const { items, refetchItems } = useItems();
-    const { child, caregivers, accessibleHomes, getItemsInArchivedHomes, currentChildId, childSpaces } = useAppState();
+    const { child, caregivers, accessibleHomes, getItemsInArchivedHomes, currentChildId, childSpaces, householdMembers, currentChild, setCurrentChildId } = useAppState();
+
+    // Get current child's member ID for selection state (single-select like other pages)
+    const currentMemberId = currentChild ? `child-${currentChild.id}` : null;
+
+    // Selected member ID (single-select for Items - matches Contacts, Health, etc.)
+    const selectedMemberIds = React.useMemo(() => {
+        return new Set(currentMemberId ? [currentMemberId] : []);
+    }, [currentMemberId]);
+
+    // Calculate which members have items (for greying out members without data)
+    const membersWithItemData = React.useMemo(() => {
+        const memberIdsWithItems = new Set<string>();
+
+        // Check each item to see which child owns it
+        items.forEach(item => {
+            if (item.childSpaceId && childSpaces) {
+                // Find which child this item belongs to
+                const childSpace = childSpaces.find((cs: any) => cs.id === item.childSpaceId);
+                if (childSpace) {
+                    memberIdsWithItems.add(`child-${childSpace.childId}`);
+                }
+            }
+        });
+
+        return memberIdsWithItems;
+    }, [items, childSpaces]);
+
+    // Handle member selection - switches to viewing that child's items
+    const handleMemberToggle = React.useCallback((memberId: string) => {
+        const member = householdMembers.find(m => m.id === memberId);
+        if (member && member.isChild) {
+            setCurrentChildId(member.entityId);
+        }
+    }, [householdMembers, setCurrentChildId]);
     
     // Archived home items state
     const [archivedItemsCount, setArchivedItemsCount] = useState(0);
@@ -493,10 +528,10 @@ function ItemsPageContent() {
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h1 className="font-dmSerif text-2xl text-forest mt-2">
-                        {hasHomeAccess ? `${child?.name || "Child"}'s Things` : "Items"}
+                        Items
                     </h1>
                     <p className="text-sm text-textSub mt-1">
-                        {hasHomeAccess ? "All items across every home." : "Track items across homes."}
+                        {hasHomeAccess ? "All items across your household." : "Track items across homes."}
                     </p>
                 </div>
                 <Link
@@ -506,6 +541,24 @@ function ItemsPageContent() {
                     + New item
                 </Link>
             </div>
+
+            {/* Household Member Filter */}
+            {householdMembers.length > 1 && (
+                <div className="card-organic p-4 mb-4">
+                    <HouseholdMemberFilter
+                        members={householdMembers}
+                        selectedMemberIds={selectedMemberIds}
+                        onToggleMember={handleMemberToggle}
+                        membersWithData={membersWithItemData}
+                        showSelectAllButton={false}
+                    />
+                    {currentChild && (
+                        <p className="text-center text-sm text-textSub mt-3">
+                            Viewing items for <span className="font-semibold text-forest">{currentChild.name}</span>
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Top Tabs - Matching Dashboard Button Style */}
             <div className="flex flex-wrap gap-2 mb-4">

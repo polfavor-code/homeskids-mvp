@@ -1,24 +1,34 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { nanoid } from "nanoid";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { QRCodeSVG } from "qrcode.react";
-import MobileSelect from "@/components/MobileSelect";
+// MobileSelect removed - using checkboxes for multi-select roles
 
 interface InviteCaregiverPanelProps {
     onClose: () => void;
     onSuccess?: () => void;
 }
 
-// Helper role options - for home-scoped helpers only
-const HELPER_ROLE_OPTIONS = [
-    { value: "nanny", label: "Nanny" },
-    { value: "babysitter", label: "Babysitter" },
+// Base roles (always available when something is selected)
+const BASE_ROLES = [
     { value: "family_member", label: "Family member" },
     { value: "family_friend", label: "Family friend" },
     { value: "other", label: "Other" },
+];
+
+// Child-specific roles (only shown when children are selected)
+const CHILD_ROLES = [
+    { value: "nanny", label: "Nanny" },
+    { value: "babysitter", label: "Babysitter" },
+];
+
+// Pet-specific roles (only shown when pets are selected)
+const PET_ROLES = [
+    { value: "pet_sitter", label: "Pet sitter" },
 ];
 
 // Track invite link data outside component to survive re-renders
@@ -26,7 +36,7 @@ let pendingInviteData: {
     token: string;
     name: string;
     label: string;
-    role: string;
+    roles: string[];
     homeIds: string[];
     childIds: string[];
     petIds: string[];
@@ -40,7 +50,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
     const [showInviteLink, setShowInviteLink] = useState(() => pendingInviteData !== null);
     const [inviteName, setInviteName] = useState(() => pendingInviteData?.name || "");
     const [inviteLabel, setInviteLabel] = useState(() => pendingInviteData?.label || "");
-    const [inviteRole, setInviteRole] = useState(() => pendingInviteData?.role || "");
+    const [selectedRoles, setSelectedRoles] = useState<string[]>(() => pendingInviteData?.roles || []);
     const [inviteToken, setInviteToken] = useState(() => pendingInviteData?.token || "");
 
     // Home selection - REQUIRED, can select multiple homes
@@ -104,6 +114,41 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
     const filteredPets = selectedHomeIds.length > 0
         ? pets.filter(p => petSpaces.some(ps => ps.petId === p.id && selectedHomeIds.includes(ps.homeId)))
         : [];
+
+    // Compute available roles based on children/pets selection
+    const availableRoles = useMemo(() => {
+        const roles: { value: string; label: string }[] = [];
+
+        // Add child-specific roles if children are selected
+        if (selectedChildIds.length > 0) {
+            roles.push(...CHILD_ROLES);
+        }
+
+        // Add pet-specific roles if pets are selected
+        if (selectedPetIds.length > 0) {
+            roles.push(...PET_ROLES);
+        }
+
+        // Always add base roles at the end
+        roles.push(...BASE_ROLES);
+
+        return roles;
+    }, [selectedChildIds.length, selectedPetIds.length]);
+
+    // Clear invalid roles when selection changes (e.g., if pet_sitter selected but then pets unselected)
+    useEffect(() => {
+        const validRoleValues = availableRoles.map(r => r.value);
+        setSelectedRoles(prev => prev.filter(role => validRoleValues.includes(role)));
+    }, [availableRoles]);
+
+    // Toggle role selection
+    const handleToggleRole = (roleValue: string) => {
+        setSelectedRoles(prev =>
+            prev.includes(roleValue)
+                ? prev.filter(r => r !== roleValue)
+                : [...prev, roleValue]
+        );
+    };
 
     // Toggle home selection (multi-select)
     const handleToggleHome = (homeId: string) => {
@@ -182,8 +227,8 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             return;
         }
 
-        if (!inviteRole) {
-            setError("Please select a role");
+        if (selectedRoles.length === 0) {
+            setError("Please select at least one role");
             return;
         }
 
@@ -191,8 +236,8 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
             setGeneratingInvite(true);
             setError("");
 
-            // Generate new invite token
-            const newToken = crypto.randomUUID();
+            // Generate short invite token (8 chars, ~218 trillion combinations)
+            const newToken = nanoid(8);
 
             // Build invite data for helper (home-scoped)
             const inviteData: Record<string, unknown> = {
@@ -202,22 +247,23 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 status: "pending",
                 invitee_name: inviteName.trim(),
                 invitee_label: inviteLabel.trim() || inviteName.trim(), // Fall back to name if not provided
-                invitee_role: inviteRole,
+                invitee_role: selectedRoles[0] || null, // Primary role for backward compat
                 has_own_home: false, // Helpers don't create their own home
                 home_id: selectedHomeIds[0], // Primary home for backward compat
                 invite_type: "helper", // Mark as helper invite (home-scoped)
             };
 
-            // Try to include selected_child_ids and selected_pet_ids if columns exist
+            // Try to include new array columns if they exist
             let { error: insertError } = await supabase.from("invites").insert({
                 ...inviteData,
                 selected_child_ids: selectedChildIds,
                 selected_pet_ids: selectedPetIds,
+                invitee_roles: selectedRoles, // New: multiple roles
             });
 
             // If columns don't exist, retry without them
-            if (insertError?.message?.includes("selected_child_ids") || insertError?.message?.includes("selected_pet_ids")) {
-                console.log("selected_child_ids/selected_pet_ids columns not found, inserting without them");
+            if (insertError?.message?.includes("selected_child_ids") || insertError?.message?.includes("selected_pet_ids") || insertError?.message?.includes("invitee_roles")) {
+                console.log("Array columns not found, inserting without them");
                 const result = await supabase.from("invites").insert(inviteData);
                 insertError = result.error;
             }
@@ -229,7 +275,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                 token: newToken,
                 name: inviteName.trim(),
                 label: inviteLabel.trim(),
-                role: inviteRole,
+                roles: selectedRoles,
                 homeIds: selectedHomeIds,
                 childIds: selectedChildIds,
                 petIds: selectedPetIds,
@@ -263,7 +309,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
         setInviteToken("");
         setInviteName("");
         setInviteLabel("");
-        setInviteRole("");
+        setSelectedRoles([]);
         setSelectedHomeIds(homes.length === 1 ? [homes[0].id] : []);
         setSelectedChildIds([]);
         setSelectedPetIds([]);
@@ -604,19 +650,48 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                     </div>
                 )}
 
-                {/* Role */}
-                <div>
-                    <label htmlFor="invitee-role" className="block text-sm font-semibold text-forest mb-1.5">
-                        Role
-                    </label>
-                    <MobileSelect
-                        value={inviteRole}
-                        onChange={setInviteRole}
-                        options={HELPER_ROLE_OPTIONS}
-                        placeholder="Select role..."
-                        title="Select role"
-                    />
-                </div>
+                {/* Role - only show after children or pets are selected */}
+                {(selectedChildIds.length > 0 || selectedPetIds.length > 0) && (
+                    <div>
+                        <label className="block text-sm font-semibold text-forest mb-1.5">
+                            Role <span className="text-red-500">*</span>
+                        </label>
+                        <p className="text-xs text-textSub mb-3">
+                            Select one or more roles for this helper.
+                        </p>
+                        <div className="space-y-2">
+                            {availableRoles.map((role) => {
+                                const isSelected = selectedRoles.includes(role.value);
+                                return (
+                                    <button
+                                        key={role.value}
+                                        type="button"
+                                        onClick={() => handleToggleRole(role.value)}
+                                        className={`w-full flex items-center gap-2 p-3 rounded-xl border transition-colors ${
+                                            isSelected
+                                                ? "bg-softGreen/50 border-forest/20"
+                                                : "bg-white border-border hover:border-forest/30"
+                                        }`}
+                                    >
+                                        {/* Checkbox indicator */}
+                                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                            isSelected ? "border-forest bg-forest" : "border-textSub"
+                                        }`}>
+                                            {isSelected && (
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <span className={`text-sm font-medium flex-1 text-left ${isSelected ? "text-forest" : "text-textSub"}`}>
+                                            {role.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -631,7 +706,7 @@ export default function InviteCaregiverPanel({ onClose, onSuccess }: InviteCareg
                     disabled={
                         generatingInvite ||
                         !inviteName.trim() ||
-                        !inviteRole ||
+                        selectedRoles.length === 0 ||
                         selectedHomeIds.length === 0 ||
                         (selectedChildIds.length === 0 && selectedPetIds.length === 0)
                     }
